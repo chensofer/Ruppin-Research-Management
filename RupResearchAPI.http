@@ -1,0 +1,6 @@
+@RupResearchAPI_HostAddress = http://localhost:5269
+
+GET {{RupResearchAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
