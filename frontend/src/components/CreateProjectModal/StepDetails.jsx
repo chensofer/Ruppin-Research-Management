@@ -31,7 +31,7 @@ export default function StepDetails({ data, onChange, errors }) {
 
   useEffect(() => {
     // Load researchers — role names as stored in research_roles table
-    getUsers('Researcher,Research manager')
+    getUsers()
       .then((res) => setAllUsers(res.data))
       .catch(() => {})
       .finally(() => setUsersLoading(false));

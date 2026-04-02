@@ -26,7 +26,7 @@ export default function StepAssistants({ data, onChange }) {
 
   useEffect(() => {
     // Load all users — any user can be assigned as an assistant
-    getUsers('Research Assistant')
+    getUsers()
       .then((res) => setAllUsers(res.data))
       .catch(() => setLoadError('שגיאה בטעינת רשימת המשתמשים'))
       .finally(() => setLoading(false));

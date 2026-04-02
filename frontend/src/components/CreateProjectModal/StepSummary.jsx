@@ -10,32 +10,35 @@ function Section({ title, children }) {
 }
 
 function Row({ label, value }) {
+  if (!value) return null;
   return (
     <div className="flex justify-between text-sm py-1">
       <span className="text-gray-500">{label}</span>
-      <span className="font-medium text-gray-800">{value || '—'}</span>
+      <span className="font-medium text-gray-800">{value}</span>
     </div>
   );
 }
 
 const fmt = (n) =>
-  n ? `₪${new Intl.NumberFormat('he-IL').format(n)}` : '—';
+  n ? `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)}` : null;
 
-const fmtDate = (d) =>
-  d ? new Date(d).toLocaleDateString('he-IL') : '—';
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('he-IL') : null);
 
-export default function StepSummary({ details, budgetCategories, teamMembers, assistants, expenses, documents }) {
-  const totalBudget = parseFloat(details.totalBudget) || 0;
+export default function StepSummary({ details, budgetCategories, teamMembers, assistants, expenses, documents, centers }) {
+  const totalBudget    = parseFloat(details.totalBudget) || 0;
   const totalAllocated = budgetCategories.reduce((s, c) => s + (parseFloat(c.allocatedAmount) || 0), 0);
-  const totalExpenses = expenses.reduce((s, e) => s + (parseFloat(e.requestedAmount) || 0), 0);
+  const totalExpenses  = expenses.reduce((s, e) => s + (parseFloat(e.requestedAmount) || 0), 0);
+
+  const centerName = centers?.find((c) => String(c.centerId) === String(details.centerId))?.centerName;
 
   return (
     <div className="space-y-4">
       {/* Research details */}
       <Section title="פרטי המחקר">
         <Row label="שם המחקר" value={details.projectNameHe} />
-        {details.projectNameEn && <Row label="שם באנגלית" value={details.projectNameEn} />}
-        <Row label="סטטוס" value={details.status} />
+        <Row label="שם באנגלית" value={details.projectNameEn} />
+        <Row label="חוקר ראשי" value={details.principalResearcherName} />
+        <Row label="מרכז מחקר" value={centerName} />
         <Row label="תקציב כולל" value={fmt(totalBudget)} />
         <Row label="מקור מימון" value={details.fundingSource} />
         <Row label="תחילה" value={fmtDate(details.startDate)} />
@@ -54,12 +57,12 @@ export default function StepSummary({ details, budgetCategories, teamMembers, as
             {budgetCategories.filter((c) => c.categoryName).map((c) => (
               <div key={c._key} className="flex justify-between text-sm py-1">
                 <span className="text-gray-700">{c.categoryName}</span>
-                <span className="font-medium text-primary">{fmt(c.allocatedAmount)}</span>
+                <span className="font-medium text-primary">{fmt(c.allocatedAmount) ?? '—'}</span>
               </div>
             ))}
             <div className="flex justify-between text-sm font-semibold pt-2 border-t border-gray-100 mt-1">
               <span className="text-gray-700">סה״כ מוקצה</span>
-              <span className="text-primary">{fmt(totalAllocated)}</span>
+              <span className="text-primary">{fmt(totalAllocated) ?? '₪0'}</span>
             </div>
           </div>
         </Section>
@@ -108,13 +111,13 @@ export default function StepSummary({ details, budgetCategories, teamMembers, as
           <div className="space-y-1">
             {expenses.map((e) => (
               <div key={e._key} className="flex justify-between text-sm py-1">
-                <span className="text-gray-700">{e.requestTitle || 'הוצאה ללא שם'}</span>
-                <span className="font-medium text-red-600">{fmt(e.requestedAmount)}</span>
+                <span className="text-gray-700">{e.categoryName}{e.requestDescription ? ` — ${e.requestDescription}` : ''}</span>
+                <span className="font-medium text-red-600">{fmt(e.requestedAmount) ?? '—'}</span>
               </div>
             ))}
             <div className="flex justify-between text-sm font-semibold pt-2 border-t border-gray-100 mt-1">
               <span className="text-gray-700">סה״כ הוצאות</span>
-              <span className="text-red-600">{fmt(totalExpenses)}</span>
+              <span className="text-red-600">{fmt(totalExpenses) ?? '₪0'}</span>
             </div>
           </div>
         </Section>

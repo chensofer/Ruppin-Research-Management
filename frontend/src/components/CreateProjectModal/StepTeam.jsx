@@ -13,7 +13,7 @@ export default function StepTeam({ data, onChange }) {
 
   useEffect(() => {
     // Load all users — role filtering is done client-side so we always have data
-    getUsers('Researcher,Research manager')
+    getUsers()
       .then((res) => setAllUsers(res.data))
       .catch(() => setLoadError('שגיאה בטעינת רשימת המשתמשים'))
       .finally(() => setLoading(false));

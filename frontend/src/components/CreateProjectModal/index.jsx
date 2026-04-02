@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Stepper, { STEP_IDS } from './Stepper';
 import StepDetails from './StepDetails';
 import StepBudget from './StepBudget';
@@ -8,6 +8,7 @@ import StepExpenses from './StepExpenses';
 import StepDocuments from './StepDocuments';
 import StepSummary from './StepSummary';
 import { createFullProject, uploadProjectFile } from '../../api/projectsApi';
+import { getCenters } from '../../api/centersApi';
 
 const INITIAL_DETAILS = {
   projectNameHe: '',
@@ -36,6 +37,11 @@ export default function CreateProjectModal({ onClose, onCreated }) {
   const [expenses, setExpenses]             = useState([]);
   const [documents, setDocuments]           = useState([]);
   const [docFolders, setDocFolders]         = useState(['כללי']);
+  const [centers, setCenters]               = useState([]);
+
+  useEffect(() => {
+    getCenters().then((res) => setCenters(res.data)).catch(() => {});
+  }, []);
 
   const currentIndex = STEP_IDS.indexOf(step);
   const isFirst = currentIndex === 0;
@@ -199,6 +205,7 @@ export default function CreateProjectModal({ onClose, onCreated }) {
               assistants={assistants}
               expenses={expenses}
               documents={documents}
+              centers={centers}
             />
           )}
         </div>
