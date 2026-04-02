@@ -31,5 +31,9 @@ namespace RupResearchAPI.Models
 
         [Column("project_id")]
         public int? ProjectId { get; set; }
+
+        [Column("folder_name")]
+        [StringLength(100)]
+        public string? FolderName { get; set; }
     }
 }

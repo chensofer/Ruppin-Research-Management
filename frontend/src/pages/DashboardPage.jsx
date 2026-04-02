@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { getProjects } from '../api/projectsApi';
 import Layout from '../components/Layout';
 import ProjectCard from '../components/ProjectCard';
+import CreateProjectModal from '../components/CreateProjectModal';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -10,13 +11,25 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
 
-  useEffect(() => {
+  const loadProjects = () => {
+    setLoading(true);
     getProjects()
       .then((res) => setProjects(res.data))
       .catch(() => setError('שגיאה בטעינת המחקרים'))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { loadProjects(); }, []);
+
+  const handleCreated = (newProject) => {
+    setShowModal(false);
+    setSuccessMsg(`המחקר "${newProject.projectNameHe}" נוצר בהצלחה!`);
+    loadProjects();
+    setTimeout(() => setSuccessMsg(''), 4000);
+  };
 
   const activeProjects = projects.filter(
     (p) => p.status === 'פעיל' || p.status === 'Active' || p.status === 'active'
@@ -32,10 +45,14 @@ export default function DashboardPage() {
   });
 
   return (
+    <>
     <Layout>
       {/* Page header */}
       <div className="flex items-start justify-between mb-6">
-        <button className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors">
+        <button
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors"
+        >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
@@ -47,6 +64,16 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-500 mt-0.5">{activeProjects.length} מחקרים פעילים</p>
         </div>
       </div>
+
+      {/* Success banner */}
+      {successMsg && (
+        <div className="mb-4 bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-lg flex items-center gap-2">
+          <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          {successMsg}
+        </div>
+      )}
 
       {/* Search bar */}
       <div className="relative mb-6">
@@ -107,5 +134,13 @@ export default function DashboardPage() {
         </>
       )}
     </Layout>
+
+      {showModal && (
+        <CreateProjectModal
+          onClose={() => setShowModal(false)}
+          onCreated={handleCreated}
+        />
+      )}
+    </>
   );
 }

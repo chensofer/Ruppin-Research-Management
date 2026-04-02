@@ -47,5 +47,9 @@ namespace RupResearchAPI.Models
 
         [Column("research_expenses")]
         public decimal? ResearchExpenses { get; set; }
+
+        [Column("funding_source")]
+        [StringLength(255)]
+        public string? FundingSource { get; set; }
     }
 }
