@@ -23,7 +23,6 @@ namespace RupResearchAPI.Data
         public DbSet<ResearchAlert> ResearchAlerts { get; set; }
         public DbSet<ResearchCategory> ResearchCategories { get; set; }
         public DbSet<ResearchCenterBudget> ResearchCenterBudgets { get; set; }
-        public DbSet<ResearchBelongsToCenter> ResearchBelongsToCenters { get; set; }
         public DbSet<ResearchUsersProject> ResearchUsersProjects { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -31,9 +30,6 @@ namespace RupResearchAPI.Data
             // Composite primary keys for junction/association tables
             modelBuilder.Entity<ResearchAssistant>()
                 .HasKey(a => new { a.AssistantUserId, a.ProjectId });
-
-            modelBuilder.Entity<ResearchBelongsToCenter>()
-                .HasKey(b => new { b.UserId, b.CenterId });
 
             modelBuilder.Entity<ResearchUsersProject>()
                 .HasKey(u => new { u.UserId, u.ProjectId });

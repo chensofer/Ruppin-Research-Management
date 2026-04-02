@@ -180,6 +180,14 @@ namespace RupResearchAPI.Services
             var project = await _db.ResearchProjects.FindAsync(id);
             if (project == null) return false;
 
+            bool hasPayments = await _db.ResearchPaymentRequests.AnyAsync(r => r.ProjectId == id);
+            bool hasHourReports = await _db.ResearchHourReports.AnyAsync(r => r.ProjectId == id);
+            bool hasApprovals = await _db.ResearchMonthlyWorkApprovals.AnyAsync(r => r.ProjectId == id);
+
+            if (hasPayments || hasHourReports || hasApprovals)
+                throw new InvalidOperationException(
+                    "לא ניתן למחוק מחקר שיש לו בקשות תשלום, דוחות שעות או אישורים חודשיים.");
+
             _db.ResearchProjects.Remove(project);
             await _db.SaveChangesAsync();
             return true;
@@ -229,6 +237,9 @@ namespace RupResearchAPI.Services
 
                 foreach (var ast in dto.Assistants)
                 {
+                    if (string.IsNullOrWhiteSpace(ast.AssistantUserId))
+                        throw new InvalidOperationException("מזהה עוזר מחקר חסר.");
+
                     if (ast.IsNewUser)
                     {
                         var newUser = new ResearchUser

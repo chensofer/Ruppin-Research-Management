@@ -61,18 +61,32 @@ namespace RupResearchAPI.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var deleted = await _projectService.Delete(id);
-            if (!deleted) return NotFound();
-            return NoContent();
+            try
+            {
+                var deleted = await _projectService.Delete(id);
+                if (!deleted) return NotFound();
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         // POST /api/projects/full — create project with all related data in one transaction
         [HttpPost("full")]
         public async Task<IActionResult> CreateFull([FromBody] CreateFullProjectDto dto)
         {
-            var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
-            var created = await _projectService.CreateFull(dto, userId);
-            return CreatedAtAction(nameof(GetById), new { id = created.ProjectId }, created);
+            try
+            {
+                var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
+                var created = await _projectService.CreateFull(dto, userId);
+                return CreatedAtAction(nameof(GetById), new { id = created.ProjectId }, created);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         // POST /api/projects/{id}/files — upload a single file for a project
