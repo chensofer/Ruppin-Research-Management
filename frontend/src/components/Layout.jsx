@@ -15,7 +15,7 @@ const navItems = [
   },
   {
     to: '/approvals',
-    label: 'אישור בקשות',
+    label: 'אישור בקשות תשלום',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -41,7 +41,7 @@ export default function Layout({ children }) {
       {/* Right Sidebar */}
       <aside className="w-64 bg-white border-l border-gray-200 flex flex-col fixed right-0 top-0 h-full z-10 shadow-sm">
         {/* Logo */}
-        <div className="px-6 py-5 border-b border-gray-100">
+        <div className="px-6 py-2 border-b border-gray-100 flex items-center justify-center">
           <Logo />
         </div>
 

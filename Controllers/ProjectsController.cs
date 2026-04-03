@@ -22,7 +22,8 @@ namespace RupResearchAPI.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var projects = await _projectService.GetAll();
+            var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
+            var projects = await _projectService.GetAll(userId);
             return Ok(projects);
         }
 
@@ -46,7 +47,8 @@ namespace RupResearchAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateProjectDto dto)
         {
-            var created = await _projectService.Create(dto);
+            var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
+            var created = await _projectService.Create(dto, userId);
             return CreatedAtAction(nameof(GetById), new { id = created.ProjectId }, created);
         }
 

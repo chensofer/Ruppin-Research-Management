@@ -1,12 +1,15 @@
-export default function Logo({ size = 'md' }) {
-  const height = size === 'sm' ? 32 : size === 'lg' ? 48 : 40;
+const sizeClass = {
+  sm: 'h-12 w-auto',
+  md: 'h-32 w-auto',
+  lg: 'h-52 w-auto',
+};
 
+export default function Logo({ size = 'md' }) {
   return (
     <img
       src="/logo.png"
       alt="RupResearch"
-      style={{ height }}
-      className="object-contain"
+      className={`object-contain ${sizeClass[size] ?? sizeClass.md}`}
     />
   );
 }

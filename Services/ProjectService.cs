@@ -14,11 +14,35 @@ namespace RupResearchAPI.Services
             _db = db;
         }
 
-        public async Task<List<ProjectResponseDto>> GetAll()
+        public async Task<List<ProjectResponseDto>> GetAll(string userId)
         {
-            return await _db.ResearchProjects
+            // Get all projects then filter in memory (avoids OPENJSON issue on older SQL Server)
+            var allProjects = await _db.ResearchProjects.ToListAsync();
+
+            var asPrincipal = allProjects
+                .Where(p => p.PrincipalResearcherId?.Trim() == userId.Trim())
+                .Select(p => p.ProjectId)
+                .ToHashSet();
+
+            var asTeamMember = (await _db.ResearchUsersProjects
+                .Where(u => u.UserId == userId)
+                .Select(u => u.ProjectId)
+                .ToListAsync()).ToHashSet();
+
+            var asAssistant = (await _db.ResearchAssistants
+                .Where(a => a.AssistantUserId == userId)
+                .Select(a => a.ProjectId)
+                .ToListAsync()).ToHashSet();
+
+            var userProjectIds = asPrincipal
+                .Union(asTeamMember)
+                .Union(asAssistant)
+                .ToHashSet();
+
+            return allProjects
+                .Where(p => userProjectIds.Contains(p.ProjectId))
                 .Select(p => ToDto(p))
-                .ToListAsync();
+                .ToList();
         }
 
         public async Task<ProjectResponseDto?> GetById(int id)
@@ -134,7 +158,7 @@ namespace RupResearchAPI.Services
             return detail;
         }
 
-        public async Task<ProjectResponseDto> Create(CreateProjectDto dto)
+        public async Task<ProjectResponseDto> Create(CreateProjectDto dto, string creatorUserId)
         {
             var project = new ResearchProject
             {
@@ -152,6 +176,10 @@ namespace RupResearchAPI.Services
 
             _db.ResearchProjects.Add(project);
             await _db.SaveChangesAsync();
+
+            // Auto-add creator to team so they can see this project
+            await EnsureUserInTeam(project.ProjectId, creatorUserId, "יוצר");
+
             return ToDto(project);
         }
 
@@ -276,6 +304,18 @@ namespace RupResearchAPI.Services
                         RequestDate = exp.RequestDate ?? DateOnly.FromDateTime(DateTime.Today),
                         CategoryName = exp.CategoryName,
                         Status = "שולם",
+                    });
+                }
+
+                // Auto-add creator to team if not already included
+                bool creatorAlreadyInTeam = dto.TeamMembers.Any(m => m.UserId == requestedByUserId);
+                if (!creatorAlreadyInTeam && !string.IsNullOrEmpty(requestedByUserId))
+                {
+                    _db.ResearchUsersProjects.Add(new ResearchUsersProject
+                    {
+                        UserId = requestedByUserId,
+                        ProjectId = project.ProjectId,
+                        ProjectRole = "יוצר",
                     });
                 }
 
@@ -527,6 +567,23 @@ namespace RupResearchAPI.Services
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────
+
+        private async Task EnsureUserInTeam(int projectId, string userId, string role)
+        {
+            if (string.IsNullOrWhiteSpace(userId)) return;
+            var exists = await _db.ResearchUsersProjects
+                .AnyAsync(up => up.ProjectId == projectId && up.UserId == userId);
+            if (!exists)
+            {
+                _db.ResearchUsersProjects.Add(new ResearchUsersProject
+                {
+                    UserId = userId,
+                    ProjectId = projectId,
+                    ProjectRole = role,
+                });
+                await _db.SaveChangesAsync();
+            }
+        }
 
         private static ProjectResponseDto ToDto(ResearchProject p) => new()
         {
