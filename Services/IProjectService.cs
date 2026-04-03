@@ -4,10 +4,10 @@ namespace RupResearchAPI.Services
 {
     public interface IProjectService
     {
-        Task<List<ProjectResponseDto>> GetAll();
+        Task<List<ProjectResponseDto>> GetAll(string userId);
         Task<ProjectResponseDto?> GetById(int id);
         Task<ProjectDetailDto?> GetDetail(int id);
-        Task<ProjectResponseDto> Create(CreateProjectDto dto);
+        Task<ProjectResponseDto> Create(CreateProjectDto dto, string creatorUserId);
         Task<ProjectResponseDto> CreateFull(CreateFullProjectDto dto, string requestedByUserId);
         Task<ProjectResponseDto?> Update(int id, UpdateProjectDto dto);
         Task<bool> Delete(int id);

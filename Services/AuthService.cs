@@ -26,6 +26,13 @@ namespace RupResearchAPI.Services
             if (exists)
                 throw new InvalidOperationException("User ID already exists.");
 
+            if (!string.IsNullOrEmpty(dto.SystemAuthorization))
+            {
+                bool roleExists = await _db.ResearchRoles.AnyAsync(r => r.RoleName == dto.SystemAuthorization);
+                if (!roleExists)
+                    throw new InvalidOperationException($"Role '{dto.SystemAuthorization}' does not exist.");
+            }
+
             var user = new ResearchUser
             {
                 UserId = dto.UserId,

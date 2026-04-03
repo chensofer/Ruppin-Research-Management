@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import ProjectPage from './pages/ProjectPage';
+import ApprovalsPage from './pages/ApprovalsPage';
 
 export default function App() {
   return (
@@ -21,6 +22,9 @@ export default function App() {
           } />
           <Route path="/projects/:id" element={
             <ProtectedRoute><ProjectPage /></ProtectedRoute>
+          } />
+          <Route path="/approvals" element={
+            <ProtectedRoute><ApprovalsPage /></ProtectedRoute>
           } />
 
           {/* Default redirect */}
