@@ -14,6 +14,12 @@ namespace RupResearchAPI.DTOs
         public DateOnly? EndDate { get; set; }
         public string? Status { get; set; }
         public decimal? ResearchExpenses { get; set; }
+        // Computed budget stats
+        public decimal TotalPaid { get; set; }
+        public int PendingCount { get; set; }
+        public decimal TotalFuture { get; set; }
+        public decimal RemainingBalance { get; set; }
+        public decimal AvailableBalance { get; set; }
     }
 
     public class CreateProjectDto

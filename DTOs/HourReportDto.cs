@@ -37,6 +37,8 @@ namespace RupResearchAPI.DTOs
         public string? ApprovalDate { get; set; }  // "yyyy-MM-dd"
         public decimal? TotalWorkedHours { get; set; }
         public string? Comments { get; set; }
+        public decimal? SalaryPerHour { get; set; }
+        public decimal? TotalPaymentAmount { get; set; }
     }
 
     public class SubmitMonthlyApprovalDto

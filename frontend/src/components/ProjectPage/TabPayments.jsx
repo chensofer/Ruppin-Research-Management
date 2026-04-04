@@ -33,7 +33,6 @@ const EMPTY_FORM = {
   requestedAmount: '',
   requestDate: new Date().toISOString().slice(0, 10),
   providerId: '',
-  dueDate: '',
   comments: '',
 };
 
@@ -82,6 +81,7 @@ export default function TabPayments({ projectId, payments, onCreated }) {
     if (!form.requestedAmount || parseFloat(form.requestedAmount) <= 0) {
       setError('יש להזין סכום תקין'); return;
     }
+    if (!form.providerId) { setError('יש לבחור ספק'); return; }
     setSaving(true);
     setError('');
     try {
@@ -91,33 +91,42 @@ export default function TabPayments({ projectId, payments, onCreated }) {
         requestDescription: form.requestDescription || null,
         requestedAmount: parseFloat(form.requestedAmount),
         requestDate: form.requestDate || null,
-        providerId: form.providerId ? parseInt(form.providerId) : null,
-        dueDate: form.dueDate || null,
+        providerId: parseInt(form.providerId),
         comments: form.comments || null,
       });
 
-      // Upload files if any
-      if (selectedFiles.length > 0) {
-        const newId = res.data.paymentRequestId;
-        for (const file of selectedFiles) {
-          await uploadQuotationFile(newId, file);
-        }
-      }
-
+      // Capture files before clearing state
+      const filesToUpload = [...selectedFiles];
       setForm(EMPTY_FORM);
       setSelectedFiles([]);
       setShowForm(false);
       onCreated();
-    } catch {
-      setError('שגיאה בשמירת הבקשה');
+
+      // Upload files sequentially; refresh again when done
+      if (filesToUpload.length > 0) {
+        const newId = res.data.paymentRequestId;
+        for (const file of filesToUpload) {
+          try {
+            await uploadQuotationFile(newId, file);
+          } catch {
+            // ignore individual file upload errors
+          }
+        }
+        onCreated();
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'שגיאה בשמירת הבקשה');
     } finally {
       setSaving(false);
     }
   };
 
+  // Sort newest first by ID
+  const sortedPayments = [...payments].sort((a, b) => b.paymentRequestId - a.paymentRequestId);
+
   const filteredPayments = statusFilter === 'הכל'
-    ? payments
-    : payments.filter((p) => (p.status || 'ממתין') === statusFilter);
+    ? sortedPayments
+    : sortedPayments.filter((p) => (p.status || 'ממתין') === statusFilter);
 
   const countFor = (s) => s === 'הכל'
     ? payments.length
@@ -160,7 +169,7 @@ export default function TabPayments({ projectId, payments, onCreated }) {
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1">ספק</label>
+              <label className="block text-xs text-gray-500 mb-1">ספק <span className="text-red-500">*</span></label>
               {showNewProvider ? (
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-2">
@@ -197,12 +206,6 @@ export default function TabPayments({ projectId, payments, onCreated }) {
                 </div>
               )}
             </div>
-
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">תאריך לתשלום</label>
-              <input type="date" value={form.dueDate} onChange={set('dueDate')}
-                min={new Date().toISOString().slice(0, 10)} className={inputCls} />
-            </div>
           </div>
 
           <div>
@@ -217,11 +220,31 @@ export default function TabPayments({ projectId, payments, onCreated }) {
               type="file"
               multiple
               accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
-              onChange={(e) => setSelectedFiles(Array.from(e.target.files))}
+              onChange={(e) => {
+                const added = Array.from(e.target.files);
+                setSelectedFiles((prev) => {
+                  const existingNames = new Set(prev.map((f) => f.name));
+                  return [...prev, ...added.filter((f) => !existingNames.has(f.name))];
+                });
+                e.target.value = '';
+              }}
               className="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-primary file:text-white hover:file:bg-primary-dark cursor-pointer"
             />
             {selectedFiles.length > 0 && (
-              <p className="text-xs text-gray-400 mt-1">{selectedFiles.length} קבצים נבחרו</p>
+              <ul className="mt-1.5 space-y-1">
+                {selectedFiles.map((f, i) => (
+                  <li key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded px-2 py-1">
+                    <span className="text-gray-600 truncate">{f.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="text-gray-400 hover:text-red-500 ml-2 flex-shrink-0"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
 
@@ -319,16 +342,12 @@ export default function TabPayments({ projectId, payments, onCreated }) {
                         <td colSpan={6} className="px-8 py-4">
                           <div className="grid grid-cols-3 gap-4 text-xs">
                             <div>
-                              <dt className="text-gray-400 mb-0.5">שם שולח הבקשה</dt>
+                              <dt className="text-gray-400 mb-0.5">שולח הבקשה</dt>
                               <dd className="text-gray-700 font-medium">{p.requestedByUserName || p.requestedByUserId || '—'}</dd>
                             </div>
                             <div>
                               <dt className="text-gray-400 mb-0.5">ספק</dt>
                               <dd className="text-gray-700 font-medium">{p.providerName || '—'}</dd>
-                            </div>
-                            <div>
-                              <dt className="text-gray-400 mb-0.5">תאריך לתשלום</dt>
-                              <dd className="text-gray-700 font-medium">{fmtDate(p.dueDate)}</dd>
                             </div>
                             <div>
                               <dt className="text-gray-400 mb-0.5">תאריך אישור / דחייה</dt>

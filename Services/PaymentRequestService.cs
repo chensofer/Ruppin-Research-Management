@@ -39,8 +39,42 @@ namespace RupResearchAPI.Services
             }).ToList();
         }
 
+        private async Task<decimal> GetAvailableBudget(int projectId)
+        {
+            var project = await _db.ResearchProjects.FindAsync(projectId);
+            var budget = project?.TotalBudget ?? 0;
+
+            var allPayments = await _db.ResearchPaymentRequests
+                .Where(r => r.ProjectId == projectId)
+                .ToListAsync();
+
+            var totalPaid = allPayments
+                .Where(r => r.Status == "אושר" || r.Status == "שולם")
+                .Sum(r => r.RequestedAmount ?? 0);
+
+            var totalPending = allPayments
+                .Where(r => r.Status == "ממתין")
+                .Sum(r => r.RequestedAmount ?? 0);
+
+            var allCommitments = await _db.ResearchFutureCommitments
+                .Where(c => c.ProjectId == projectId && c.Status != "בוטל")
+                .ToListAsync();
+            var totalFuture = allCommitments.Sum(c => c.ExpectedAmount ?? 0);
+
+            return budget - totalPaid - totalPending - totalFuture;
+        }
+
         public async Task<PaymentRequestResponseDto> Create(int projectId, CreatePaymentRequestDto dto)
         {
+            // Budget validation (skip for pre-paid expenses which already have status "שולם")
+            if (dto.Status != "שולם" && dto.RequestedAmount.HasValue && dto.RequestedAmount > 0)
+            {
+                var available = await GetAvailableBudget(projectId);
+                if (dto.RequestedAmount > available)
+                    throw new InvalidOperationException(
+                        $"אין תקציב זמין מספיק. יתרה זמינה (לאחר הוצאות, בקשות ממתינות והתחייבויות עתידיות): ₪{available:N0}");
+            }
+
             var request = new ResearchPaymentRequest
             {
                 ProjectId = projectId,
@@ -98,10 +132,14 @@ namespace RupResearchAPI.Services
             var allProjects = await _db.ResearchProjects.ToListAsync();
             var projectDict = allProjects.ToDictionary(p => p.ProjectId);
 
+            var allProviders = await _db.ResearchProviders.ToListAsync();
+            var providerDict = allProviders.ToDictionary(p => p.ProviderId);
+
             return requests.Select(r =>
             {
                 projectDict.TryGetValue(r.ProjectId ?? 0, out var project);
-                return ToPendingDto(r, project);
+                providerDict.TryGetValue(r.ProviderId ?? -1, out var provider);
+                return ToPendingDto(r, project, provider?.ProviderName);
             }).ToList();
         }
 
@@ -122,17 +160,17 @@ namespace RupResearchAPI.Services
             }
             catch { asTeamMember = []; }
 
-            List<int?> asAssistantRaw;
+            List<int> asAssistant;
             try
             {
-                asAssistantRaw = await _db.ResearchAssistants
-                    .Where(a => a.AssistantUserId == userId)
-                    .Select(a => (int?)a.ProjectId)
-                    .ToListAsync();
+                var trimmedId = userId.Trim();
+                var allAssistants = await _db.ResearchAssistants.ToListAsync();
+                asAssistant = allAssistants
+                    .Where(a => a.AssistantUserId?.Trim() == trimmedId)
+                    .Select(a => a.ProjectId)
+                    .ToList();
             }
-            catch { asAssistantRaw = []; }
-
-            var asAssistant = asAssistantRaw.Where(x => x.HasValue).Select(x => x!.Value).ToList();
+            catch { asAssistant = []; }
 
             return asPrincipal.Union(asTeamMember).Union(asAssistant).Distinct().ToList();
         }
@@ -181,7 +219,7 @@ namespace RupResearchAPI.Services
             Comments = r.Comments,
         };
 
-        private static PendingPaymentRequestDto ToPendingDto(ResearchPaymentRequest r, ResearchProject? project) => new()
+        private static PendingPaymentRequestDto ToPendingDto(ResearchPaymentRequest r, ResearchProject? project, string? providerName = null) => new()
         {
             PaymentRequestId = r.PaymentRequestId,
             ProjectId = r.ProjectId,
@@ -189,6 +227,7 @@ namespace RupResearchAPI.Services
             ProjectNameEn = project?.ProjectNameEn,
             RequestedByUserId = r.RequestedByUserId,
             ProviderId = r.ProviderId,
+            ProviderName = providerName,
             CategoryName = r.CategoryName,
             RequestTitle = r.RequestTitle,
             RequestDescription = r.RequestDescription,

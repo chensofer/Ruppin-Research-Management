@@ -38,8 +38,15 @@ namespace RupResearchAPI.Controllers
         [HttpPost("api/projects/{projectId}/payment-requests")]
         public async Task<IActionResult> Create(int projectId, [FromBody] CreatePaymentRequestDto dto)
         {
-            var created = await _service.Create(projectId, dto);
-            return Ok(created);
+            try
+            {
+                var created = await _service.Create(projectId, dto);
+                return Ok(created);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPut("api/payment-requests/{id}/status")]

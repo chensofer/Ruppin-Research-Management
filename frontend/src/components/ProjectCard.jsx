@@ -19,12 +19,13 @@ function StatusBadge({ status }) {
 export default function ProjectCard({ project }) {
   const navigate = useNavigate();
   const budget = project.totalBudget || 0;
-  const expenses = project.researchExpenses || 0;
-  const remaining = budget - expenses;
-  const usagePercent = budget > 0 ? Math.min(Math.round((expenses / budget) * 100), 100) : 0;
+  const totalPaid = project.totalPaid ?? 0;
+  const remaining = project.remainingBalance ?? (budget - totalPaid);
+  const available = project.availableBalance ?? remaining;
+  const usagePercent = budget > 0 ? Math.min(Math.round((totalPaid / budget) * 100), 100) : 0;
 
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(amount);
+  const fmt = (amount) =>
+    `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(amount)}`;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
@@ -57,20 +58,30 @@ export default function ProjectCard({ project }) {
       )}
 
       {/* Budget row */}
-      <div className="bg-gray-50 rounded-lg p-3">
+      <div className="bg-gray-50 rounded-lg p-3 space-y-2">
         <div className="flex justify-between text-center">
           <div>
             <p className="text-xs text-gray-500 mb-0.5">יתרה</p>
-            <p className="text-base font-bold text-success">₪{formatCurrency(remaining)}</p>
+            <p className={`text-base font-bold ${remaining >= 0 ? 'text-success' : 'text-red-600'}`}>
+              {fmt(remaining)}
+            </p>
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-0.5">תקציב כולל</p>
-            <p className="text-base font-bold text-gray-800">₪{formatCurrency(budget)}</p>
+            <p className="text-base font-bold text-gray-800">{fmt(budget)}</p>
           </div>
         </div>
 
+        {/* Available after future commitments */}
+        {project.totalFuture > 0 && (
+          <div className="flex justify-between text-xs text-gray-500 border-t border-gray-200 pt-2">
+            <span className="font-medium text-gray-700">{fmt(available)}</span>
+            <span>זמין לאחר התחייבויות עתידיות</span>
+          </div>
+        )}
+
         {/* Progress bar */}
-        <div className="mt-3">
+        <div className="mt-1">
           <div className="flex justify-between text-xs text-gray-400 mb-1">
             <span>{usagePercent}%</span>
             <span>ניצול תקציב</span>

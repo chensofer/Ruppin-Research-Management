@@ -19,11 +19,16 @@ namespace RupResearchAPI.Services
             // Use a date range to avoid EF Core translation issues with DateOnly.Month/Year
             var startDate = new DateOnly(year, month, 1);
             var endDate = startDate.AddMonths(1);
+            var trimmedUserId = userId.Trim();
 
+            // Fetch all reports for the project first, then filter by userId in memory
+            // to handle char(10) padding in DB columns
             var all = await _db.ResearchHourReports
-                .Where(r => r.UserId == userId && r.ProjectId == projectId && r.ReportDate.HasValue)
+                .Where(r => r.ProjectId == projectId && r.ReportDate.HasValue)
                 .OrderBy(r => r.ReportDate)
                 .ToListAsync();
+
+            all = all.Where(r => r.UserId?.Trim() == trimmedUserId).ToList();
 
             // Filter in memory to avoid OPENJSON / DateOnly translation issues
             return all
@@ -54,9 +59,11 @@ namespace RupResearchAPI.Services
             // If a report already exists for this user+project+date, update it
             if (reportDate.HasValue)
             {
+                var trimmedId = dto.UserId?.Trim();
                 var allForUser = await _db.ResearchHourReports
-                    .Where(r => r.UserId == dto.UserId && r.ProjectId == dto.ProjectId)
+                    .Where(r => r.ProjectId == dto.ProjectId)
                     .ToListAsync();
+                allForUser = allForUser.Where(r => r.UserId?.Trim() == trimmedId).ToList();
 
                 var existing = allForUser.FirstOrDefault(r => r.ReportDate == reportDate);
 
@@ -89,7 +96,7 @@ namespace RupResearchAPI.Services
         public async Task<bool> DeleteReport(int id, string userId)
         {
             var report = await _db.ResearchHourReports.FindAsync(id);
-            if (report == null || report.UserId != userId) return false;
+            if (report == null || report.UserId?.Trim() != userId.Trim()) return false;
             _db.ResearchHourReports.Remove(report);
             await _db.SaveChangesAsync();
             return true;
@@ -97,10 +104,11 @@ namespace RupResearchAPI.Services
 
         public async Task<MonthlyApprovalDto?> GetMonthlyApproval(string userId, int projectId, int month, int year)
         {
-            var record = await _db.ResearchMonthlyWorkApprovals
-                .FirstOrDefaultAsync(a =>
-                    a.UserId == userId && a.ProjectId == projectId &&
-                    a.Month == month && a.Year == year);
+            var trimmedId = userId.Trim();
+            var all = await _db.ResearchMonthlyWorkApprovals
+                .Where(a => a.ProjectId == projectId && a.Month == month && a.Year == year)
+                .ToListAsync();
+            var record = all.FirstOrDefault(a => a.UserId?.Trim() == trimmedId);
 
             if (record == null) return null;
 
@@ -149,6 +157,32 @@ namespace RupResearchAPI.Services
             var record = await _db.ResearchMonthlyWorkApprovals.FindAsync(id);
             if (record == null) return null;
 
+            decimal paymentAmount = 0;
+            decimal salaryPerHour = 0;
+
+            if (dto.ApprovalStatus == "אושר" && record.ProjectId.HasValue && record.UserId != null)
+            {
+                // Look up assistant's salary (in memory to handle char(10) trimming)
+                var allAssistants = await _db.ResearchAssistants.ToListAsync();
+                var assistantRecord = allAssistants.FirstOrDefault(a =>
+                    a.AssistantUserId?.Trim() == record.UserId.Trim() &&
+                    a.ProjectId == record.ProjectId.Value);
+
+                salaryPerHour = assistantRecord?.SalaryPerHour ?? 0;
+                var totalHours = record.TotalWorkedHours ?? 0;
+                paymentAmount = salaryPerHour * totalHours;
+
+                // Budget validation — only when there is an actual payment
+                if (paymentAmount > 0)
+                {
+                    var available = await GetAvailableBudget(record.ProjectId.Value);
+                    if (paymentAmount > available)
+                        throw new InvalidOperationException(
+                            $"אין תקציב זמין מספיק לאישור. עלות השכר: ₪{paymentAmount:N0}. יתרה זמינה (לאחר הוצאות והתחייבויות עתידיות): ₪{available:N0}");
+                }
+            }
+
+            // ── Step 1: Save the approval decision first ──────────────────────
             record.ApprovalStatus = dto.ApprovalStatus;
             record.ApprovedByUserId = dto.ApprovedByUserId;
             record.ApprovalDate = DateOnly.FromDateTime(DateTime.Today);
@@ -156,11 +190,82 @@ namespace RupResearchAPI.Services
 
             await _db.SaveChangesAsync();
 
+            // ── Step 2: Create the executed expense (separate save, non-blocking) ──
+            if (dto.ApprovalStatus == "אושר" && record.ProjectId.HasValue && record.UserId != null)
+            {
+                try
+                {
+                    const string wageCategory = "שכר לעוזרי מחקר";
+
+                    // Ensure the category exists (may be FK-constrained in DB)
+                    bool catExists = await _db.ResearchCategories
+                        .AnyAsync(c => c.CategoryName == wageCategory);
+                    if (!catExists)
+                    {
+                        _db.ResearchCategories.Add(new ResearchCategory
+                        {
+                            CategoryName = wageCategory,
+                            CategoryDescription = "שכר לעוזרי מחקר"
+                        });
+                        await _db.SaveChangesAsync();
+                    }
+
+                    var monthNames = new[] { "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני",
+                                             "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר" };
+                    var monthName = record.Month.HasValue && record.Month >= 1 && record.Month <= 12
+                        ? monthNames[record.Month.Value - 1] : $"חודש {record.Month}";
+
+                    _db.ResearchPaymentRequests.Add(new ResearchPaymentRequest
+                    {
+                        ProjectId = record.ProjectId,
+                        RequestedByUserId = record.UserId?.Trim(),
+                        CategoryName = wageCategory,
+                        RequestTitle = $"שכר עוזר מחקר — {monthName} {record.Year}",
+                        RequestedAmount = paymentAmount > 0 ? paymentAmount : null,
+                        RequestDate = DateOnly.FromDateTime(DateTime.Today),
+                        Status = "שולם",
+                        ApprovedByUserId = dto.ApprovedByUserId?.Trim(),
+                        DecisionDate = DateOnly.FromDateTime(DateTime.Today),
+                    });
+                    await _db.SaveChangesAsync();
+                }
+                catch
+                {
+                    // Payment record creation failed — approval is already saved above.
+                    // Log if logging is available; don't re-throw so the caller gets 200.
+                }
+            }
+
             var project = await _db.ResearchProjects.FindAsync(record.ProjectId);
             var userRecord = record.UserId != null ? await _db.ResearchUsers.FindAsync(record.UserId) : null;
             string? userName = userRecord != null ? $"{userRecord.FirstName} {userRecord.LastName}".Trim() : null;
 
             return ToApprovalDto(record, project?.ProjectNameHe, userName);
+        }
+
+        private async Task<decimal> GetAvailableBudget(int projectId)
+        {
+            var project = await _db.ResearchProjects.FindAsync(projectId);
+            var budget = project?.TotalBudget ?? 0;
+
+            var allPayments = await _db.ResearchPaymentRequests
+                .Where(r => r.ProjectId == projectId)
+                .ToListAsync();
+
+            var totalPaid = allPayments
+                .Where(r => r.Status == "אושר" || r.Status == "שולם")
+                .Sum(r => r.RequestedAmount ?? 0);
+
+            var totalPending = allPayments
+                .Where(r => r.Status == "ממתין")
+                .Sum(r => r.RequestedAmount ?? 0);
+
+            var allCommitments = await _db.ResearchFutureCommitments
+                .Where(c => c.ProjectId == projectId && c.Status != "בוטל")
+                .ToListAsync();
+            var totalFuture = allCommitments.Sum(c => c.ExpectedAmount ?? 0);
+
+            return budget - totalPaid - totalPending - totalFuture;
         }
 
         public async Task<List<MonthlyApprovalDto>> GetPendingForResearcher(string researcherId)
@@ -189,13 +294,23 @@ namespace RupResearchAPI.Services
             var allUsers = await _db.ResearchUsers.ToListAsync();
             var userDict = allUsers.ToDictionary(u => u.UserId.Trim());
 
+            var allAssistants = await _db.ResearchAssistants.ToListAsync();
+
             return relevant.Select(a =>
             {
                 projectDict.TryGetValue(a.ProjectId ?? 0, out var project);
                 var uid = a.UserId?.Trim() ?? "";
                 userDict.TryGetValue(uid, out var user);
                 string? userName = user != null ? $"{user.FirstName} {user.LastName}".Trim() : null;
-                return ToApprovalDto(a, project?.ProjectNameHe, userName);
+
+                var assistantRecord = allAssistants.FirstOrDefault(ast =>
+                    ast.AssistantUserId?.Trim() == uid && ast.ProjectId == (a.ProjectId ?? 0));
+                var salaryPerHour = assistantRecord?.SalaryPerHour;
+                var totalPayment = salaryPerHour.HasValue && a.TotalWorkedHours.HasValue
+                    ? salaryPerHour.Value * a.TotalWorkedHours.Value
+                    : (decimal?)null;
+
+                return ToApprovalDto(a, project?.ProjectNameHe, userName, salaryPerHour, totalPayment);
             }).ToList();
         }
 
@@ -238,7 +353,12 @@ namespace RupResearchAPI.Services
             Comments = r.Comments,
         };
 
-        private static MonthlyApprovalDto ToApprovalDto(ResearchMonthlyWorkApproval a, string? projectNameHe = null, string? userName = null) => new()
+        private static MonthlyApprovalDto ToApprovalDto(
+            ResearchMonthlyWorkApproval a,
+            string? projectNameHe = null,
+            string? userName = null,
+            decimal? salaryPerHour = null,
+            decimal? totalPaymentAmount = null) => new()
         {
             MonthlyApprovalId = a.MonthlyApprovalId,
             UserId = a.UserId,
@@ -252,6 +372,8 @@ namespace RupResearchAPI.Services
             ApprovalDate = a.ApprovalDate?.ToString("yyyy-MM-dd"),
             TotalWorkedHours = a.TotalWorkedHours,
             Comments = a.Comments,
+            SalaryPerHour = salaryPerHour,
+            TotalPaymentAmount = totalPaymentAmount,
         };
     }
 }

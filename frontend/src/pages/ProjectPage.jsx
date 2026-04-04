@@ -17,10 +17,10 @@ import TabFutureExpenses from '../components/ProjectPage/TabFutureExpenses';
 
 const TABS = [
   { id: 'overview',     label: 'סקירה כללית' },
+  { id: 'transactions', label: 'ריכוז תנועות' },
   { id: 'payments',     label: 'בקשות תשלום' },
   { id: 'team',         label: 'צוות המחקר' },
   { id: 'assistants',   label: 'עוזרי מחקר' },
-  { id: 'transactions', label: 'ספר הזמנות' },
   { id: 'documents',    label: 'מסמכים' },
   { id: 'future',       label: 'הוצאות עתידיות' },
 ];

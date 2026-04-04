@@ -25,6 +25,7 @@ function RequestCard({ request, onApprove, onReject }) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const handleApprove = async () => {
     setBusy(true);
@@ -38,90 +39,147 @@ function RequestCard({ request, onApprove, onReject }) {
     setBusy(false);
   };
 
+  const quotationFiles = request.quotationFilePath
+    ? request.quotationFilePath.split(';').filter(Boolean)
+    : [];
+  const hasDetails = request.providerName || request.requestDescription || quotationFiles.length > 0;
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-semibold text-gray-900 truncate">
-            {request.requestTitle || 'בקשה ללא כותרת'}
-          </h4>
-          {request.categoryName && (
-            <span className="inline-block mt-1 text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-              {request.categoryName}
-            </span>
-          )}
-        </div>
-        <div className="text-left flex-shrink-0">
-          <p className="text-lg font-bold text-gray-900">{formatAmount(request.requestedAmount)}</p>
-        </div>
-      </div>
-
-      {request.requestDescription && (
-        <p className="text-xs text-gray-500 mb-3 line-clamp-2">{request.requestDescription}</p>
-      )}
-
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mb-4">
-        {request.requestedByUserId && (
-          <span>מבקש: <span className="font-medium text-gray-700">{request.requestedByUserId}</span></span>
-        )}
-        {request.requestDate && (
-          <span>תאריך: <span className="font-medium text-gray-700">{formatDate(request.requestDate)}</span></span>
-        )}
-        {request.dueDate && (
-          <span>לביצוע עד: <span className="font-medium text-gray-700">{formatDate(request.dueDate)}</span></span>
-        )}
-      </div>
-
-      {rejecting ? (
-        <div className="space-y-2">
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="סיבת הדחייה (אופציונלי)"
-            rows={2}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={handleRejectConfirm}
-              disabled={busy}
-              className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors"
-            >
-              {busy ? 'שולח...' : 'אישור דחייה'}
-            </button>
-            <button
-              onClick={() => { setRejecting(false); setReason(''); }}
-              disabled={busy}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-700 text-sm font-medium py-2 rounded-lg transition-colors"
-            >
-              ביטול
-            </button>
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-semibold text-gray-900 truncate">
+              {request.requestTitle || 'בקשה ללא כותרת'}
+            </h4>
+            {request.categoryName && (
+              <span className="inline-block mt-1 text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                {request.categoryName}
+              </span>
+            )}
+          </div>
+          <div className="text-left flex-shrink-0">
+            <p className="text-lg font-bold text-gray-900">{formatAmount(request.requestedAmount)}</p>
           </div>
         </div>
-      ) : (
-        <div className="flex gap-2">
-          <button
-            onClick={handleApprove}
-            disabled={busy}
-            className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            {busy ? 'מאשר...' : 'אישור'}
-          </button>
-          <button
-            onClick={() => setRejecting(true)}
-            disabled={busy}
-            className="flex-1 bg-red-50 hover:bg-red-100 disabled:opacity-50 text-red-700 text-sm font-medium py-2 rounded-lg border border-red-200 transition-colors flex items-center justify-center gap-1.5"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            דחייה
-          </button>
+
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mb-4">
+          {(request.requestedByUserName || request.requestedByUserId) && (
+            <span>מבקש: <span className="font-medium text-gray-700">{request.requestedByUserName || request.requestedByUserId}</span></span>
+          )}
+          {request.requestDate && (
+            <span>תאריך: <span className="font-medium text-gray-700">{formatDate(request.requestDate)}</span></span>
+          )}
         </div>
-      )}
+
+        {hasDetails && (
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 mb-3 transition-colors"
+          >
+            <svg
+              className={`w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+            {expanded ? 'הסתר פרטים' : 'פרטים נוספים'}
+          </button>
+        )}
+
+        {expanded && (
+          <div className="bg-gray-50 rounded-lg p-3 mb-3 space-y-2 text-xs">
+            {request.providerName && (
+              <div>
+                <dt className="text-gray-400 mb-0.5">ספק</dt>
+                <dd className="text-gray-700 font-medium">{request.providerName}</dd>
+              </div>
+            )}
+            {request.requestDescription && (
+              <div>
+                <dt className="text-gray-400 mb-0.5">תיאור</dt>
+                <dd className="text-gray-700">{request.requestDescription}</dd>
+              </div>
+            )}
+            {quotationFiles.length > 0 && (
+              <div>
+                <dt className="text-gray-400 mb-1">קבצים מצורפים</dt>
+                <dd className="flex flex-wrap gap-1.5">
+                  {quotationFiles.map((path, i) => {
+                    const name = path.split('/').pop();
+                    return (
+                      <a
+                        key={i}
+                        href={`http://localhost:5269${path}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-primary bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded-lg transition-colors"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                        {name}
+                      </a>
+                    );
+                  })}
+                </dd>
+              </div>
+            )}
+          </div>
+        )}
+
+        {rejecting ? (
+          <div className="space-y-2">
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="סיבת הדחייה (אופציונלי)"
+              rows={2}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleRejectConfirm}
+                disabled={busy}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors"
+              >
+                {busy ? 'שולח...' : 'אישור דחייה'}
+              </button>
+              <button
+                onClick={() => { setRejecting(false); setReason(''); }}
+                disabled={busy}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-700 text-sm font-medium py-2 rounded-lg transition-colors"
+              >
+                ביטול
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              onClick={handleApprove}
+              disabled={busy}
+              className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              {busy ? 'מאשר...' : 'אישור'}
+            </button>
+            <button
+              onClick={() => setRejecting(true)}
+              disabled={busy}
+              className="flex-1 bg-red-50 hover:bg-red-100 disabled:opacity-50 text-red-700 text-sm font-medium py-2 rounded-lg border border-red-200 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              דחייה
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -130,12 +188,20 @@ function HourApprovalCard({ record, onDecide }) {
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
+  const [budgetError, setBudgetError] = useState('');
+
+  const fmtCurrency = (n) => n != null
+    ? `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)}` : null;
 
   const decide = async (status) => {
     setBusy(true);
-    await onDecide(record.monthlyApprovalId, status, status === 'נדחה' ? reason : null);
+    setBudgetError('');
+    const err = await onDecide(record.monthlyApprovalId, status, status === 'נדחה' ? reason : null);
+    if (err) setBudgetError(err);
     setBusy(false);
   };
+
+  const paymentAmount = record.totalPaymentAmount;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
@@ -151,8 +217,20 @@ function HourApprovalCard({ record, onDecide }) {
         <div className="text-left flex-shrink-0">
           <p className="text-lg font-bold text-gray-900">{record.totalWorkedHours ?? '—'}</p>
           <p className="text-xs text-gray-400">שעות</p>
+          {paymentAmount != null && (
+            <p className="text-sm font-bold text-primary mt-0.5">{fmtCurrency(paymentAmount)}</p>
+          )}
+          {record.salaryPerHour != null && (
+            <p className="text-xs text-gray-400">{fmtCurrency(record.salaryPerHour)}/שעה</p>
+          )}
         </div>
       </div>
+
+      {budgetError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-lg mb-3">
+          {budgetError}
+        </div>
+      )}
 
       {record.comments && (
         <p className="text-xs text-gray-500 mb-3">{record.comments}</p>
@@ -269,8 +347,12 @@ export default function ApprovalsPage() {
       });
       setHourRecords((prev) => prev.filter((r) => r.monthlyApprovalId !== id));
       showToast(status === 'אושר' ? 'שעות אושרו' : 'שעות נדחו');
-    } catch {
-      showToast('שגיאה בעדכון');
+      return null;
+    } catch (err) {
+      const msg = err.response?.data?.message || 'שגיאה בעדכון';
+      if (err.response?.status === 400) return msg; // return budget error to card
+      showToast(msg);
+      return null;
     }
   };
 

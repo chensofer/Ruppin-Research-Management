@@ -29,20 +29,44 @@ namespace RupResearchAPI.Services
                 .Select(u => u.ProjectId)
                 .ToListAsync()).ToHashSet();
 
-            var asAssistant = (await _db.ResearchAssistants
-                .Where(a => a.AssistantUserId == userId)
+            var allAssistants = await _db.ResearchAssistants.ToListAsync();
+            var asAssistant = allAssistants
+                .Where(a => a.AssistantUserId?.Trim() == userId.Trim())
                 .Select(a => a.ProjectId)
-                .ToListAsync()).ToHashSet();
+                .ToHashSet();
 
             var userProjectIds = asPrincipal
                 .Union(asTeamMember)
                 .Union(asAssistant)
                 .ToHashSet();
 
-            return allProjects
+            var userProjects = allProjects
                 .Where(p => userProjectIds.Contains(p.ProjectId))
-                .Select(p => ToDto(p))
                 .ToList();
+
+            // Load budget data in memory for all user projects
+            var allPayments = await _db.ResearchPaymentRequests.ToListAsync();
+            var allCommitments = await _db.ResearchFutureCommitments.ToListAsync();
+
+            return userProjects.Select(p =>
+            {
+                var payments = allPayments.Where(r => r.ProjectId == p.ProjectId).ToList();
+                var totalPaid = payments
+                    .Where(r => r.Status == "אושר" || r.Status == "שולם")
+                    .Sum(r => r.RequestedAmount ?? 0);
+                var pendingCount = payments.Count(r => r.Status == "ממתין");
+                var totalFuture = allCommitments
+                    .Where(c => c.ProjectId == p.ProjectId && c.Status != "בוטל")
+                    .Sum(c => c.ExpectedAmount ?? 0);
+                var budget = p.TotalBudget ?? 0;
+                var dto = ToDto(p);
+                dto.TotalPaid = totalPaid;
+                dto.PendingCount = pendingCount;
+                dto.TotalFuture = totalFuture;
+                dto.RemainingBalance = budget - totalPaid;
+                dto.AvailableBalance = budget - totalPaid - totalFuture;
+                return dto;
+            }).ToList();
         }
 
         public async Task<ProjectResponseDto?> GetById(int id)

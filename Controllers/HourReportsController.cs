@@ -58,9 +58,16 @@ namespace RupResearchAPI.Controllers
         [HttpPut("monthly/{id}/decision")]
         public async Task<IActionResult> Decide(int id, [FromBody] DecideMonthlyApprovalDto dto)
         {
-            var result = await _svc.DecideMonthly(id, dto);
-            if (result == null) return NotFound();
-            return Ok(result);
+            try
+            {
+                var result = await _svc.DecideMonthly(id, dto);
+                if (result == null) return NotFound();
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // GET /api/hour-reports/monthly/pending?researcherId=

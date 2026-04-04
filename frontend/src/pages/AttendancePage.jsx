@@ -343,7 +343,7 @@ export default function AttendancePage() {
           <>
             {/* Approval status banner */}
             {approval && (
-              <div className={`flex items-center justify-between px-5 py-3.5 rounded-xl mb-4 border ${
+              <div className={`px-5 py-3.5 rounded-xl mb-4 border ${
                 isApproved ? 'bg-green-50 border-green-200'
                   : approval.approvalStatus === 'נדחה' ? 'bg-red-50 border-red-200'
                   : 'bg-yellow-50 border-yellow-200'
@@ -358,6 +358,11 @@ export default function AttendancePage() {
                       : 'הדוח נדחה — ניתן לערוך ולשלוח מחדש'}
                   </span>
                 </div>
+                {approval.approvalStatus === 'נדחה' && approval.comments && (
+                  <p className="text-sm text-red-700 mt-2 pr-1">
+                    <span className="font-medium">סיבת הדחייה: </span>{approval.comments}
+                  </p>
+                )}
               </div>
             )}
 
