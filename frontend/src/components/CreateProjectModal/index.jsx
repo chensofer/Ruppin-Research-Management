@@ -111,9 +111,9 @@ export default function CreateProjectModal({ onClose, onCreated }) {
         })),
 
         expenses: expenses
-          .filter((e) => e.requestTitle.trim())
+          .filter((e) => e.categoryName?.trim() && e.requestedAmount)
           .map((e) => ({
-            requestTitle: e.requestTitle,
+            requestTitle: e.categoryName || null,
             requestDescription: e.requestDescription || null,
             requestedAmount: parseFloat(e.requestedAmount) || null,
             requestDate: e.requestDate || null,

@@ -20,7 +20,7 @@ export default function LoginPage() {
     try {
       const res = await loginApi(form);
       login(res.data);
-      navigate('/dashboard');
+      navigate(res.data.systemAuthorization === 'עוזר מחקר' ? '/attendance' : '/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'שם משתמש או סיסמה שגויים');
     } finally {

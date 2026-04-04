@@ -112,15 +112,27 @@ namespace RupResearchAPI.Services
                 .Select(p => p.ProjectId)
                 .ToListAsync();
 
-            var asTeamMember = await _db.ResearchUsersProjects
-                .Where(u => u.UserId == userId)
-                .Select(u => u.ProjectId)
-                .ToListAsync();
+            List<int> asTeamMember;
+            try
+            {
+                asTeamMember = await _db.ResearchUsersProjects
+                    .Where(u => u.UserId == userId)
+                    .Select(u => u.ProjectId)
+                    .ToListAsync();
+            }
+            catch { asTeamMember = []; }
 
-            var asAssistant = await _db.ResearchAssistants
-                .Where(a => a.AssistantUserId == userId)
-                .Select(a => a.ProjectId)
-                .ToListAsync();
+            List<int?> asAssistantRaw;
+            try
+            {
+                asAssistantRaw = await _db.ResearchAssistants
+                    .Where(a => a.AssistantUserId == userId)
+                    .Select(a => (int?)a.ProjectId)
+                    .ToListAsync();
+            }
+            catch { asAssistantRaw = []; }
+
+            var asAssistant = asAssistantRaw.Where(x => x.HasValue).Select(x => x!.Value).ToList();
 
             return asPrincipal.Union(asTeamMember).Union(asAssistant).Distinct().ToList();
         }

@@ -42,7 +42,7 @@ export default function TabPayments({ projectId, payments, onCreated }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [categories, setCategories] = useState([]);
   const [providers, setProviders] = useState([]);
-  const [newProvider, setNewProvider] = useState('');
+  const [newProvider, setNewProvider] = useState({ providerName: '', phone: '', email: '', notes: '' });
   const [showNewProvider, setShowNewProvider] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -59,12 +59,17 @@ export default function TabPayments({ projectId, payments, onCreated }) {
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
   const handleAddProvider = async () => {
-    if (!newProvider.trim()) return;
+    if (!newProvider.providerName.trim()) return;
     try {
-      const res = await createProvider({ providerName: newProvider.trim() });
+      const res = await createProvider({
+        providerName: newProvider.providerName.trim(),
+        phone: newProvider.phone.trim() || null,
+        email: newProvider.email.trim() || null,
+        notes: newProvider.notes.trim() || null,
+      });
       setProviders((prev) => [...prev, res.data]);
       setForm((f) => ({ ...f, providerId: String(res.data.providerId) }));
-      setNewProvider('');
+      setNewProvider({ providerName: '', phone: '', email: '', notes: '' });
       setShowNewProvider(false);
     } catch {
       setError('שגיאה בהוספת ספק');
@@ -157,13 +162,27 @@ export default function TabPayments({ projectId, payments, onCreated }) {
             <div>
               <label className="block text-xs text-gray-500 mb-1">ספק</label>
               {showNewProvider ? (
-                <div className="flex gap-2">
-                  <input type="text" value={newProvider} onChange={(e) => setNewProvider(e.target.value)}
-                    placeholder="שם הספק" className={`${inputCls} flex-1`} />
-                  <button type="button" onClick={handleAddProvider}
-                    className="px-3 py-2 bg-primary text-white text-xs rounded-lg">הוסף</button>
-                  <button type="button" onClick={() => setShowNewProvider(false)}
-                    className="px-2 py-2 text-gray-400 hover:text-gray-600 text-xs">ביטול</button>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="text" value={newProvider.providerName}
+                      onChange={(e) => setNewProvider((p) => ({ ...p, providerName: e.target.value }))}
+                      placeholder="שם הספק *" className={inputCls} />
+                    <input type="tel" value={newProvider.phone}
+                      onChange={(e) => setNewProvider((p) => ({ ...p, phone: e.target.value }))}
+                      placeholder="טלפון" className={inputCls} />
+                    <input type="email" value={newProvider.email}
+                      onChange={(e) => setNewProvider((p) => ({ ...p, email: e.target.value }))}
+                      placeholder="אימייל" className={inputCls} />
+                    <input type="text" value={newProvider.notes}
+                      onChange={(e) => setNewProvider((p) => ({ ...p, notes: e.target.value }))}
+                      placeholder="הערות" className={inputCls} />
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={handleAddProvider}
+                      className="px-3 py-1.5 bg-primary text-white text-xs rounded-lg hover:bg-primary-dark">הוסף ספק</button>
+                    <button type="button" onClick={() => { setShowNewProvider(false); setNewProvider({ providerName: '', phone: '', email: '', notes: '' }); }}
+                      className="px-3 py-1.5 text-gray-500 border border-gray-200 text-xs rounded-lg hover:bg-gray-50">ביטול</button>
+                  </div>
                 </div>
               ) : (
                 <div className="flex gap-2">

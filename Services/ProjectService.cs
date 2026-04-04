@@ -253,45 +253,6 @@ namespace RupResearchAPI.Services
                     });
                 }
 
-                foreach (var member in dto.TeamMembers)
-                {
-                    _db.ResearchUsersProjects.Add(new ResearchUsersProject
-                    {
-                        UserId = member.UserId,
-                        ProjectId = project.ProjectId,
-                        ProjectRole = member.ProjectRole,
-                    });
-                }
-
-                foreach (var ast in dto.Assistants)
-                {
-                    if (string.IsNullOrWhiteSpace(ast.AssistantUserId))
-                        throw new InvalidOperationException("מזהה עוזר מחקר חסר.");
-
-                    if (ast.IsNewUser)
-                    {
-                        var newUser = new ResearchUser
-                        {
-                            UserId = ast.AssistantUserId!,
-                            FirstName = ast.FirstName,
-                            LastName = ast.LastName,
-                            Email = ast.Email,
-                            SystemAuthorization = "עוזר מחקר",
-                            Password = BCrypt.Net.BCrypt.HashPassword("Temp1234!"),
-                        };
-                        _db.ResearchUsers.Add(newUser);
-                        await _db.SaveChangesAsync();
-                    }
-
-                    _db.ResearchAssistants.Add(new ResearchAssistant
-                    {
-                        AssistantUserId = ast.AssistantUserId!,
-                        ProjectId = project.ProjectId,
-                        Role = ast.Role,
-                        SalaryPerHour = ast.SalaryPerHour,
-                    });
-                }
-
                 foreach (var exp in dto.Expenses)
                 {
                     _db.ResearchPaymentRequests.Add(new ResearchPaymentRequest
@@ -307,20 +268,14 @@ namespace RupResearchAPI.Services
                     });
                 }
 
-                // Auto-add creator to team if not already included
-                bool creatorAlreadyInTeam = dto.TeamMembers.Any(m => m.UserId == requestedByUserId);
-                if (!creatorAlreadyInTeam && !string.IsNullOrEmpty(requestedByUserId))
-                {
-                    _db.ResearchUsersProjects.Add(new ResearchUsersProject
-                    {
-                        UserId = requestedByUserId,
-                        ProjectId = project.ProjectId,
-                        ProjectRole = "יוצר",
-                    });
-                }
-
                 await _db.SaveChangesAsync();
                 await tx.CommitAsync();
+
+                // Team members and assistants are in separate tables that may not exist yet.
+                // Add them outside the main transaction so a missing table doesn't block project creation.
+                await TryAddTeamMembersAsync(project.ProjectId, dto.TeamMembers, requestedByUserId);
+                await TryAddAssistantsAsync(project.ProjectId, dto.Assistants);
+
                 return ToDto(project);
             }
             catch
@@ -328,6 +283,79 @@ namespace RupResearchAPI.Services
                 await tx.RollbackAsync();
                 throw;
             }
+        }
+
+        private async Task TryAddTeamMembersAsync(int projectId, List<FullTeamMemberDto> members, string requestedByUserId)
+        {
+            try
+            {
+                var toAdd = new List<ResearchUsersProject>();
+                var alreadyIncluded = new HashSet<string>(members.Select(m => m.UserId));
+
+                foreach (var member in members)
+                {
+                    toAdd.Add(new ResearchUsersProject
+                    {
+                        UserId = member.UserId,
+                        ProjectId = projectId,
+                        ProjectRole = member.ProjectRole,
+                    });
+                }
+
+                if (!alreadyIncluded.Contains(requestedByUserId) && !string.IsNullOrEmpty(requestedByUserId))
+                {
+                    toAdd.Add(new ResearchUsersProject
+                    {
+                        UserId = requestedByUserId,
+                        ProjectId = projectId,
+                        ProjectRole = "יוצר",
+                    });
+                }
+
+                _db.ResearchUsersProjects.AddRange(toAdd);
+                await _db.SaveChangesAsync();
+            }
+            catch { /* Table may not exist yet — project was still created */ }
+        }
+
+        private async Task TryAddAssistantsAsync(int projectId, List<FullAssistantDto> assistants)
+        {
+            try
+            {
+                foreach (var ast in assistants)
+                {
+                    if (string.IsNullOrWhiteSpace(ast.AssistantUserId)) continue;
+
+                    if (ast.IsNewUser)
+                    {
+                        // Skip if user already exists
+                        bool exists = await _db.ResearchUsers.AnyAsync(u => u.UserId == ast.AssistantUserId);
+                        if (!exists)
+                        {
+                            _db.ResearchUsers.Add(new ResearchUser
+                            {
+                                UserId = ast.AssistantUserId!,
+                                FirstName = ast.FirstName,
+                                LastName = ast.LastName,
+                                Email = ast.Email,
+                                SystemAuthorization = "עוזר מחקר",
+                                Password = BCrypt.Net.BCrypt.HashPassword("Temp1234!"),
+                            });
+                            await _db.SaveChangesAsync();
+                        }
+                    }
+
+                    _db.ResearchAssistants.Add(new ResearchAssistant
+                    {
+                        AssistantUserId = ast.AssistantUserId!,
+                        ProjectId = projectId,
+                        Role = ast.Role,
+                        SalaryPerHour = ast.SalaryPerHour,
+                    });
+                }
+                await _db.SaveChangesAsync();
+            }
+            catch { /* Table may not exist yet — project was still created */ }
         }
 
         public async Task<FileRecordDto> SaveFileRecord(

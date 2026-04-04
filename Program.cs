@@ -32,6 +32,7 @@ namespace RupResearchAPI
             builder.Services.AddScoped<IProjectService, ProjectService>();
             builder.Services.AddScoped<IPaymentRequestService, PaymentRequestService>();
             builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<IHourReportService, HourReportService>();
 
             // JWT Authentication
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -86,6 +87,7 @@ namespace RupResearchAPI
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
+                app.UseDeveloperExceptionPage();
             }
 
             // Ensure uploads directory exists

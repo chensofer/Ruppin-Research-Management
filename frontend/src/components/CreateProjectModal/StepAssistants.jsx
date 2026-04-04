@@ -23,6 +23,8 @@ export default function StepAssistants({ data, onChange }) {
   const [query, setQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [tab, setTab] = useState('existing');
+  const [stagedUser, setStagedUser] = useState(null); // user selected but not yet added
+  const [stagedSalary, setStagedSalary] = useState('');
 
   useEffect(() => {
     // Load all users — any user can be assigned as an assistant
@@ -46,17 +48,26 @@ export default function StepAssistants({ data, onChange }) {
 
   const displayed = query ? filtered : filtered.slice(0, 10);
 
-  const addExisting = (user) => {
+  const stageExisting = (user) => {
+    setStagedUser(user);
+    setStagedSalary('');
+    setQuery(`${user.firstName} ${user.lastName}`);
+    setShowDropdown(false);
+  };
+
+  const commitStaged = () => {
+    if (!stagedUser) return;
     onChange([...data, {
       isNewUser: false,
-      assistantUserId: user.userId,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      assistantUserId: stagedUser.userId,
+      firstName: stagedUser.firstName,
+      lastName: stagedUser.lastName,
       role: 'עוזר מחקר',
-      salaryPerHour: '',
+      salaryPerHour: stagedSalary,
     }]);
+    setStagedUser(null);
+    setStagedSalary('');
     setQuery('');
-    setShowDropdown(false);
   };
 
   const addManual = () => onChange([...data, newManualRow()]);
@@ -88,14 +99,14 @@ export default function StepAssistants({ data, onChange }) {
       </div>
 
       {tab === 'existing' && (
-        <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+        <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
           {loadError && <p className="text-xs text-red-500 mb-2">{loadError}</p>}
 
           <div className="relative">
             <input
               type="text"
               value={query}
-              onChange={(e) => { setQuery(e.target.value); setShowDropdown(true); }}
+              onChange={(e) => { setQuery(e.target.value); setShowDropdown(true); setStagedUser(null); }}
               onFocus={() => setShowDropdown(true)}
               onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
               placeholder={loading ? 'טוען משתמשים...' : 'חפש עוזר מחקר לפי שם או ת.ז...'}
@@ -110,7 +121,7 @@ export default function StepAssistants({ data, onChange }) {
                     {displayed.map((u) => (
                       <li
                         key={u.userId}
-                        onMouseDown={() => addExisting(u)}
+                        onMouseDown={() => stageExisting(u)}
                         className="px-3 py-2.5 cursor-pointer hover:bg-primary-light text-sm flex justify-between items-center"
                       >
                         <span className="font-medium text-gray-800">{u.firstName} {u.lastName}</span>
@@ -131,6 +142,43 @@ export default function StepAssistants({ data, onChange }) {
               </ul>
             )}
           </div>
+
+          {/* Staging area — shown after picking a user */}
+          {stagedUser && (
+            <div className="flex items-center gap-3 bg-white border border-primary/30 rounded-xl p-3 shadow-sm">
+              <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-primary text-sm font-bold flex-shrink-0">
+                {(stagedUser.firstName?.[0] ?? '') + (stagedUser.lastName?.[0] ?? '')}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-800">{stagedUser.firstName} {stagedUser.lastName}</p>
+                <p className="text-xs text-gray-400">{stagedUser.userId}</p>
+              </div>
+              <input
+                type="number"
+                min={0}
+                value={stagedSalary}
+                onChange={(e) => setStagedSalary(e.target.value)}
+                placeholder="₪/שעה"
+                className="w-28 border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <button
+                type="button"
+                onClick={commitStaged}
+                className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-dark transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                הוסף
+              </button>
+              <button type="button" onClick={() => { setStagedUser(null); setQuery(''); }}
+                className="p-1 text-gray-400 hover:text-red-500 transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
