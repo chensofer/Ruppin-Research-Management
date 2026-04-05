@@ -51,7 +51,22 @@ export default function CreateProjectModal({ onClose, onCreated }) {
   const validateStep = () => {
     const errs = {};
     if (step === 'details') {
-      if (!details.projectNameHe.trim()) errs.projectNameHe = 'שם המחקר הוא שדה חובה';
+      if (!details.projectNameHe.trim())
+        errs.projectNameHe = 'שם המחקר הוא שדה חובה';
+      if (!details.projectDescription?.trim())
+        errs.projectDescription = 'תיאור המחקר הוא שדה חובה';
+      if (!details.principalResearcherId)
+        errs.principalResearcherId = 'יש לבחור חוקר ראשי';
+      if (!details.centerId)
+        errs.centerId = 'יש לשייך את המחקר למרכז מחקר';
+      if (!details.fundingSource?.trim())
+        errs.fundingSource = 'מקור מימון הוא שדה חובה';
+      if (!details.startDate)
+        errs.startDate = 'תאריך התחלה הוא שדה חובה';
+      if (!details.endDate)
+        errs.endDate = 'תאריך סיום הוא שדה חובה';
+      if (details.startDate && details.endDate && details.endDate < details.startDate)
+        errs.endDate = 'תאריך הסיום חייב להיות אחרי תאריך ההתחלה';
       if (!details.totalBudget || parseFloat(details.totalBudget) <= 0)
         errs.totalBudget = 'יש להזין תקציב תקין';
     }

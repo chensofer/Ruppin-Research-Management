@@ -55,9 +55,34 @@ namespace RupResearchAPI.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateProjectDto dto)
         {
+            var errs = ValidateProjectFields(
+                dto.ProjectNameHe, dto.ProjectDescription, dto.PrincipalResearcherId,
+                dto.CenterId, dto.FundingSource, dto.StartDate, dto.EndDate, dto.TotalBudget);
+            if (errs.Count > 0)
+                return BadRequest(new { message = string.Join(" | ", errs) });
+
             var updated = await _projectService.Update(id, dto);
             if (updated == null) return NotFound();
             return Ok(updated);
+        }
+
+        private static List<string> ValidateProjectFields(
+            string? nameHe, string? description, string? piId,
+            short? centerId, string? fundingSource,
+            DateOnly? startDate, DateOnly? endDate, decimal? budget)
+        {
+            var errors = new List<string>();
+            if (string.IsNullOrWhiteSpace(nameHe))         errors.Add("שם המחקר הוא שדה חובה");
+            if (string.IsNullOrWhiteSpace(description))    errors.Add("תיאור המחקר הוא שדה חובה");
+            if (string.IsNullOrWhiteSpace(piId))           errors.Add("יש לבחור חוקר ראשי");
+            if (centerId == null || centerId == 0)         errors.Add("יש לשייך את המחקר למרכז מחקר");
+            if (string.IsNullOrWhiteSpace(fundingSource))  errors.Add("מקור מימון הוא שדה חובה");
+            if (startDate == null)                         errors.Add("תאריך התחלה הוא שדה חובה");
+            if (endDate == null)                           errors.Add("תאריך סיום הוא שדה חובה");
+            if (budget == null || budget <= 0)             errors.Add("יש להזין תקציב תקין");
+            if (startDate.HasValue && endDate.HasValue && endDate < startDate)
+                errors.Add("תאריך הסיום חייב להיות אחרי תאריך ההתחלה");
+            return errors;
         }
 
         [HttpDelete("{id}")]
@@ -79,6 +104,12 @@ namespace RupResearchAPI.Controllers
         [HttpPost("full")]
         public async Task<IActionResult> CreateFull([FromBody] CreateFullProjectDto dto)
         {
+            var errs = ValidateProjectFields(
+                dto.ProjectNameHe, dto.ProjectDescription, dto.PrincipalResearcherId,
+                dto.CenterId, dto.FundingSource, dto.StartDate, dto.EndDate, dto.TotalBudget);
+            if (errs.Count > 0)
+                return BadRequest(new { message = string.Join(" | ", errs) });
+
             try
             {
                 var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
@@ -151,10 +182,17 @@ namespace RupResearchAPI.Controllers
         [HttpPost("{id}/team")]
         public async Task<IActionResult> AddTeamMember(int id, [FromBody] AddTeamMemberRequest req)
         {
-            var member = await _projectService.AddTeamMember(id, req.UserId, req.ProjectRole);
-            if (member == null)
-                return Conflict(new { message = "המשתמש כבר חבר בצוות" });
-            return Ok(member);
+            try
+            {
+                var member = await _projectService.AddTeamMember(id, req.UserId, req.ProjectRole);
+                if (member == null)
+                    return Conflict(new { message = "המשתמש כבר חבר בצוות" });
+                return Ok(member);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // DELETE /api/projects/{id}/team/{userId}
@@ -193,6 +231,51 @@ namespace RupResearchAPI.Controllers
             var removed = await _projectService.RemoveAssistant(id, userId);
             if (!removed) return NotFound();
             return NoContent();
+        }
+
+        // POST /api/projects/{id}/assistants/new — create new RA user + assign to project
+        [HttpPost("{id}/assistants/new")]
+        public async Task<IActionResult> CreateAndAddAssistant(int id, [FromBody] CreateAndAddAssistantRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.UserId) || string.IsNullOrWhiteSpace(req.FirstName) ||
+                string.IsNullOrWhiteSpace(req.LastName) || string.IsNullOrWhiteSpace(req.Email) ||
+                req.SalaryPerHour <= 0)
+                return BadRequest(new { message = "כל השדות הם חובה ושכר לשעה חייב להיות גדול מאפס" });
+
+            try
+            {
+                var result = await _projectService.CreateAndAddAssistant(id, req);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+        }
+
+        // PUT /api/projects/{id}/assistants/{userId}
+        [HttpPut("{id}/assistants/{userId}")]
+        public async Task<IActionResult> UpdateAssistant(int id, string userId, [FromBody] UpdateAssistantRequest req)
+        {
+            if (req.SalaryPerHour.HasValue && req.SalaryPerHour.Value <= 0)
+                return BadRequest(new { message = "שכר לשעה חייב להיות גדול מאפס" });
+
+            var result = await _projectService.UpdateAssistant(id, userId, req);
+            if (result == null) return NotFound();
+            return Ok(result);
+        }
+
+        // GET /api/projects/{id}/assistants/{userId}/tracking
+        [HttpGet("{id}/assistants/{userId}/tracking")]
+        public async Task<IActionResult> GetAssistantTracking(int id, string userId)
+        {
+            var result = await _projectService.GetAssistantTracking(id, userId);
+            if (result == null) return NotFound();
+            return Ok(result);
         }
 
         // ── Future commitments endpoints ──────────────────────────────────────

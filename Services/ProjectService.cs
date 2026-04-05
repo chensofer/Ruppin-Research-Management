@@ -97,10 +97,11 @@ namespace RupResearchAPI.Services
             }
 
             // Team members
+            var piId = project.PrincipalResearcherId?.Trim() ?? "";
             List<TeamMemberDetailDto> teamMembers;
             try
             {
-                teamMembers = await (
+                var rawMembers = await (
                     from up in _db.ResearchUsersProjects
                     join u in _db.ResearchUsers on up.UserId equals u.UserId
                     where up.ProjectId == id
@@ -112,6 +113,13 @@ namespace RupResearchAPI.Services
                         ProjectRole = up.ProjectRole,
                         SystemAuthorization = u.SystemAuthorization
                     }).ToListAsync();
+
+                // Resolve IsPrincipalInvestigator in memory so char(10) trimming is safe
+                foreach (var m in rawMembers)
+                    m.IsPrincipalInvestigator = !string.IsNullOrEmpty(piId) &&
+                                                m.UserId?.Trim() == piId;
+
+                teamMembers = rawMembers;
             }
             catch { teamMembers = []; }
 
@@ -218,6 +226,7 @@ namespace RupResearchAPI.Services
             project.TotalBudget = dto.TotalBudget;
             project.CenterId = dto.CenterId;
             project.PrincipalResearcherId = dto.PrincipalResearcherId;
+            project.FundingSource = dto.FundingSource;
             project.StartDate = dto.StartDate;
             project.EndDate = dto.EndDate;
             project.Status = dto.Status;
@@ -253,6 +262,7 @@ namespace RupResearchAPI.Services
                 var project = new ResearchProject
                 {
                     ProjectNameHe = dto.ProjectNameHe,
+                    ProjectNameEn = dto.ProjectNameEn,
                     ProjectDescription = dto.ProjectDescription,
                     TotalBudget = dto.TotalBudget,
                     Status = dto.Status ?? "פעיל",
@@ -413,7 +423,10 @@ namespace RupResearchAPI.Services
 
         public async Task<List<TeamMemberDetailDto>> GetTeam(int projectId)
         {
-            return await (
+            var project = await _db.ResearchProjects.FindAsync(projectId);
+            var piId = project?.PrincipalResearcherId?.Trim() ?? "";
+
+            var members = await (
                 from up in _db.ResearchUsersProjects
                 join u in _db.ResearchUsers on up.UserId equals u.UserId
                 where up.ProjectId == projectId
@@ -425,10 +438,23 @@ namespace RupResearchAPI.Services
                     ProjectRole = up.ProjectRole,
                     SystemAuthorization = u.SystemAuthorization
                 }).ToListAsync();
+
+            foreach (var m in members)
+                m.IsPrincipalInvestigator = !string.IsNullOrEmpty(piId) &&
+                                            m.UserId?.Trim() == piId;
+
+            return members;
         }
 
         public async Task<TeamMemberDetailDto?> AddTeamMember(int projectId, string userId, string projectRole)
         {
+            var user = await _db.ResearchUsers.FindAsync(userId);
+            if (user == null) return null;
+
+            // Research Assistants may not be added as team members
+            if (user.SystemAuthorization == "עוזר מחקר")
+                throw new InvalidOperationException("לא ניתן להוסיף עוזר מחקר לצוות המחקר");
+
             var exists = await _db.ResearchUsersProjects
                 .AnyAsync(up => up.ProjectId == projectId && up.UserId == userId);
             if (exists) return null;
@@ -441,14 +467,17 @@ namespace RupResearchAPI.Services
             });
             await _db.SaveChangesAsync();
 
-            var user = await _db.ResearchUsers.FindAsync(userId);
+            var project = await _db.ResearchProjects.FindAsync(projectId);
+            var piId = project?.PrincipalResearcherId?.Trim() ?? "";
+
             return new TeamMemberDetailDto
             {
                 UserId = userId,
-                FirstName = user?.FirstName,
-                LastName = user?.LastName,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
                 ProjectRole = projectRole,
-                SystemAuthorization = user?.SystemAuthorization
+                SystemAuthorization = user.SystemAuthorization,
+                IsPrincipalInvestigator = !string.IsNullOrEmpty(piId) && userId.Trim() == piId,
             };
         }
 
@@ -507,6 +536,61 @@ namespace RupResearchAPI.Services
             };
         }
 
+        public async Task<AssistantDetailDto> CreateAndAddAssistant(int projectId, CreateAndAddAssistantRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.UserId) || string.IsNullOrWhiteSpace(req.FirstName) ||
+                string.IsNullOrWhiteSpace(req.LastName) || string.IsNullOrWhiteSpace(req.Email))
+                throw new ArgumentException("כל השדות הם חובה");
+
+            if (req.SalaryPerHour <= 0)
+                throw new ArgumentException("שכר לשעה חייב להיות גדול מאפס");
+
+            // Create the user if they don't already exist
+            var existingUser = await _db.ResearchUsers.FindAsync(req.UserId);
+            if (existingUser == null)
+            {
+                existingUser = new Models.ResearchUser
+                {
+                    UserId = req.UserId,
+                    FirstName = req.FirstName,
+                    LastName = req.LastName,
+                    Email = req.Email,
+                    SystemAuthorization = "עוזר מחקר",
+                    Password = BCrypt.Net.BCrypt.HashPassword(req.UserId),
+                };
+                _db.ResearchUsers.Add(existingUser);
+                await _db.SaveChangesAsync();
+            }
+
+            // Guard: user exists but isn't an RA — don't silently change their role
+            if (existingUser.SystemAuthorization != "עוזר מחקר")
+                throw new InvalidOperationException("המשתמש קיים במערכת עם הרשאה שאינה עוזר מחקר");
+
+            // Guard: already assigned to this project
+            var alreadyExists = await _db.ResearchAssistants
+                .AnyAsync(a => a.ProjectId == projectId && a.AssistantUserId == req.UserId);
+            if (alreadyExists)
+                throw new InvalidOperationException("עוזר המחקר כבר משויך למחקר זה");
+
+            _db.ResearchAssistants.Add(new Models.ResearchAssistant
+            {
+                AssistantUserId = req.UserId,
+                ProjectId = projectId,
+                Role = "עוזר מחקר",
+                SalaryPerHour = req.SalaryPerHour,
+            });
+            await _db.SaveChangesAsync();
+
+            return new AssistantDetailDto
+            {
+                AssistantUserId = req.UserId,
+                FirstName = existingUser.FirstName,
+                LastName = existingUser.LastName,
+                Role = "עוזר מחקר",
+                SalaryPerHour = req.SalaryPerHour,
+            };
+        }
+
         public async Task<bool> RemoveAssistant(int projectId, string assistantUserId)
         {
             var entry = await _db.ResearchAssistants
@@ -516,6 +600,114 @@ namespace RupResearchAPI.Services
             _db.ResearchAssistants.Remove(entry);
             await _db.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<AssistantDetailDto?> UpdateAssistant(int projectId, string assistantUserId, UpdateAssistantRequest req)
+        {
+            var trimmedId = assistantUserId.Trim();
+
+            var entry = await _db.ResearchAssistants
+                .Where(a => a.ProjectId == projectId)
+                .ToListAsync()
+                .ContinueWith(t => t.Result.FirstOrDefault(a => a.AssistantUserId.Trim() == trimmedId));
+
+            if (entry == null) return null;
+
+            if (req.SalaryPerHour.HasValue)
+                entry.SalaryPerHour = req.SalaryPerHour.Value;
+
+            var user = await _db.ResearchUsers
+                .Where(u => u.UserId.Trim() == trimmedId)
+                .FirstOrDefaultAsync();
+
+            if (user != null && req.Email != null)
+                user.Email = req.Email.Trim();
+
+            await _db.SaveChangesAsync();
+
+            return new AssistantDetailDto
+            {
+                AssistantUserId = entry.AssistantUserId.Trim(),
+                FirstName = user?.FirstName,
+                LastName = user?.LastName,
+                Role = entry.Role,
+                SalaryPerHour = entry.SalaryPerHour,
+            };
+        }
+
+        public async Task<AssistantTrackingDto?> GetAssistantTracking(int projectId, string assistantUserId)
+        {
+            var trimmedId = assistantUserId.Trim();
+
+            // Fetch assistant record (char(10) trimming in memory)
+            var allAssistants = await _db.ResearchAssistants
+                .Where(a => a.ProjectId == projectId)
+                .ToListAsync();
+            var assistant = allAssistants
+                .FirstOrDefault(a => a.AssistantUserId?.Trim() == trimmedId);
+            if (assistant == null) return null;
+
+            var user = await _db.ResearchUsers.FindAsync(assistantUserId);
+            var salary = assistant.SalaryPerHour ?? 0;
+
+            // Hour reports for this assistant + project
+            var allReports = await _db.ResearchHourReports
+                .Where(r => r.ProjectId == projectId)
+                .OrderByDescending(r => r.ReportDate)
+                .ToListAsync();
+            var hourReports = allReports
+                .Where(r => r.UserId?.Trim() == trimmedId)
+                .ToList();
+
+            // Monthly approvals for this assistant + project
+            var allApprovals = await _db.ResearchMonthlyWorkApprovals
+                .Where(a => a.ProjectId == projectId)
+                .ToListAsync();
+            var monthlyApprovals = allApprovals
+                .Where(a => a.UserId?.Trim() == trimmedId)
+                .OrderByDescending(a => a.Year).ThenByDescending(a => a.Month)
+                .ToList();
+
+            var totalHours = hourReports.Sum(r => r.WorkedHours ?? 0);
+            var totalPaid = monthlyApprovals
+                .Where(a => a.ApprovalStatus == "אושר")
+                .Sum(a => salary * (a.TotalWorkedHours ?? 0));
+            var totalPending = monthlyApprovals
+                .Where(a => a.ApprovalStatus == "ממתין")
+                .Sum(a => salary * (a.TotalWorkedHours ?? 0));
+
+            return new AssistantTrackingDto
+            {
+                AssistantUserId = assistantUserId,
+                FirstName = user?.FirstName,
+                LastName = user?.LastName,
+                SalaryPerHour = assistant.SalaryPerHour,
+                TotalHours = totalHours,
+                TotalPaid = totalPaid,
+                TotalPending = totalPending,
+                MonthlyApprovals = monthlyApprovals.Select(a => new AssistantMonthlyEntryDto
+                {
+                    MonthlyApprovalId = a.MonthlyApprovalId,
+                    Month = a.Month,
+                    Year = a.Year,
+                    ApprovalStatus = a.ApprovalStatus,
+                    TotalWorkedHours = a.TotalWorkedHours,
+                    TotalPaymentAmount = salary > 0 && a.TotalWorkedHours.HasValue
+                        ? salary * a.TotalWorkedHours.Value
+                        : null,
+                    ApprovalDate = a.ApprovalDate?.ToString("yyyy-MM-dd"),
+                    Comments = a.Comments,
+                }).ToList(),
+                HourReports = hourReports.Select(r => new AssistantHourEntryDto
+                {
+                    HourReportId = r.HourReportId,
+                    ReportDate = r.ReportDate?.ToString("yyyy-MM-dd"),
+                    FromHour = r.FromHour?.ToString("HH:mm"),
+                    ToHour = r.ToHour?.ToString("HH:mm"),
+                    WorkedHours = r.WorkedHours,
+                    Comments = r.Comments,
+                }).ToList(),
+            };
         }
 
         // ── Future Commitments ────────────────────────────────────────────────

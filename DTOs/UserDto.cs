@@ -8,4 +8,8 @@ namespace RupResearchAPI.DTOs
         public string? Email { get; set; }
         public string? SystemAuthorization { get; set; }
     }
+
+    public record UpdateProfileDto(string? FirstName, string? LastName, string? Email);
+
+    public record ChangePasswordDto(string CurrentPassword, string NewPassword);
 }

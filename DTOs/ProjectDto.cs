@@ -43,6 +43,7 @@ namespace RupResearchAPI.DTOs
         public decimal? TotalBudget { get; set; }
         public short? CenterId { get; set; }
         public string? PrincipalResearcherId { get; set; }
+        public string? FundingSource { get; set; }
         public DateOnly? StartDate { get; set; }
         public DateOnly? EndDate { get; set; }
         public string? Status { get; set; }

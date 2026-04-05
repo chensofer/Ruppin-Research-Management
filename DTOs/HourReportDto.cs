@@ -64,4 +64,39 @@ namespace RupResearchAPI.DTOs
         public string? ApprovedByUserId { get; set; }
         public string? Comments { get; set; }
     }
+
+    public class AssistantHourEntryDto
+    {
+        public int HourReportId { get; set; }
+        public string? ReportDate { get; set; }    // "yyyy-MM-dd"
+        public string? FromHour { get; set; }       // "HH:mm"
+        public string? ToHour { get; set; }         // "HH:mm"
+        public decimal? WorkedHours { get; set; }
+        public string? Comments { get; set; }
+    }
+
+    public class AssistantMonthlyEntryDto
+    {
+        public int MonthlyApprovalId { get; set; }
+        public int? Month { get; set; }
+        public int? Year { get; set; }
+        public string? ApprovalStatus { get; set; }
+        public decimal? TotalWorkedHours { get; set; }
+        public decimal? TotalPaymentAmount { get; set; }
+        public string? ApprovalDate { get; set; }   // "yyyy-MM-dd"
+        public string? Comments { get; set; }
+    }
+
+    public class AssistantTrackingDto
+    {
+        public string AssistantUserId { get; set; } = null!;
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public decimal? SalaryPerHour { get; set; }
+        public decimal TotalHours { get; set; }
+        public decimal TotalPaid { get; set; }
+        public decimal TotalPending { get; set; }
+        public List<AssistantMonthlyEntryDto> MonthlyApprovals { get; set; } = [];
+        public List<AssistantHourEntryDto> HourReports { get; set; } = [];
+    }
 }
