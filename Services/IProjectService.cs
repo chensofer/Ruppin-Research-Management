@@ -21,7 +21,10 @@ namespace RupResearchAPI.Services
         // Assistants
         Task<List<AssistantDetailDto>> GetAssistants(int projectId);
         Task<AssistantDetailDto?> AddAssistant(int projectId, string assistantUserId, string? role, decimal? salaryPerHour);
+        Task<AssistantDetailDto> CreateAndAddAssistant(int projectId, CreateAndAddAssistantRequest req);
         Task<bool> RemoveAssistant(int projectId, string assistantUserId);
+        Task<AssistantDetailDto?> UpdateAssistant(int projectId, string assistantUserId, UpdateAssistantRequest req);
+        Task<AssistantTrackingDto?> GetAssistantTracking(int projectId, string assistantUserId);
 
         // Future commitments
         Task<List<FutureCommitmentDto>> GetCommitments(int projectId);

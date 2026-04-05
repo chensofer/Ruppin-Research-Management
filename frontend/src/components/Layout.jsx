@@ -82,15 +82,23 @@ export default function Layout({ children }) {
         {/* User section */}
         <div className="px-4 py-4 border-t border-gray-100">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+            <button
+              onClick={() => navigate('/profile')}
+              className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm flex-shrink-0 hover:opacity-80 transition-opacity"
+              title="הפרופיל שלי"
+            >
               {initials}
-            </div>
-            <div className="flex-1 min-w-0">
+            </button>
+            <button
+              onClick={() => navigate('/profile')}
+              className="flex-1 min-w-0 text-right hover:opacity-80 transition-opacity"
+              title="הפרופיל שלי"
+            >
               <p className="text-sm font-medium text-gray-800 truncate">
                 {user?.firstName} {user?.lastName}
               </p>
               <p className="text-xs text-gray-500 truncate">{user?.userId}</p>
-            </div>
+            </button>
             <button
               onClick={handleLogout}
               className="text-gray-400 hover:text-gray-600 transition-colors"

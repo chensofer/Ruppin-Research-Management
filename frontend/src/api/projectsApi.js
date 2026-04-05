@@ -26,8 +26,13 @@ export const removeTeamMember = (projectId, userId) =>
 // Assistants
 export const getProjectAssistants = (projectId) => axiosInstance.get(`/projects/${projectId}/assistants`);
 export const addAssistant = (projectId, data) => axiosInstance.post(`/projects/${projectId}/assistants`, data);
+export const createAndAddAssistant = (projectId, data) => axiosInstance.post(`/projects/${projectId}/assistants/new`, data);
 export const removeAssistant = (projectId, userId) =>
   axiosInstance.delete(`/projects/${projectId}/assistants/${userId}`);
+export const updateAssistant = (projectId, userId, data) =>
+  axiosInstance.put(`/projects/${projectId}/assistants/${userId}`, data);
+export const getAssistantTracking = (projectId, userId) =>
+  axiosInstance.get(`/projects/${projectId}/assistants/${userId}/tracking`);
 
 // Future commitments
 export const getCommitments = (projectId) => axiosInstance.get(`/projects/${projectId}/commitments`);

@@ -4,6 +4,7 @@ namespace RupResearchAPI.DTOs
     {
         // Step 1: Research details
         public string? ProjectNameHe { get; set; }
+        public string? ProjectNameEn { get; set; }
         public string? ProjectDescription { get; set; }
         public decimal? TotalBudget { get; set; }
         public string? Status { get; set; }

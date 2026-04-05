@@ -7,6 +7,7 @@ namespace RupResearchAPI.DTOs
         public string? LastName { get; set; }
         public string? ProjectRole { get; set; }
         public string? SystemAuthorization { get; set; }
+        public bool IsPrincipalInvestigator { get; set; }
     }
 
     public class AssistantDetailDto
@@ -61,6 +62,15 @@ namespace RupResearchAPI.DTOs
     // Requests for add operations
     public record AddTeamMemberRequest(string UserId, string ProjectRole);
     public record AddAssistantRequest(string AssistantUserId, string? Role, decimal? SalaryPerHour);
+
+    public record CreateAndAddAssistantRequest(
+        string UserId,
+        string FirstName,
+        string LastName,
+        string Email,
+        decimal SalaryPerHour);
+    public record UpdateAssistantRequest(string? Email, decimal? SalaryPerHour);
+
     public record CreateFutureCommitmentRequest(
         string? CategoryName,
         string? CommitmentDescription,

@@ -206,7 +206,7 @@ export default function ProjectPage() {
 
       {/* Tab content */}
       {activeTab === 'overview' && (
-        <TabOverview detail={detail} />
+        <TabOverview detail={detail} onChanged={reloadDetail} />
       )}
       {activeTab === 'payments' && (
         <TabPayments
@@ -219,6 +219,8 @@ export default function ProjectPage() {
         <TabTeam
           projectId={id}
           teamMembers={detail.teamMembers}
+          principalResearcherId={detail.principalResearcherId?.trim()}
+          principalResearcherName={detail.principalResearcherName}
           onChanged={reloadDetail}
         />
       )}
