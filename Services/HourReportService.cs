@@ -74,6 +74,8 @@ namespace RupResearchAPI.Services
                     existing.WorkedHours = dto.WorkedHours;
                     existing.Comments = dto.Comments;
                     await _db.SaveChangesAsync();
+                    if (dto.ProjectId.HasValue)
+                        await UpsertAssistantCommitment(dto.UserId!, dto.ProjectId.Value, reportDate.Value);
                     return ToDto(existing);
                 }
             }
@@ -90,6 +92,8 @@ namespace RupResearchAPI.Services
             };
             _db.ResearchHourReports.Add(report);
             await _db.SaveChangesAsync();
+            if (reportDate.HasValue && dto.ProjectId.HasValue && dto.UserId != null)
+                await UpsertAssistantCommitment(dto.UserId, dto.ProjectId.Value, reportDate.Value);
             return ToDto(report);
         }
 
@@ -97,8 +101,13 @@ namespace RupResearchAPI.Services
         {
             var report = await _db.ResearchHourReports.FindAsync(id);
             if (report == null || report.UserId?.Trim() != userId.Trim()) return false;
+            var projectId = report.ProjectId;
+            var reportDate = report.ReportDate;
+            var reportUserId = report.UserId;
             _db.ResearchHourReports.Remove(report);
             await _db.SaveChangesAsync();
+            if (projectId.HasValue && reportDate.HasValue && reportUserId != null)
+                await UpsertAssistantCommitment(reportUserId, projectId.Value, reportDate.Value);
             return true;
         }
 
@@ -175,8 +184,17 @@ namespace RupResearchAPI.Services
                 // Budget validation — only when there is an actual payment
                 if (paymentAmount > 0)
                 {
+                    // The assistant's future commitment already reduces 'available', so add it back
+                    var marker = $"assistant:{record.UserId.Trim()}:{record.Month}:{record.Year}";
+                    var allCommitmentsForBudget = await _db.ResearchFutureCommitments
+                        .Where(c => c.ProjectId == record.ProjectId.Value)
+                        .ToListAsync();
+                    var reservedByCommitment = allCommitmentsForBudget
+                        .Where(c => c.Notes == marker)
+                        .Sum(c => c.ExpectedAmount ?? 0);
+
                     var available = await GetAvailableBudget(record.ProjectId.Value);
-                    if (paymentAmount > available)
+                    if (paymentAmount > available + reservedByCommitment)
                         throw new InvalidOperationException(
                             $"אין תקציב זמין מספיק לאישור. עלות השכר: ₪{paymentAmount:N0}. יתרה זמינה (לאחר הוצאות והתחייבויות עתידיות): ₪{available:N0}");
                 }
@@ -190,9 +208,21 @@ namespace RupResearchAPI.Services
 
             await _db.SaveChangesAsync();
 
-            // ── Step 2: Create the executed expense (separate save, non-blocking) ──
+            // ── Step 2: Delete future commitment + create executed expense ──
             if (dto.ApprovalStatus == "אושר" && record.ProjectId.HasValue && record.UserId != null)
             {
+                // Remove the future commitment (it's now becoming a real payment)
+                var markerToDelete = $"assistant:{record.UserId.Trim()}:{record.Month}:{record.Year}";
+                var allCommitmentsToDelete = await _db.ResearchFutureCommitments
+                    .Where(c => c.ProjectId == record.ProjectId.Value)
+                    .ToListAsync();
+                var commitmentToDelete = allCommitmentsToDelete.FirstOrDefault(c => c.Notes == markerToDelete);
+                if (commitmentToDelete != null)
+                {
+                    _db.ResearchFutureCommitments.Remove(commitmentToDelete);
+                    await _db.SaveChangesAsync();
+                }
+
                 try
                 {
                     const string wageCategory = "שכר לעוזרי מחקר";
@@ -241,6 +271,76 @@ namespace RupResearchAPI.Services
             string? userName = userRecord != null ? $"{userRecord.FirstName} {userRecord.LastName}".Trim() : null;
 
             return ToApprovalDto(record, project?.ProjectNameHe, userName);
+        }
+
+        private async Task UpsertAssistantCommitment(string userId, int projectId, DateOnly reportDate)
+        {
+            try
+            {
+                var month = reportDate.Month;
+                var year = reportDate.Year;
+                var trimmedId = userId.Trim();
+
+                // Total worked hours for this user+project+month
+                var startDate = new DateOnly(year, month, 1);
+                var endDate = startDate.AddMonths(1);
+                var allReports = await _db.ResearchHourReports
+                    .Where(r => r.ProjectId == projectId && r.ReportDate.HasValue)
+                    .ToListAsync();
+                var totalHours = allReports
+                    .Where(r => r.UserId?.Trim() == trimmedId && r.ReportDate >= startDate && r.ReportDate < endDate)
+                    .Sum(r => r.WorkedHours ?? 0);
+
+                // Salary per hour
+                var allAssistants = await _db.ResearchAssistants.ToListAsync();
+                var assistant = allAssistants.FirstOrDefault(a =>
+                    a.AssistantUserId?.Trim() == trimmedId && a.ProjectId == projectId);
+                var salaryPerHour = assistant?.SalaryPerHour ?? 0;
+                var expectedAmount = totalHours * salaryPerHour;
+
+                // User display name
+                var userRecord = await _db.ResearchUsers.FindAsync(trimmedId);
+                var userName = userRecord != null
+                    ? $"{userRecord.FirstName} {userRecord.LastName}".Trim()
+                    : trimmedId;
+
+                // Find or create/update the commitment using a unique marker in Notes
+                var marker = $"assistant:{trimmedId}:{month}:{year}";
+                var allCommitments = await _db.ResearchFutureCommitments
+                    .Where(c => c.ProjectId == projectId)
+                    .ToListAsync();
+                var existing = allCommitments.FirstOrDefault(c => c.Notes == marker);
+
+                if (existing != null)
+                {
+                    if (expectedAmount <= 0)
+                        _db.ResearchFutureCommitments.Remove(existing);
+                    else
+                    {
+                        existing.ExpectedAmount = expectedAmount;
+                        existing.CommitmentDescription = $"תשלום שכר עוזר מחקר — {userName} — {month}/{year}";
+                    }
+                }
+                else if (expectedAmount > 0)
+                {
+                    _db.ResearchFutureCommitments.Add(new ResearchFutureCommitment
+                    {
+                        ProjectId = projectId,
+                        CategoryName = "שכר לעוזרי מחקר",
+                        CommitmentDescription = $"תשלום שכר עוזר מחקר — {userName} — {month}/{year}",
+                        ExpectedDate = endDate,
+                        ExpectedAmount = expectedAmount,
+                        Status = "מתוכנן",
+                        Notes = marker,
+                    });
+                }
+
+                await _db.SaveChangesAsync();
+            }
+            catch
+            {
+                // Non-critical — don't fail the main save operation
+            }
         }
 
         private async Task<decimal> GetAvailableBudget(int projectId)
