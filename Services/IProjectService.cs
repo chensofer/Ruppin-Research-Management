@@ -35,6 +35,10 @@ namespace RupResearchAPI.Services
         Task<List<FileRecordDto>> GetFiles(int projectId);
         Task<bool> DeleteFile(int fileId);
 
+        // Budget categories
+        Task<List<BudgetCategoryDto>> GetBudgetCategories(int projectId);
+        Task<List<BudgetCategoryDto>> ReplaceBudgetCategories(int projectId, List<UpdateBudgetCategoryItem> items);
+
         // Providers
         Task<List<ProviderDto>> GetProviders();
         Task<ProviderDto> CreateProvider(CreateProviderRequest req);

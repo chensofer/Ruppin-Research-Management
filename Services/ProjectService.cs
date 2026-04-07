@@ -299,6 +299,7 @@ namespace RupResearchAPI.Services
                         RequestDate = exp.RequestDate ?? DateOnly.FromDateTime(DateTime.Today),
                         CategoryName = exp.CategoryName,
                         Status = "שולם",
+                        ProviderId = exp.ProviderId,
                     });
                 }
 
@@ -808,6 +809,43 @@ namespace RupResearchAPI.Services
                 Email = provider.Email,
                 Notes = provider.Notes,
             };
+        }
+
+        // ── Budget categories ─────────────────────────────────────────────────
+
+        public async Task<List<BudgetCategoryDto>> GetBudgetCategories(int projectId)
+        {
+            return await _db.ResearchBudgetCategories
+                .Where(c => c.ProjectId == projectId)
+                .OrderBy(c => c.ResearchBudgetCategoryId)
+                .Select(c => new BudgetCategoryDto
+                {
+                    ResearchBudgetCategoryId = c.ResearchBudgetCategoryId,
+                    CategoryName = c.CategoryName,
+                    AllocatedAmount = c.AllocatedAmount,
+                })
+                .ToListAsync();
+        }
+
+        public async Task<List<BudgetCategoryDto>> ReplaceBudgetCategories(int projectId, List<UpdateBudgetCategoryItem> items)
+        {
+            var existing = await _db.ResearchBudgetCategories
+                .Where(c => c.ProjectId == projectId)
+                .ToListAsync();
+            _db.ResearchBudgetCategories.RemoveRange(existing);
+
+            foreach (var item in items)
+            {
+                _db.ResearchBudgetCategories.Add(new ResearchBudgetCategory
+                {
+                    ProjectId = projectId,
+                    CategoryName = item.CategoryName,
+                    AllocatedAmount = item.AllocatedAmount,
+                });
+            }
+
+            await _db.SaveChangesAsync();
+            return await GetBudgetCategories(projectId);
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────

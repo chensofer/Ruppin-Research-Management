@@ -73,10 +73,7 @@ namespace RupResearchAPI.Controllers
         {
             var errors = new List<string>();
             if (string.IsNullOrWhiteSpace(nameHe))         errors.Add("שם המחקר הוא שדה חובה");
-            if (string.IsNullOrWhiteSpace(description))    errors.Add("תיאור המחקר הוא שדה חובה");
             if (string.IsNullOrWhiteSpace(piId))           errors.Add("יש לבחור חוקר ראשי");
-            if (centerId == null || centerId == 0)         errors.Add("יש לשייך את המחקר למרכז מחקר");
-            if (string.IsNullOrWhiteSpace(fundingSource))  errors.Add("מקור מימון הוא שדה חובה");
             if (startDate == null)                         errors.Add("תאריך התחלה הוא שדה חובה");
             if (endDate == null)                           errors.Add("תאריך סיום הוא שדה חובה");
             if (budget == null || budget <= 0)             errors.Add("יש להזין תקציב תקין");
@@ -100,6 +97,32 @@ namespace RupResearchAPI.Controllers
             }
         }
 
+        // GET /api/projects/{id}/budget-categories
+        [HttpGet("{id}/budget-categories")]
+        public async Task<IActionResult> GetBudgetCategories(int id)
+        {
+            var categories = await _projectService.GetBudgetCategories(id);
+            return Ok(categories);
+        }
+
+        // PUT /api/projects/{id}/budget-categories — replace all budget categories
+        [HttpPut("{id}/budget-categories")]
+        public async Task<IActionResult> UpdateBudgetCategories(int id, [FromBody] UpdateBudgetCategoriesRequest req)
+        {
+            var project = await _projectService.GetById(id);
+            if (project == null) return NotFound();
+
+            if (project.TotalBudget.HasValue && req.Categories.Count > 0)
+            {
+                var total = req.Categories.Sum(c => c.AllocatedAmount ?? 0);
+                if (total > project.TotalBudget.Value)
+                    return BadRequest(new { message = "סך קטגוריות התקציב חורג מהתקציב המאושר" });
+            }
+
+            var result = await _projectService.ReplaceBudgetCategories(id, req.Categories);
+            return Ok(result);
+        }
+
         // POST /api/projects/full — create project with all related data in one transaction
         [HttpPost("full")]
         public async Task<IActionResult> CreateFull([FromBody] CreateFullProjectDto dto)
@@ -109,6 +132,14 @@ namespace RupResearchAPI.Controllers
                 dto.CenterId, dto.FundingSource, dto.StartDate, dto.EndDate, dto.TotalBudget);
             if (errs.Count > 0)
                 return BadRequest(new { message = string.Join(" | ", errs) });
+
+            // Validate that budget categories do not exceed total approved budget
+            if (dto.TotalBudget.HasValue && dto.BudgetCategories.Count > 0)
+            {
+                var totalAllocated = dto.BudgetCategories.Sum(c => c.AllocatedAmount ?? 0);
+                if (totalAllocated > dto.TotalBudget.Value)
+                    return BadRequest(new { message = "סך קטגוריות התקציב חורג מהתקציב המאושר" });
+            }
 
             try
             {

@@ -34,6 +34,11 @@ export const updateAssistant = (projectId, userId, data) =>
 export const getAssistantTracking = (projectId, userId) =>
   axiosInstance.get(`/projects/${projectId}/assistants/${userId}/tracking`);
 
+// Budget categories
+export const getBudgetCategories = (projectId) => axiosInstance.get(`/projects/${projectId}/budget-categories`);
+export const updateBudgetCategories = (projectId, categories) =>
+  axiosInstance.put(`/projects/${projectId}/budget-categories`, { categories });
+
 // Future commitments
 export const getCommitments = (projectId) => axiosInstance.get(`/projects/${projectId}/commitments`);
 export const addCommitment = (projectId, data) => axiosInstance.post(`/projects/${projectId}/commitments`, data);

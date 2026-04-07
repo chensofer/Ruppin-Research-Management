@@ -71,6 +71,16 @@ namespace RupResearchAPI.DTOs
         decimal SalaryPerHour);
     public record UpdateAssistantRequest(string? Email, decimal? SalaryPerHour);
 
+    public class BudgetCategoryDto
+    {
+        public int ResearchBudgetCategoryId { get; set; }
+        public string? CategoryName { get; set; }
+        public decimal? AllocatedAmount { get; set; }
+    }
+
+    public record UpdateBudgetCategoriesRequest(List<UpdateBudgetCategoryItem> Categories);
+    public record UpdateBudgetCategoryItem(string CategoryName, decimal? AllocatedAmount);
+
     public record CreateFutureCommitmentRequest(
         string? CategoryName,
         string? CommitmentDescription,

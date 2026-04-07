@@ -8,6 +8,7 @@ import StepExpenses from './StepExpenses';
 import StepDocuments from './StepDocuments';
 import StepSummary from './StepSummary';
 import { createFullProject, uploadProjectFile } from '../../api/projectsApi';
+import { createProvider } from '../../api/providersApi';
 import { getCenters } from '../../api/centersApi';
 
 const INITIAL_DETAILS = {
@@ -20,6 +21,7 @@ const INITIAL_DETAILS = {
   endDate: '',
   principalResearcherId: '',
   principalResearcherName: '',
+  principalResearcherRole: '',
   centerId: '',
 };
 
@@ -29,15 +31,14 @@ export default function CreateProjectModal({ onClose, onCreated }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
-  // Step state
-  const [details, setDetails]               = useState(INITIAL_DETAILS);
+  const [details, setDetails]                   = useState(INITIAL_DETAILS);
   const [budgetCategories, setBudgetCategories] = useState([]);
-  const [teamMembers, setTeamMembers]       = useState([]);
-  const [assistants, setAssistants]         = useState([]);
-  const [expenses, setExpenses]             = useState([]);
-  const [documents, setDocuments]           = useState([]);
-  const [docFolders, setDocFolders]         = useState(['כללי']);
-  const [centers, setCenters]               = useState([]);
+  const [teamMembers, setTeamMembers]           = useState([]);
+  const [assistants, setAssistants]             = useState([]);
+  const [expenses, setExpenses]                 = useState([]);
+  const [documents, setDocuments]               = useState([]);
+  const [docFolders, setDocFolders]             = useState(['כללי']);
+  const [centers, setCenters]                   = useState([]);
 
   useEffect(() => {
     getCenters().then((res) => setCenters(res.data)).catch(() => {});
@@ -50,17 +51,12 @@ export default function CreateProjectModal({ onClose, onCreated }) {
   // --- Validation ---
   const validateStep = () => {
     const errs = {};
+
     if (step === 'details') {
       if (!details.projectNameHe.trim())
         errs.projectNameHe = 'שם המחקר הוא שדה חובה';
-      if (!details.projectDescription?.trim())
-        errs.projectDescription = 'תיאור המחקר הוא שדה חובה';
       if (!details.principalResearcherId)
         errs.principalResearcherId = 'יש לבחור חוקר ראשי';
-      if (!details.centerId)
-        errs.centerId = 'יש לשייך את המחקר למרכז מחקר';
-      if (!details.fundingSource?.trim())
-        errs.fundingSource = 'מקור מימון הוא שדה חובה';
       if (!details.startDate)
         errs.startDate = 'תאריך התחלה הוא שדה חובה';
       if (!details.endDate)
@@ -70,6 +66,17 @@ export default function CreateProjectModal({ onClose, onCreated }) {
       if (!details.totalBudget || parseFloat(details.totalBudget) <= 0)
         errs.totalBudget = 'יש להזין תקציב תקין';
     }
+
+    if (step === 'budget') {
+      const totalBudgetNum = parseFloat(details.totalBudget) || 0;
+      const totalAllocated = budgetCategories.reduce(
+        (s, r) => s + (parseFloat(r.allocatedAmount) || 0), 0
+      );
+      if (totalBudgetNum > 0 && Math.abs(totalAllocated - totalBudgetNum) > 0.01) {
+        errs.budgetBalance = 'יש לאזן את התקציב במלואו לפני המעבר לשלב הבא';
+      }
+    }
+
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -80,6 +87,7 @@ export default function CreateProjectModal({ onClose, onCreated }) {
   };
 
   const goBack = () => {
+    setErrors({});
     if (!isFirst) setStep(STEP_IDS[currentIndex - 1]);
   };
 
@@ -90,7 +98,22 @@ export default function CreateProjectModal({ onClose, onCreated }) {
     setSubmitError('');
 
     try {
-      // Build the JSON payload (no files)
+      // Resolve new providers first
+      const resolvedExpenses = await Promise.all(
+        expenses.map(async (e) => {
+          if (e.isNewProvider && e.newProvider?.providerName?.trim()) {
+            const res = await createProvider({
+              providerName: e.newProvider.providerName,
+              phone: e.newProvider.phone || null,
+              email: e.newProvider.email || null,
+              notes: e.newProvider.notes || null,
+            });
+            return { ...e, providerId: res.data.providerId };
+          }
+          return e;
+        })
+      );
+
       const payload = {
         projectNameHe: details.projectNameHe,
         projectNameEn: details.projectNameEn || null,
@@ -125,7 +148,7 @@ export default function CreateProjectModal({ onClose, onCreated }) {
           salaryPerHour: parseFloat(a.salaryPerHour) || null,
         })),
 
-        expenses: expenses
+        expenses: resolvedExpenses
           .filter((e) => e.categoryName?.trim() && e.requestedAmount)
           .map((e) => ({
             requestTitle: e.categoryName || null,
@@ -133,19 +156,31 @@ export default function CreateProjectModal({ onClose, onCreated }) {
             requestedAmount: parseFloat(e.requestedAmount) || null,
             requestDate: e.requestDate || null,
             categoryName: e.categoryName || null,
+            providerId: e.providerId || null,
           })),
       };
 
-      // Phase 1: create project
       const res = await createFullProject(payload);
       const projectId = res.data.projectId;
 
-      // Phase 2: upload files
+      // Upload project documents
       for (const doc of documents) {
         const fd = new FormData();
         fd.append('file', doc.file);
         fd.append('folderName', doc.folder);
         await uploadProjectFile(projectId, fd);
+      }
+
+      // Upload expense attachments into "הוצאות" folder
+      for (const exp of resolvedExpenses) {
+        if (exp.files?.length) {
+          for (const fileItem of exp.files) {
+            const fd = new FormData();
+            fd.append('file', fileItem.file);
+            fd.append('folderName', 'הוצאות');
+            await uploadProjectFile(projectId, fd);
+          }
+        }
       }
 
       onCreated(res.data);
@@ -160,9 +195,7 @@ export default function CreateProjectModal({ onClose, onCreated }) {
   };
 
   return (
-    // Backdrop
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      {/* Modal */}
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
 
         {/* Header */}
@@ -178,10 +211,9 @@ export default function CreateProjectModal({ onClose, onCreated }) {
           <h2 className="text-lg font-bold text-gray-900">יצירת מחקר חדש</h2>
         </div>
 
-        {/* Stepper */}
         <Stepper currentStep={step} />
 
-        {/* Body — scrollable */}
+        {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {submitError && (
             <div className="mb-4 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-lg">
@@ -193,7 +225,12 @@ export default function CreateProjectModal({ onClose, onCreated }) {
             <StepDetails data={details} onChange={setDetails} errors={errors} />
           )}
           {step === 'budget' && (
-            <StepBudget data={budgetCategories} onChange={setBudgetCategories} totalBudget={details.totalBudget} />
+            <StepBudget
+              data={budgetCategories}
+              onChange={setBudgetCategories}
+              totalBudget={details.totalBudget}
+              errors={errors}
+            />
           )}
           {step === 'team' && (
             <StepTeam data={teamMembers} onChange={setTeamMembers} />

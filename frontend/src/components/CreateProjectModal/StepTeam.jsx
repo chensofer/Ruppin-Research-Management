@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getUsers } from '../../api/usersApi';
 
-const ROLES = ['חוקר', 'מנהל מרכז מחקר'];
 const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400';
 
 export default function StepTeam({ data, onChange }) {
@@ -12,7 +11,6 @@ export default function StepTeam({ data, onChange }) {
   const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
-    // Load all users — role filtering is done client-side so we always have data
     getUsers()
       .then((res) => setAllUsers(res.data))
       .catch(() => setLoadError('שגיאה בטעינת רשימת המשתמשים'))
@@ -21,9 +19,11 @@ export default function StepTeam({ data, onChange }) {
 
   const selectedIds = new Set(data.map((m) => m.userId));
 
+  // Exclude research assistants — allow חוקר, מנהל מרכז מחקר, and any other non-assistant role
   const filtered = allUsers.filter((u) => {
+    if (u.systemAuthorization === 'עוזר מחקר') return false;
     if (selectedIds.has(u.userId)) return false;
-    if (!query) return true; // show all when no query
+    if (!query) return true;
     const q = query.toLowerCase();
     return (
       u.userId.toLowerCase().includes(q) ||
@@ -31,7 +31,6 @@ export default function StepTeam({ data, onChange }) {
     );
   });
 
-  // Limit to 10 results when no query to avoid a massive list
   const displayed = query ? filtered : filtered.slice(0, 10);
 
   const addMember = (user) => {
@@ -40,16 +39,13 @@ export default function StepTeam({ data, onChange }) {
       firstName: user.firstName,
       lastName: user.lastName,
       systemAuthorization: user.systemAuthorization,
-      projectRole: ROLES[0],
+      projectRole: user.systemAuthorization,
     }]);
     setQuery('');
     setShowDropdown(false);
   };
 
   const removeMember = (userId) => onChange(data.filter((m) => m.userId !== userId));
-
-  const setRole = (userId, role) =>
-    onChange(data.map((m) => (m.userId === userId ? { ...m, projectRole: role } : m)));
 
   return (
     <div className="space-y-4">
@@ -59,7 +55,7 @@ export default function StepTeam({ data, onChange }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
               d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <h3 className="text-sm font-semibold text-gray-700">הוסף חוקרים לצוות</h3>
+          <h3 className="text-sm font-semibold text-gray-700">הוסף חוקרים ומנהלי מרכז מחקר לצוות</h3>
         </div>
 
         {loadError && (
@@ -89,7 +85,7 @@ export default function StepTeam({ data, onChange }) {
                       className="px-3 py-2.5 cursor-pointer hover:bg-primary-light text-sm flex justify-between items-center"
                     >
                       <span className="font-medium text-gray-800">{u.firstName} {u.lastName}</span>
-                      <span className="text-xs text-gray-400">{u.userId} · {u.systemAuthorization || 'ללא תפקיד'}</span>
+                      <span className="text-xs text-gray-400">ת"ז - {u.userId} · {u.systemAuthorization}</span>
                     </li>
                   ))}
                   {!query && filtered.length > 10 && (
@@ -117,15 +113,11 @@ export default function StepTeam({ data, onChange }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-800">{m.firstName} {m.lastName}</p>
-                <p className="text-xs text-gray-400">{m.userId} · {m.systemAuthorization}</p>
+                <p className="text-xs text-gray-400">ת"ז - {m.userId}</p>
               </div>
-              <select
-                value={m.projectRole}
-                onChange={(e) => setRole(m.userId, e.target.value)}
-                className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-              </select>
+              <span className="text-xs text-gray-500 bg-gray-100 rounded-lg px-2 py-1">
+                {m.projectRole}
+              </span>
               <button
                 type="button"
                 onClick={() => removeMember(m.userId)}

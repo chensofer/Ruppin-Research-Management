@@ -62,5 +62,6 @@ namespace RupResearchAPI.DTOs
         public decimal? RequestedAmount { get; set; }
         public DateOnly? RequestDate { get; set; }
         public string? CategoryName { get; set; }
+        public int? ProviderId { get; set; }
     }
 }

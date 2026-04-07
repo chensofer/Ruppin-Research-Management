@@ -20,27 +20,23 @@ const errorCls = 'border-red-400 focus:ring-red-400';
 export default function StepDetails({ data, onChange, errors }) {
   const set = (field) => (e) => onChange({ ...data, [field]: e.target.value });
 
-  // Principal researcher picker
   const [allUsers, setAllUsers]         = useState([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [piQuery, setPiQuery]           = useState('');
   const [showPiDrop, setShowPiDrop]     = useState(false);
-
-  // Center picker
-  const [centers, setCenters] = useState([]);
+  const [centers, setCenters]           = useState([]);
 
   useEffect(() => {
     getUsers()
       .then((res) => setAllUsers(res.data))
       .catch(() => {})
       .finally(() => setUsersLoading(false));
-
     getCenters()
       .then((res) => setCenters(res.data))
       .catch(() => {});
   }, []);
 
-  // Filter users for PI dropdown — exclude Research Assistants
+  // Exclude research assistants from PI picker
   const piFiltered = allUsers
     .filter((u) => {
       if (u.systemAuthorization === 'עוזר מחקר') return false;
@@ -54,18 +50,24 @@ export default function StepDetails({ data, onChange, errors }) {
     .slice(0, 10);
 
   const selectPI = (user) => {
-    onChange({ ...data, principalResearcherId: user.userId, principalResearcherName: `${user.firstName} ${user.lastName}` });
+    onChange({
+      ...data,
+      principalResearcherId: user.userId,
+      principalResearcherName: `${user.firstName} ${user.lastName}`,
+      principalResearcherRole: user.systemAuthorization,
+    });
     setPiQuery('');
     setShowPiDrop(false);
   };
 
-  const clearPI = () => onChange({ ...data, principalResearcherId: '', principalResearcherName: '' });
+  const clearPI = () =>
+    onChange({ ...data, principalResearcherId: '', principalResearcherName: '', principalResearcherRole: '' });
 
   return (
     <div className="space-y-4">
       {/* Names */}
       <div className="grid grid-cols-2 gap-4">
-        <Field label="שם המחקר (עברית)" required error={errors.projectNameHe}>
+        <Field label="שם מחקר" required error={errors.projectNameHe}>
           <input
             type="text"
             value={data.projectNameHe}
@@ -74,8 +76,7 @@ export default function StepDetails({ data, onChange, errors }) {
             className={`${inputCls} ${errors.projectNameHe ? errorCls : ''}`}
           />
         </Field>
-
-        <Field label="שם המחקר (אנגלית)">
+        <Field label="שם מחקר באנגלית">
           <input
             type="text"
             value={data.projectNameEn}
@@ -86,74 +87,24 @@ export default function StepDetails({ data, onChange, errors }) {
         </Field>
       </div>
 
-      {/* Description */}
-      <Field label="תיאור המחקר" required error={errors.projectDescription}>
-        <textarea
-          rows={3}
-          value={data.projectDescription}
-          onChange={set('projectDescription')}
-          placeholder="תאר בקצרה את נושא המחקר..."
-          className={`${inputCls} resize-none ${errors.projectDescription ? errorCls : ''}`}
-        />
-      </Field>
-
-      {/* Budget + Funding Source */}
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="תקציב כולל (₪)" required error={errors.totalBudget}>
-          <input
-            type="number"
-            min={0}
-            value={data.totalBudget}
-            onChange={set('totalBudget')}
-            placeholder="0"
-            className={`${inputCls} ${errors.totalBudget ? errorCls : ''}`}
-          />
-        </Field>
-
-        <Field label="מקור מימון" required error={errors.fundingSource}>
-          <input
-            type="text"
-            value={data.fundingSource}
-            onChange={set('fundingSource')}
-            placeholder="לדוגמה: קרן מדע, ISF..."
-            className={`${inputCls} ${errors.fundingSource ? errorCls : ''}`}
-          />
-        </Field>
-      </div>
-
-      {/* Dates */}
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="תאריך התחלה" required error={errors.startDate}>
-          <input
-            type="date"
-            value={data.startDate}
-            onChange={set('startDate')}
-            className={`${inputCls} ${errors.startDate ? errorCls : ''}`}
-          />
-        </Field>
-        <Field label="תאריך סיום משוערך" required error={errors.endDate}>
-          <input
-            type="date"
-            value={data.endDate}
-            onChange={set('endDate')}
-            className={`${inputCls} ${errors.endDate ? errorCls : ''}`}
-          />
-        </Field>
-      </div>
-
-      {/* Principal researcher — searchable single-select */}
+      {/* Principal researcher */}
       <Field label="חוקר ראשי" required error={errors.principalResearcherId}>
         {data.principalResearcherId ? (
-          <div className={`flex items-center gap-3 bg-primary-light border rounded-lg px-3 py-2 ${errors.principalResearcherId ? 'border-red-400' : 'border-primary/20'}`}>
-            <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+          <div className={`flex items-center gap-3 bg-primary-light border rounded-lg px-3 py-2.5 ${errors.principalResearcherId ? 'border-red-400' : 'border-primary/20'}`}>
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
               {data.principalResearcherName?.[0] ?? '?'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-primary truncate">{data.principalResearcherName}</p>
-              <p className="text-xs text-primary/60">{data.principalResearcherId}</p>
+              <p className="text-sm font-semibold text-primary truncate">{data.principalResearcherName}</p>
+              <p className="text-xs text-primary/60">ת"ז - {data.principalResearcherId}</p>
             </div>
+            {data.principalResearcherRole && (
+              <span className="text-xs bg-primary/10 text-primary font-medium px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0">
+                {data.principalResearcherRole}
+              </span>
+            )}
             <button type="button" onClick={clearPI}
-              className="text-primary/50 hover:text-primary transition-colors">
+              className="text-primary/40 hover:text-primary transition-colors flex-shrink-0">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -175,9 +126,14 @@ export default function StepDetails({ data, onChange, errors }) {
               <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                 {piFiltered.length > 0 ? piFiltered.map((u) => (
                   <li key={u.userId} onMouseDown={() => selectPI(u)}
-                    className="px-3 py-2.5 cursor-pointer hover:bg-primary-light text-sm flex justify-between items-center">
-                    <span className="font-medium text-gray-800">{u.firstName} {u.lastName}</span>
-                    <span className="text-xs text-gray-400">{u.userId} · {u.systemAuthorization}</span>
+                    className="px-3 py-2.5 cursor-pointer hover:bg-primary-light text-sm flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-800 truncate">{u.firstName} {u.lastName}</p>
+                      <p className="text-xs text-gray-400">ת"ז - {u.userId}</p>
+                    </div>
+                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                      {u.systemAuthorization}
+                    </span>
                   </li>
                 )) : (
                   <li className="px-3 py-3 text-sm text-gray-400 text-center">
@@ -191,17 +147,71 @@ export default function StepDetails({ data, onChange, errors }) {
       </Field>
 
       {/* Research center */}
-      <Field label="מרכז מחקר" required error={errors.centerId}>
+      <Field label="מרכז מחקר" error={errors.centerId}>
         <select
           value={data.centerId}
           onChange={set('centerId')}
           className={`${inputCls} ${errors.centerId ? errorCls : ''}`}
         >
-          <option value="">— בחר מרכז מחקר —</option>
+          <option value="">— ללא שיוך למרכז מחקר —</option>
           {centers.map((c) => (
             <option key={c.centerId} value={c.centerId}>{c.centerName}</option>
           ))}
         </select>
+      </Field>
+
+      {/* Budget + Funding Source */}
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="תקציב מאושר (₪)" required error={errors.totalBudget}>
+          <input
+            type="number"
+            min={0}
+            value={data.totalBudget}
+            onChange={set('totalBudget')}
+            placeholder="0"
+            className={`${inputCls} ${errors.totalBudget ? errorCls : ''}`}
+          />
+        </Field>
+        <Field label="מקור מימון" error={errors.fundingSource}>
+          <input
+            type="text"
+            value={data.fundingSource}
+            onChange={set('fundingSource')}
+            placeholder="לדוגמה: קרן מדע, ISF..."
+            className={inputCls}
+          />
+        </Field>
+      </div>
+
+      {/* Dates */}
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="תאריך התחלה" required error={errors.startDate}>
+          <input
+            type="date"
+            value={data.startDate}
+            onChange={set('startDate')}
+            className={`${inputCls} ${errors.startDate ? errorCls : ''}`}
+          />
+        </Field>
+        <Field label="תאריך סיום משוער" required error={errors.endDate}>
+          <input
+            type="date"
+            value={data.endDate}
+            onChange={set('endDate')}
+            className={`${inputCls} ${errors.endDate ? errorCls : ''}`}
+          />
+        </Field>
+      </div>
+
+      {/* Description */}
+      <Field label="תיאור המחקר" error={errors.projectDescription}>
+        <textarea
+          rows={3}
+          value={data.projectDescription}
+          onChange={set('projectDescription')}
+          placeholder="תאר בקצרה את נושא המחקר..."
+          className={`${inputCls} resize-none`}
+        />
       </Field>
     </div>
   );
