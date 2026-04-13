@@ -389,13 +389,16 @@ function TrackingModal({ assistant, projectId, onClose }) {
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                  דיווחי שעות יומיים ({data.hourReports.length})
+                  דוח שעות יומי — טרם שליחה לאישור ({data.hourReports.length})
                 </button>
 
                 {showReports && (
                   <div className="mt-3 rounded-xl border border-gray-100 overflow-hidden">
                     {data.hourReports.length === 0 ? (
-                      <p className="text-sm text-gray-400 py-4 text-center">אין דיווחי שעות</p>
+                      <div className="py-6 text-center">
+                        <p className="text-sm text-gray-400">אין דיווחי שעות ממתינים לשליחה</p>
+                        <p className="text-xs text-gray-300 mt-1">כל הדיווחים נשלחו לאישור או אושרו</p>
+                      </div>
                     ) : (
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50 text-xs text-gray-500">

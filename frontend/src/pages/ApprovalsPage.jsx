@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getPendingPaymentRequests, updatePaymentRequestStatus } from '../api/paymentRequestsApi';
 import { getPendingHourApprovals, decideMonthlyApproval } from '../api/hourReportsApi';
@@ -280,6 +281,9 @@ function HourApprovalCard({ record, onDecide }) {
 
 export default function ApprovalsPage() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterProjectId = searchParams.get('projectId') ? parseInt(searchParams.get('projectId'), 10) : null;
+
   const [tab, setTab] = useState('payments');
   const [requests, setRequests] = useState([]);
   const [hourRecords, setHourRecords] = useState([]);
@@ -356,8 +360,28 @@ export default function ApprovalsPage() {
     }
   };
 
+  // Apply project filter if coming from a specific project page
+  const visibleRequests = filterProjectId
+    ? requests.filter((r) => r.projectId === filterProjectId)
+    : requests;
+
+  const visibleHourRecords = filterProjectId
+    ? hourRecords.filter((r) => r.projectId === filterProjectId)
+    : hourRecords;
+
+  // Name of the filtered project (prefer payment requests name, fall back to hour records name)
+  const filterProjectName = filterProjectId
+    ? (visibleRequests[0]?.projectNameHe
+        || visibleRequests[0]?.projectNameEn
+        || visibleHourRecords[0]?.projectNameHe
+        || `מחקר ${filterProjectId}`)
+    : null;
+
+  // Clear the project filter
+  const clearFilter = () => setSearchParams({});
+
   // Group requests by project
-  const grouped = requests.reduce((acc, req) => {
+  const grouped = visibleRequests.reduce((acc, req) => {
     const key = req.projectId ?? 0;
     const name = req.projectNameHe || req.projectNameEn || `מחקר ${key}`;
     if (!acc[key]) acc[key] = { name, items: [] };
@@ -366,7 +390,7 @@ export default function ApprovalsPage() {
   }, {});
 
   const groups = Object.values(grouped);
-  const totalCount = requests.length;
+  const totalCount = visibleRequests.length;
 
   return (
     <Layout>
@@ -375,6 +399,32 @@ export default function ApprovalsPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">אישורים ממתינים</h1>
         </div>
+
+        {/* Project filter banner */}
+        {filterProjectId && (
+          <div className="flex items-center gap-3 mb-5 px-4 py-3 bg-primary/5 border border-primary/20 rounded-xl">
+            <svg className="w-4 h-4 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+            </svg>
+            <p className="text-sm text-primary flex-1">
+              מציג בקשות עבור:{' '}
+              <span className="font-semibold">
+                {filterProjectName || `מחקר ${filterProjectId}`}
+              </span>
+            </p>
+            <button
+              onClick={clearFilter}
+              className="flex items-center gap-1 text-xs text-primary/70 hover:text-primary transition-colors"
+              title="הצג את כל הבקשות"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              נקה סינון
+            </button>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-gray-200 mb-6">
@@ -398,9 +448,9 @@ export default function ApprovalsPage() {
             }`}
           >
             שעות עוזרי מחקר
-            {hourRecords.length > 0 && (
+            {visibleHourRecords.length > 0 && (
               <span className="mr-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">
-                {hourRecords.length}
+                {visibleHourRecords.length}
               </span>
             )}
           </button>
@@ -472,18 +522,22 @@ export default function ApprovalsPage() {
         {/* Hour approvals tab */}
         {!loading && tab === 'hours' && (
           <>
-            {hourRecords.length === 0 ? (
+            {visibleHourRecords.length === 0 ? (
               <div className="text-center py-20 text-gray-400">
                 <svg className="w-16 h-16 mx-auto mb-4 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p className="text-lg font-medium">הכל מעודכן!</p>
-                <p className="text-sm mt-1">אין דוחות שעות הממתינים לאישורך</p>
+                <p className="text-sm mt-1">
+                  {filterProjectId
+                    ? 'אין דוחות שעות הממתינים לאישורך עבור מחקר זה'
+                    : 'אין דוחות שעות הממתינים לאישורך'}
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {hourRecords.map((r) => (
+                {visibleHourRecords.map((r) => (
                   <HourApprovalCard
                     key={r.monthlyApprovalId}
                     record={r}

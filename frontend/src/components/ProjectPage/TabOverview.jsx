@@ -1,7 +1,12 @@
 import { useState } from 'react';
+import DatePicker from 'react-datepicker';
+import toast from 'react-hot-toast';
 import { getUsers } from '../../api/usersApi';
 import { getCenters } from '../../api/centersApi';
 import { updateProject } from '../../api/projectsApi';
+
+const toDate = (str) => (str ? new Date(str) : null);
+const toStr  = (d)   => (d   ? d.toISOString().split('T')[0] : '');
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 const fmt = (n) =>
@@ -31,12 +36,12 @@ function Field({ label, value, span = 1, highlight }) {
 const inputCls = 'w-full bg-white text-gray-900 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400';
 const errCls   = 'border-red-400 focus:ring-red-400';
 
-function EditField({ label, children, error, span = 1 }) {
+function EditField({ label, children, error, span = 1, required = false }) {
   const spanClass = span === 3 ? 'col-span-3' : span === 2 ? 'col-span-2' : '';
   return (
     <div className={spanClass}>
       <label className="block text-xs text-gray-500 mb-1">
-        {label} <span className="text-red-500">*</span>
+        {label} {required && <span className="text-red-500">*</span>}
       </label>
       {children}
       {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}
@@ -118,13 +123,10 @@ function PIPicker({ value, name: displayName, onChange, error, allUsers, loading
 // ── Validation ──────────────────────────────────────────────────────────────────
 function validateForm(f) {
   const e = {};
-  if (!f.projectNameHe.trim())       e.projectNameHe     = 'שדה חובה';
-  if (!f.projectDescription.trim())  e.projectDescription = 'שדה חובה';
-  if (!f.principalResearcherId)      e.principalResearcherId = 'יש לבחור חוקר ראשי';
-  if (!f.centerId)                   e.centerId          = 'יש לבחור מרכז מחקר';
-  if (!f.fundingSource.trim())       e.fundingSource     = 'שדה חובה';
-  if (!f.startDate)                  e.startDate         = 'שדה חובה';
-  if (!f.endDate)                    e.endDate           = 'שדה חובה';
+  if (!f.projectNameHe.trim())  e.projectNameHe = 'שדה חובה';
+  if (!f.principalResearcherId) e.principalResearcherId = 'יש לבחור חוקר ראשי';
+  if (!f.startDate)             e.startDate = 'שדה חובה';
+  if (!f.endDate)               e.endDate   = 'שדה חובה';
   if (!f.totalBudget || parseFloat(f.totalBudget) <= 0)
     e.totalBudget = 'יש להזין תקציב תקין';
   if (f.startDate && f.endDate && f.endDate < f.startDate)
@@ -138,7 +140,6 @@ export default function TabOverview({ detail, onChanged }) {
   const [form, setForm]       = useState({});
   const [errors, setErrors]   = useState({});
   const [saving, setSaving]   = useState(false);
-  const [saveError, setSaveError] = useState('');
 
   // Lazy-loaded data for edit mode
   const [allUsers, setAllUsers]   = useState([]);
@@ -161,7 +162,6 @@ export default function TabOverview({ detail, onChanged }) {
   const enterEdit = () => {
     setForm(initForm());
     setErrors({});
-    setSaveError('');
     setEditing(true);
 
     if (allUsers.length === 0 || centers.length === 0) {
@@ -176,7 +176,6 @@ export default function TabOverview({ detail, onChanged }) {
   const cancelEdit = () => {
     setEditing(false);
     setErrors({});
-    setSaveError('');
   };
 
   const setField = (field) => (e) =>
@@ -187,7 +186,6 @@ export default function TabOverview({ detail, onChanged }) {
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
     setSaving(true);
-    setSaveError('');
     try {
       await updateProject(detail.projectId, {
         projectNameHe:         form.projectNameHe.trim(),
@@ -199,14 +197,14 @@ export default function TabOverview({ detail, onChanged }) {
         endDate:               form.endDate,
         principalResearcherId: form.principalResearcherId,
         centerId:              form.centerId ? parseInt(form.centerId) : null,
-        // carry unchanged fields
         status:                detail.status,
         researchExpenses:      detail.researchExpenses ?? null,
       });
       setEditing(false);
+      toast.success('פרטי המחקר עודכנו בהצלחה');
       onChanged?.();
     } catch (err) {
-      setSaveError(err?.response?.data?.message ?? 'שגיאה בשמירת הנתונים');
+      toast.error(err?.response?.data?.message ?? 'שגיאה בשמירת הנתונים');
     } finally {
       setSaving(false);
     }
@@ -246,15 +244,9 @@ export default function TabOverview({ detail, onChanged }) {
             <h2 className="text-sm font-semibold text-gray-700">עריכת פרטי המחקר</h2>
           </div>
 
-          {saveError && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-lg">
-              {saveError}
-            </div>
-          )}
-
           <div className="grid grid-cols-3 gap-x-6 gap-y-4">
             {/* Row 1: Name + ID (read-only) */}
-            <EditField label="שם מחקר (עברית)" error={errors.projectNameHe} span={2}>
+            <EditField label="שם מחקר (עברית)" error={errors.projectNameHe} span={2} required>
               <input
                 type="text"
                 value={form.projectNameHe}
@@ -292,7 +284,7 @@ export default function TabOverview({ detail, onChanged }) {
             </EditField>
 
             {/* Row 4: PI */}
-            <EditField label="חוקר ראשי" error={errors.principalResearcherId} span={3}>
+            <EditField label="חוקר ראשי" error={errors.principalResearcherId} span={3} required>
               <PIPicker
                 value={form.principalResearcherId}
                 name={form.principalResearcherName}
@@ -329,7 +321,7 @@ export default function TabOverview({ detail, onChanged }) {
               />
             </EditField>
 
-            <EditField label="תקציב כולל (₪)" error={errors.totalBudget}>
+            <EditField label="תקציב כולל (₪)" error={errors.totalBudget} required>
               <input
                 type="number"
                 min={0}
@@ -340,21 +332,26 @@ export default function TabOverview({ detail, onChanged }) {
             </EditField>
 
             {/* Row 6: Dates */}
-            <EditField label="תאריך התחלה" error={errors.startDate}>
-              <input
-                type="date"
-                value={form.startDate}
-                onChange={setField('startDate')}
+            <EditField label="תאריך התחלה" error={errors.startDate} required>
+              <DatePicker
+                selected={toDate(form.startDate)}
+                onChange={(d) => setForm((f) => ({ ...f, startDate: toStr(d) }))}
+                dateFormat="dd/MM/yyyy"
+                placeholderText="בחר תאריך התחלה"
                 className={`${inputCls} ${errors.startDate ? errCls : ''}`}
+                wrapperClassName="w-full"
               />
             </EditField>
 
-            <EditField label="תאריך סיום משוערך" error={errors.endDate}>
-              <input
-                type="date"
-                value={form.endDate}
-                onChange={setField('endDate')}
+            <EditField label="תאריך סיום משוערך" error={errors.endDate} required>
+              <DatePicker
+                selected={toDate(form.endDate)}
+                onChange={(d) => setForm((f) => ({ ...f, endDate: toStr(d) }))}
+                dateFormat="dd/MM/yyyy"
+                placeholderText="בחר תאריך סיום"
+                minDate={toDate(form.startDate)}
                 className={`${inputCls} ${errors.endDate ? errCls : ''}`}
+                wrapperClassName="w-full"
               />
             </EditField>
 

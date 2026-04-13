@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import * as XLSX from 'xlsx';
 
 const fmt = (n) =>
   n != null ? `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)}` : '—';
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('he-IL') : '—');
+const fmtNum  = (n) => (n != null ? new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n) : '');
 
 const WAGE_CATEGORY = 'שכר לעוזרי מחקר';
 
@@ -12,7 +14,7 @@ function ExpandedDetails({ row }) {
   if (isWage) {
     return (
       <tr className="bg-blue-50/30">
-        <td colSpan={5} className="px-10 py-3">
+        <td colSpan={6} className="px-10 py-3">
           <div className="text-xs">
             <dt className="text-gray-400 mb-0.5">עוזר מחקר שקיבל תשלום</dt>
             <dd className="text-gray-700 font-medium">
@@ -30,7 +32,7 @@ function ExpandedDetails({ row }) {
 
   return (
     <tr className="bg-blue-50/30">
-      <td colSpan={5} className="px-10 py-3">
+      <td colSpan={6} className="px-10 py-3">
         <div className="grid grid-cols-2 gap-4 text-xs">
           {row.providerName && (
             <div>
@@ -78,7 +80,7 @@ function ExpandedDetails({ row }) {
   );
 }
 
-export default function TabTransactions({ payments, totalBudget }) {
+export default function TabTransactions({ payments, totalBudget, projectName }) {
   const [expandedRow, setExpandedRow] = useState(null);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -88,7 +90,7 @@ export default function TabTransactions({ payments, totalBudget }) {
     (p) => p.status === 'אושר' || p.status === 'שולם'
   );
 
-  // Compute running balance on chronological (oldest-first) order, using paymentRequestId as tiebreaker
+  // Compute running balance on chronological (oldest-first) order
   const oldestFirst = [...approved].sort((a, b) => a.paymentRequestId - b.paymentRequestId);
   let running = totalBudget || 0;
   const withBalance = oldestFirst.map((p) => {
@@ -109,10 +111,110 @@ export default function TabTransactions({ payments, totalBudget }) {
     return true;
   });
 
+  // ── Excel export ────────────────────────────────────────────────────────────
+  const exportToExcel = () => {
+    const today = new Date();
+    const todayStr = today.toLocaleDateString('he-IL');
+    const todayISO = today.toISOString().slice(0, 10);
+
+    // ── Metadata rows ──────────────────────────────────────────────────────────
+    const metaRows = [
+      [`ריכוז תנועות — ${projectName || 'מחקר'}`],
+      [`יוצא בתאריך: ${todayStr}`],
+    ];
+
+    if (fromDate || toDate) {
+      const range = [fromDate ? `מ-${fromDate}` : '', toDate ? `עד ${toDate}` : ''].filter(Boolean).join('  ');
+      metaRows.push([`טווח תאריכים: ${range}`]);
+    }
+
+    metaRows.push([]); // blank separator
+
+    // ── Column headers ─────────────────────────────────────────────────────────
+    const headers = [
+      'תאריך',
+      'כותרת',
+      'קטגוריה',
+      'ספק / מבצע',
+      'פירוט',
+      'סכום (₪)',
+      'יתרה (₪)',
+    ];
+
+    // ── Data rows ──────────────────────────────────────────────────────────────
+    const dataRows = rows.map((r) => [
+      r.requestDate ? String(r.requestDate).slice(0, 10) : '',
+      r.requestTitle || `בקשה #${r.paymentRequestId}`,
+      r.categoryName || '',
+      // Wage rows: show assistant name. Regular rows: show provider name.
+      r.categoryName === WAGE_CATEGORY
+        ? (r.requestedByUserName || r.requestedByUserId || '')
+        : (r.providerName || ''),
+      r.requestDescription || '',
+      r.amount || 0,    // numeric — Excel can sort/sum
+      r.balance || 0,   // numeric
+    ]);
+
+    // ── Summary rows ───────────────────────────────────────────────────────────
+    const totalAmount = rows.reduce((sum, r) => sum + (r.amount || 0), 0);
+    const summaryRows = [
+      [],
+      ['', '', '', '', 'סה"כ עסקאות:', rows.length, ''],
+      ['', '', '', '', 'סה"כ הוצאות (₪):', totalAmount, ''],
+      ['', '', '', '', 'תקציב כולל (₪):', totalBudget || 0, ''],
+    ];
+
+    // ── Assemble sheet ─────────────────────────────────────────────────────────
+    const aoa = [...metaRows, headers, ...dataRows, ...summaryRows];
+    const ws  = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Column widths (characters)
+    ws['!cols'] = [
+      { wch: 13 }, // date
+      { wch: 34 }, // title
+      { wch: 22 }, // category
+      { wch: 24 }, // provider/executor
+      { wch: 32 }, // description
+      { wch: 15 }, // amount
+      { wch: 15 }, // balance
+    ];
+
+    // Mark amount and balance columns as numbers with comma formatting
+    // (the cells already contain JS numbers, xlsx infers type automatically)
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'ריכוז תנועות');
+
+    // Safe filename (strip chars illegal in filenames)
+    const safeName = (projectName || '').replace(/[\\/:*?"<>|]/g, '_').trim();
+    const filename  = safeName
+      ? `ריכוז_תנועות_${safeName}_${todayISO}.xlsx`
+      : `ריכוז_תנועות_${todayISO}.xlsx`;
+
+    XLSX.writeFile(wb, filename);
+  };
+
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
-        <span className="text-xs text-gray-400">כולל הוצאות שאושרו ושולמו בלבד</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-400">כולל הוצאות שאושרו ושולמו בלבד</span>
+          {/* Export button */}
+          <button
+            type="button"
+            onClick={exportToExcel}
+            disabled={rows.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            title="ייצוא לאקסל"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+            </svg>
+            ייצוא לאקסל
+          </button>
+        </div>
         <span className="text-sm font-semibold text-gray-700">
           ריכוז תנועות ({rows.length})
         </span>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   getAssistantProjects,
@@ -81,6 +81,10 @@ export default function AttendancePage() {
   const [toast, setToast] = useState('');
   const [saveError, setSaveError] = useState('');
 
+  // Refs for debounced auto-save (always point to latest saveAll / locked state)
+  const saveAllRef = useRef(null);
+  const autoSaveTimerRef = useRef(null);
+
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 3000);
@@ -155,6 +159,13 @@ export default function AttendancePage() {
 
       return { ...prev, [day]: updated };
     });
+
+    // Debounced auto-save — fires 1.5 s after the last field change
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      autoSaveTimerRef.current = null;
+      saveAllRef.current?.();
+    }, 1500);
   };
 
   // Total hours from current drafts (not just DB-saved rows)
@@ -225,6 +236,9 @@ export default function AttendancePage() {
     }
     return failed === 0;
   };
+
+  // Keep the ref current so the debounce timer always calls the latest version
+  saveAllRef.current = saveAll;
 
   const clearDay = async (day) => {
     const draft = drafts[day];
@@ -466,8 +480,11 @@ export default function AttendancePage() {
                           {isSaved && !isDirty && (
                             <span className="text-xs text-green-600 font-medium">✓ נשמר</span>
                           )}
-                          {isDirty && (
-                            <span className="text-xs text-amber-500 font-medium">לא נשמר</span>
+                          {isDirty && saving && (
+                            <span className="inline-block w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          )}
+                          {isDirty && !saving && (
+                            <span className="text-xs text-amber-500 font-medium">ממתין...</span>
                           )}
                           {isSaved && !locked && (
                             <button
@@ -493,43 +510,33 @@ export default function AttendancePage() {
             {/* Action buttons */}
             {!locked && (
               <div className="flex items-center justify-between">
-                <p className="text-xs text-gray-400">
-                  {hasDraftData
-                    ? `${Object.values(drafts).filter(d => d?.fromHour || d?.toHour || d?.workedHours).length} ימים מולאו`
-                    : 'מלא שעות לימים בהם עבדת'}
+                <p className="text-xs text-gray-400 flex items-center gap-2">
+                  {saving && !submitting ? (
+                    <>
+                      <span className="inline-block w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      שומר אוטומטית...
+                    </>
+                  ) : hasDraftData ? (
+                    `${Object.values(drafts).filter(d => d?.fromHour || d?.toHour || d?.workedHours).length} ימים מולאו`
+                  ) : (
+                    'מלא שעות לימים בהם עבדת'
+                  )}
                 </p>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={saveAll}
-                    disabled={busy || !hasDraftData}
-                    className="flex items-center gap-2 px-5 py-2.5 border border-primary text-primary text-sm font-semibold rounded-lg hover:bg-primary/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {saving && !submitting ? (
-                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                      </svg>
-                    )}
-                    שמור
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={busy || !hasDraftData}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {submitting ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                    {submitting ? 'שולח...' : `שלח לאישור (${totalHoursFromDrafts.toFixed(1)} שעות)`}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={busy || !hasDraftData}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {submitting ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                  {submitting ? 'שולח...' : `שלח לאישור (${totalHoursFromDrafts.toFixed(1)} שעות)`}
+                </button>
               </div>
             )}
           </>

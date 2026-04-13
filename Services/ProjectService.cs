@@ -677,6 +677,22 @@ namespace RupResearchAPI.Services
                 .Where(a => a.ApprovalStatus == "ממתין")
                 .Sum(a => salary * (a.TotalWorkedHours ?? 0));
 
+            // Months that have been submitted and are awaiting or already approved.
+            // Daily reports for these months should NOT appear in the "unsent drafts" list.
+            // Rejected months ("נדחה") are excluded here so their reports re-appear as drafts.
+            var submittedMonths = monthlyApprovals
+                .Where(a => a.ApprovalStatus == "ממתין" || a.ApprovalStatus == "אושר")
+                .Select(a => (Month: a.Month ?? 0, Year: a.Year ?? 0))
+                .ToHashSet();
+
+            // Only daily reports whose month/year has NOT been submitted/approved
+            var unsubmittedReports = hourReports
+                .Where(r => r.ReportDate.HasValue &&
+                            !submittedMonths.Contains((
+                                Month: r.ReportDate.Value.Month,
+                                Year: r.ReportDate.Value.Year)))
+                .ToList();
+
             return new AssistantTrackingDto
             {
                 AssistantUserId = assistantUserId,
@@ -699,7 +715,8 @@ namespace RupResearchAPI.Services
                     ApprovalDate = a.ApprovalDate?.ToString("yyyy-MM-dd"),
                     Comments = a.Comments,
                 }).ToList(),
-                HourReports = hourReports.Select(r => new AssistantHourEntryDto
+                // Only returns drafts not yet sent for approval
+                HourReports = unsubmittedReports.Select(r => new AssistantHourEntryDto
                 {
                     HourReportId = r.HourReportId,
                     ReportDate = r.ReportDate?.ToString("yyyy-MM-dd"),
