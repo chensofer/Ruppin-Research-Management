@@ -11,7 +11,6 @@ export default function CategoryPicker({ value, onChange, placeholder = 'בחר 
   const [categories, setCategories] = useState([]);
   const [showNew, setShowNew]       = useState(false);
   const [newName, setNewName]       = useState('');
-  const [newDesc, setNewDesc]       = useState('');
   const [saving, setSaving]         = useState(false);
   const [saveError, setSaveError]   = useState('');
 
@@ -36,7 +35,7 @@ export default function CategoryPicker({ value, onChange, placeholder = 'בחר 
     setSaving(true);
     setSaveError('');
     try {
-      const res = await createCategory({ categoryName: name, categoryDescription: newDesc.trim() || null });
+      const res = await createCategory({ categoryName: name });
       const saved = res.data;
       setCategories((prev) => {
         const filtered = prev.filter((c) => c.categoryName !== saved.categoryName);
@@ -45,7 +44,6 @@ export default function CategoryPicker({ value, onChange, placeholder = 'בחר 
       onChange(saved.categoryName);
       setShowNew(false);
       setNewName('');
-      setNewDesc('');
     } catch {
       setSaveError('שגיאה בשמירת הקטגוריה');
     } finally {
@@ -75,13 +73,7 @@ export default function CategoryPicker({ value, onChange, placeholder = 'בחר 
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && saveNew()}
             placeholder="שם קטגוריה חדשה *"
-            className={inputCls}
-          />
-          <input
-            type="text"
-            value={newDesc}
-            onChange={(e) => setNewDesc(e.target.value)}
-            placeholder="תיאור (אופציונלי)"
+            maxLength={50}
             className={inputCls}
           />
           {saveError && <p className="text-xs text-red-500">{saveError}</p>}
@@ -96,7 +88,7 @@ export default function CategoryPicker({ value, onChange, placeholder = 'בחר 
             </button>
             <button
               type="button"
-              onClick={() => { setShowNew(false); setNewName(''); setNewDesc(''); }}
+              onClick={() => { setShowNew(false); setNewName(''); }}
               className="px-3 py-1.5 text-gray-500 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
               ביטול

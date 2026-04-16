@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { login as loginApi } from '../api/authApi';
 import Logo from '../components/Logo';
@@ -7,7 +7,10 @@ import Logo from '../components/Logo';
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ userId: '', password: '' });
+  const location = useLocation();
+  // Pre-fill from registration redirect (state passed via navigate)
+  const prefill = location.state ?? {};
+  const [form, setForm] = useState({ userId: prefill.userId ?? '', password: prefill.password ?? '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 

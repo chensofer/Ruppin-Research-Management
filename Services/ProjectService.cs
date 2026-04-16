@@ -47,6 +47,7 @@ namespace RupResearchAPI.Services
             // Load budget data in memory for all user projects
             var allPayments = await _db.ResearchPaymentRequests.ToListAsync();
             var allCommitments = await _db.ResearchFutureCommitments.ToListAsync();
+            var allTeamMembers = await _db.ResearchUsersProjects.ToListAsync();
 
             return userProjects.Select(p =>
             {
@@ -65,6 +66,7 @@ namespace RupResearchAPI.Services
                 dto.TotalFuture = totalFuture;
                 dto.RemainingBalance = budget - totalPaid;
                 dto.AvailableBalance = budget - totalPaid - totalFuture;
+                dto.TeamMemberCount = allTeamMembers.Count(up => up.ProjectId == p.ProjectId);
                 return dto;
             }).ToList();
         }
@@ -269,7 +271,7 @@ namespace RupResearchAPI.Services
                     FundingSource = dto.FundingSource,
                     StartDate = dto.StartDate,
                     EndDate = dto.EndDate,
-                    PrincipalResearcherId = dto.PrincipalResearcherId,
+                    PrincipalResearcherId = dto.PrincipalResearcherId?.Trim(),
                     CenterId = dto.CenterId,
                     CreatedDate = DateOnly.FromDateTime(DateTime.Today),
                 };
@@ -281,9 +283,9 @@ namespace RupResearchAPI.Services
                     _db.ResearchBudgetCategories.Add(new ResearchBudgetCategory
                     {
                         ProjectId = project.ProjectId,
-                        CategoryName = cat.CategoryName,
+                        CategoryName = cat.CategoryName?.Length > 50 ? cat.CategoryName[..50] : cat.CategoryName,
                         AllocatedAmount = cat.AllocatedAmount,
-                        Notes = cat.Notes,
+                        Notes = cat.Notes?.Length > 255 ? cat.Notes[..255] : cat.Notes,
                     });
                 }
 
@@ -292,12 +294,12 @@ namespace RupResearchAPI.Services
                     _db.ResearchPaymentRequests.Add(new ResearchPaymentRequest
                     {
                         ProjectId = project.ProjectId,
-                        RequestedByUserId = requestedByUserId,
-                        RequestTitle = exp.RequestTitle,
-                        RequestDescription = exp.RequestDescription,
+                        RequestedByUserId = requestedByUserId?.Trim(),
+                        RequestTitle = exp.RequestTitle?.Length > 255 ? exp.RequestTitle[..255] : exp.RequestTitle,
+                        RequestDescription = exp.RequestDescription?.Length > 1000 ? exp.RequestDescription[..1000] : exp.RequestDescription,
                         RequestedAmount = exp.RequestedAmount,
                         RequestDate = exp.RequestDate ?? DateOnly.FromDateTime(DateTime.Today),
-                        CategoryName = exp.CategoryName,
+                        CategoryName = exp.CategoryName?.Length > 50 ? exp.CategoryName[..50] : exp.CategoryName,
                         Status = "שולם",
                         ProviderId = exp.ProviderId,
                     });
@@ -337,11 +339,12 @@ namespace RupResearchAPI.Services
                     });
                 }
 
-                if (!alreadyIncluded.Contains(requestedByUserId) && !string.IsNullOrEmpty(requestedByUserId))
+                var trimmedCreator = requestedByUserId?.Trim() ?? "";
+                if (!alreadyIncluded.Contains(trimmedCreator) && !string.IsNullOrEmpty(trimmedCreator))
                 {
                     toAdd.Add(new ResearchUsersProject
                     {
-                        UserId = requestedByUserId,
+                        UserId = trimmedCreator,
                         ProjectId = projectId,
                         ProjectRole = "יוצר",
                     });
@@ -400,11 +403,11 @@ namespace RupResearchAPI.Services
             var record = new ResearchFile
             {
                 ProjectId = projectId,
-                FileName = fileName,
-                Path = relativePath,
-                FileType = fileType,
-                FolderName = folderName,
-                UploadedByUserId = userId,
+                FileName   = fileName?.Length   > 255 ? fileName[..255]   : fileName,
+                Path       = relativePath?.Length > 500 ? relativePath[..500] : relativePath,
+                FileType   = fileType?.Length   > 50  ? fileType[..50]   : fileType,
+                FolderName = folderName?.Length > 100 ? folderName[..100] : folderName,
+                UploadedByUserId = userId?.Trim() is { Length: > 10 } t ? t[..10] : userId?.Trim(),
                 CreatedDate = DateTime.UtcNow,
             };
             _db.ResearchFiles.Add(record);
@@ -778,6 +781,7 @@ namespace RupResearchAPI.Services
                     Path = f.Path,
                     FolderName = f.FolderName,
                     FileType = f.FileType,
+                    CreatedDate = f.CreatedDate != null ? f.CreatedDate.Value.ToString("yyyy-MM-dd") : null,
                 }).ToListAsync();
         }
 

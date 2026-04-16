@@ -85,5 +85,13 @@ namespace RupResearchAPI.Controllers
             var list = await _svc.GetProjectsForAssistant(userId);
             return Ok(list);
         }
+
+        // GET /api/hour-reports/my-submissions?userId=
+        [HttpGet("my-submissions")]
+        public async Task<IActionResult> GetMySubmissions([FromQuery] string userId)
+        {
+            var list = await _svc.GetAllSubmissionsForUser(userId);
+            return Ok(list);
+        }
     }
 }

@@ -120,7 +120,7 @@ function CreateAssistantModal({ onClose, onCreated, projectId }) {
             value={form.email}
             onChange={handleChange}
             error={errors.email}
-            placeholder="example@mail.com"
+            placeholder="דוא״ל"
           />
           <Field
             label="שכר לשעה (₪)"
@@ -131,7 +131,7 @@ function CreateAssistantModal({ onClose, onCreated, projectId }) {
             value={form.salary}
             onChange={handleChange}
             error={errors.salary}
-            placeholder="לדוגמה: 45"
+            placeholder="₪/שעה"
           />
 
           <p className="text-xs text-gray-400">
@@ -249,7 +249,7 @@ function EditAssistantModal({ assistant, projectId, onClose, onSaved }) {
             value={form.email}
             onChange={handleChange}
             error={errors.email}
-            placeholder="example@mail.com"
+            placeholder="דוא״ל"
           />
           <Field
             label="שכר לשעה (₪)"
@@ -260,7 +260,7 @@ function EditAssistantModal({ assistant, projectId, onClose, onSaved }) {
             value={form.salary}
             onChange={handleChange}
             error={errors.salary}
-            placeholder="לדוגמה: 45"
+            placeholder="₪/שעה"
           />
           <div className="flex gap-3 pt-1">
             <button
@@ -501,13 +501,17 @@ export default function TabAssistants({ projectId, assistants, onChanged }) {
 
   const handleAdd = async () => {
     if (!stagedUser) return;
+    if (!salary || parseFloat(salary) <= 0) {
+      setError('שכר לשעה הוא שדה חובה');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
       await addAssistant(projectId, {
         assistantUserId: stagedUser.userId,
         role: 'עוזר מחקר',
-        salaryPerHour: salary ? parseFloat(salary) : null,
+        salaryPerHour: parseFloat(salary),
       });
       setStagedUser(null);
       setSalary('');
@@ -594,9 +598,9 @@ export default function TabAssistants({ projectId, assistants, onChanged }) {
               type="number"
               min={0}
               value={salary}
-              onChange={(e) => setSalary(e.target.value)}
-              placeholder="₪/שעה"
-              className="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              onChange={(e) => { setSalary(e.target.value); setError(''); }}
+              placeholder="שכר לשעה (₪) *"
+              className={`w-32 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary ${error === 'שכר לשעה הוא שדה חובה' ? 'border-red-400' : 'border-gray-200'}`}
             />
             <button
               type="button"

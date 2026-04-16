@@ -84,5 +84,54 @@ namespace RupResearchAPI.Controllers
                 return NotFound(new { message = ex.Message });
             }
         }
+
+        // POST /api/users/assistant — create a research assistant user account (saved permanently)
+        [HttpPost("assistant")]
+        public async Task<IActionResult> CreateAssistantUser([FromBody] CreateAssistantUserDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.UserId) || string.IsNullOrWhiteSpace(dto.FirstName) ||
+                string.IsNullOrWhiteSpace(dto.LastName) || string.IsNullOrWhiteSpace(dto.Email))
+                return BadRequest(new { message = "כל השדות הם חובה" });
+
+            var trimmedId = dto.UserId.Trim();
+
+            // If user already exists, return their info without error
+            // Use FirstOrDefaultAsync with Trim() because the DB column is char(10) — padded with spaces
+            var existing = await _db.ResearchUsers.FirstOrDefaultAsync(u => u.UserId.Trim() == trimmedId);
+            if (existing != null)
+            {
+                if (existing.SystemAuthorization != "עוזר מחקר")
+                    return Conflict(new { message = "משתמש עם ת.ז. זו כבר קיים במערכת עם הרשאה אחרת" });
+                return Ok(new UserResponseDto
+                {
+                    UserId = existing.UserId.Trim(),
+                    FirstName = existing.FirstName,
+                    LastName = existing.LastName,
+                    Email = existing.Email,
+                    SystemAuthorization = existing.SystemAuthorization,
+                });
+            }
+
+            var user = new RupResearchAPI.Models.ResearchUser
+            {
+                UserId = trimmedId,
+                FirstName = dto.FirstName.Trim(),
+                LastName = dto.LastName.Trim(),
+                Email = dto.Email.Trim(),
+                SystemAuthorization = "עוזר מחקר",
+                Password = BCrypt.Net.BCrypt.HashPassword("Temp1234!"),
+            };
+            _db.ResearchUsers.Add(user);
+            await _db.SaveChangesAsync();
+
+            return Ok(new UserResponseDto
+            {
+                UserId = user.UserId,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                SystemAuthorization = user.SystemAuthorization,
+            });
+        }
     }
 }

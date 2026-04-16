@@ -12,4 +12,12 @@ namespace RupResearchAPI.DTOs
     public record UpdateProfileDto(string? FirstName, string? LastName, string? Email);
 
     public record ChangePasswordDto(string CurrentPassword, string NewPassword);
+
+    public class CreateAssistantUserDto
+    {
+        public string UserId { get; set; } = null!;
+        public string FirstName { get; set; } = null!;
+        public string LastName { get; set; } = null!;
+        public string Email { get; set; } = null!;
+    }
 }

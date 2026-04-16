@@ -6,3 +6,4 @@ export const getUsers = (role) =>
 export const getMe = () => axiosInstance.get('/users/me');
 export const updateMe = (data) => axiosInstance.put('/users/me', data);
 export const changePassword = (data) => axiosInstance.post('/users/me/change-password', data);
+export const createAssistantUser = (data) => axiosInstance.post('/users/assistant', data);

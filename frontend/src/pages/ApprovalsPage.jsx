@@ -212,7 +212,7 @@ function HourApprovalCard({ record, onDecide }) {
             {record.userName || record.userId}
           </h4>
           <p className="text-xs text-gray-500 mt-0.5">
-            {record.projectNameHe || `מחקר ${record.projectId}`} · {MONTH_NAMES[record.month]} {record.year}
+            {MONTH_NAMES[record.month]} {record.year}
           </p>
         </div>
         <div className="text-left flex-shrink-0">
@@ -380,7 +380,7 @@ export default function ApprovalsPage() {
   // Clear the project filter
   const clearFilter = () => setSearchParams({});
 
-  // Group requests by project
+  // Group payment requests by project
   const grouped = visibleRequests.reduce((acc, req) => {
     const key = req.projectId ?? 0;
     const name = req.projectNameHe || req.projectNameEn || `מחקר ${key}`;
@@ -391,6 +391,17 @@ export default function ApprovalsPage() {
 
   const groups = Object.values(grouped);
   const totalCount = visibleRequests.length;
+
+  // Group hour records by project
+  const hourGrouped = visibleHourRecords.reduce((acc, rec) => {
+    const key = rec.projectId ?? 0;
+    const name = rec.projectNameHe || rec.projectNameEn || `מחקר ${key}`;
+    if (!acc[key]) acc[key] = { name, items: [] };
+    acc[key].items.push(rec);
+    return acc;
+  }, {});
+
+  const hourGroups = Object.values(hourGrouped);
 
   return (
     <Layout>
@@ -536,15 +547,28 @@ export default function ApprovalsPage() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {visibleHourRecords.map((r) => (
-                  <HourApprovalCard
-                    key={r.monthlyApprovalId}
-                    record={r}
-                    onDecide={handleHourDecide}
-                  />
-                ))}
-              </div>
+              hourGroups.map((group) => (
+                <div key={group.name} className="mb-8">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-6 bg-primary rounded-full" />
+                      <h2 className="text-base font-semibold text-gray-800">{group.name}</h2>
+                    </div>
+                    <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                      {group.items.length} ממתינות
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {group.items.map((r) => (
+                      <HourApprovalCard
+                        key={r.monthlyApprovalId}
+                        record={r}
+                        onDecide={handleHourDecide}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))
             )}
           </>
         )}

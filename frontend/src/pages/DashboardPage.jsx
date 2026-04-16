@@ -8,19 +8,26 @@ import CreateProjectModal from '../components/CreateProjectModal';
 
 // ── Sort options ────────────────────────────────────────────────────────────────
 const SORT_OPTIONS = [
-  { value: 'default',        label: 'ברירת מחדל' },
-  { value: 'startDate_desc', label: 'תאריך התחלה — חדש לישן' },
-  { value: 'startDate_asc',  label: 'תאריך התחלה — ישן לחדש' },
-  { value: 'remaining_desc', label: 'יתרת תקציב — גבוה לנמוך' },
-  { value: 'available_desc', label: 'יתרה זמינה — גבוה לנמוך' },
-  { value: 'usage_desc',     label: 'ניצול תקציב — גבוה לנמוך' },
-  { value: 'usage_asc',      label: 'ניצול תקציב — נמוך לגבוה' },
-  { value: 'pending_desc',   label: 'בקשות ממתינות — הכי הרבה קודם' },
-  { value: 'budget_desc',    label: 'תקציב כולל — גבוה לנמוך' },
+  { value: 'default',          label: 'ברירת מחדל' },
+  { value: 'startDate_desc',   label: 'תאריך התחלה — חדש לישן' },
+  { value: 'startDate_asc',    label: 'תאריך התחלה — ישן לחדש' },
+  { value: 'budget_desc',      label: 'תקציב כולל — גבוה לנמוך' },
+  { value: 'budget_asc',       label: 'תקציב כולל — נמוך לגבוה' },
+  { value: 'available_desc',   label: 'יתרה זמינה — גבוה לנמוך' },
+  { value: 'available_asc',    label: 'יתרה זמינה — נמוך לגבוה' },
+  { value: 'researchers_desc', label: 'מספר חוקרים — הכי הרבה קודם' },
+  { value: 'researchers_asc',  label: 'מספר חוקרים — הכי פחות קודם' },
 ];
 
-const isActive = (p) =>
-  p.status === 'פעיל' || p.status === 'Active' || p.status === 'active';
+const TODAY = new Date().toISOString().split('T')[0];
+
+const isActive = (p) => {
+  const activeStatus = p.status === 'פעיל' || p.status === 'Active' || p.status === 'active';
+  if (!activeStatus) return false;
+  // If the end date has passed, treat as inactive
+  if (p.endDate && String(p.endDate).slice(0, 10) < TODAY) return false;
+  return true;
+};
 
 function sortProjects(list, sortBy) {
   if (sortBy === 'default') return list;
@@ -30,24 +37,18 @@ function sortProjects(list, sortBy) {
         return (b.startDate ?? '') > (a.startDate ?? '') ? 1 : -1;
       case 'startDate_asc':
         return (a.startDate ?? '') > (b.startDate ?? '') ? 1 : -1;
-      case 'remaining_desc':
-        return (b.remainingBalance ?? 0) - (a.remainingBalance ?? 0);
-      case 'available_desc':
-        return (b.availableBalance ?? 0) - (a.availableBalance ?? 0);
-      case 'usage_desc': {
-        const ua = a.totalBudget > 0 ? a.totalPaid / a.totalBudget : 0;
-        const ub = b.totalBudget > 0 ? b.totalPaid / b.totalBudget : 0;
-        return ub - ua;
-      }
-      case 'usage_asc': {
-        const ua = a.totalBudget > 0 ? a.totalPaid / a.totalBudget : 0;
-        const ub = b.totalBudget > 0 ? b.totalPaid / b.totalBudget : 0;
-        return ua - ub;
-      }
-      case 'pending_desc':
-        return (b.pendingCount ?? 0) - (a.pendingCount ?? 0);
       case 'budget_desc':
         return (b.totalBudget ?? 0) - (a.totalBudget ?? 0);
+      case 'budget_asc':
+        return (a.totalBudget ?? 0) - (b.totalBudget ?? 0);
+      case 'available_desc':
+        return (b.availableBalance ?? 0) - (a.availableBalance ?? 0);
+      case 'available_asc':
+        return (a.availableBalance ?? 0) - (b.availableBalance ?? 0);
+      case 'researchers_desc':
+        return (b.teamMemberCount ?? 0) - (a.teamMemberCount ?? 0);
+      case 'researchers_asc':
+        return (a.teamMemberCount ?? 0) - (b.teamMemberCount ?? 0);
       default:
         return a.projectId - b.projectId;
     }

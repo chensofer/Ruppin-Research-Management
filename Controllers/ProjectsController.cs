@@ -176,8 +176,11 @@ namespace RupResearchAPI.Controllers
             var relativePath = $"/uploads/{id}/{safeFileName}";
             var userId = User.FindFirst("user_id")?.Value;
 
+            // Use file extension instead of full MIME type (avoids truncation of long MIME strings like xlsx/docx)
+            var fileType = Path.GetExtension(safeFileName).ToLowerInvariant();
+
             var record = await _projectService.SaveFileRecord(
-                id, safeFileName, relativePath, file.ContentType, folderName, userId);
+                id, safeFileName, relativePath, fileType, folderName, userId);
 
             return Ok(record);
         }

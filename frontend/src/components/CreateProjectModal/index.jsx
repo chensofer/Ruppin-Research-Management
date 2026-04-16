@@ -242,7 +242,11 @@ export default function CreateProjectModal({ onClose, onCreated }) {
             <StepAssistants data={assistants} onChange={setAssistants} />
           )}
           {step === 'expenses' && (
-            <StepExpenses data={expenses} onChange={setExpenses} />
+            <StepExpenses
+              data={expenses}
+              onChange={setExpenses}
+              totalBudget={parseFloat(details.totalBudget) || 0}
+            />
           )}
           {step === 'documents' && (
             <StepDocuments

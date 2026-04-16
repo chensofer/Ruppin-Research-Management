@@ -1,7 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 
-function StatusBadge({ status }) {
-  const isActive = status === 'פעיל' || status === 'Active' || status === 'active';
+const TODAY = new Date().toISOString().split('T')[0];
+
+function StatusBadge({ project }) {
+  const rawActive = project.status === 'פעיל' || project.status === 'Active' || project.status === 'active';
+  const isActive = rawActive && (!project.endDate || String(project.endDate).slice(0, 10) >= TODAY);
   return (
     <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${
       isActive ? 'bg-success-light text-success' : 'bg-gray-100 text-gray-600'
@@ -11,7 +14,7 @@ function StatusBadge({ status }) {
           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
         </svg>
       )}
-      {isActive ? 'פעיל' : (status || 'לא ידוע')}
+      {isActive ? 'פעיל' : 'לא פעיל'}
     </span>
   );
 }
@@ -31,7 +34,7 @@ export default function ProjectCard({ project }) {
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
       {/* Top row: status badge */}
       <div className="flex justify-end">
-        <StatusBadge status={project.status} />
+        <StatusBadge project={project} />
       </div>
 
       {/* Project name */}

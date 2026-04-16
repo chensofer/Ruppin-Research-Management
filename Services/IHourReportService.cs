@@ -13,5 +13,6 @@ namespace RupResearchAPI.Services
         Task<MonthlyApprovalDto?> DecideMonthly(int id, DecideMonthlyApprovalDto dto);
         Task<List<MonthlyApprovalDto>> GetPendingForResearcher(string researcherId);
         Task<List<AssistantProjectDto>> GetProjectsForAssistant(string userId);
+        Task<List<MonthlyApprovalDto>> GetAllSubmissionsForUser(string userId);
     }
 }

@@ -7,5 +7,6 @@ namespace RupResearchAPI.DTOs
         public string? Path { get; set; }
         public string? FolderName { get; set; }
         public string? FileType { get; set; }
+        public string? CreatedDate { get; set; }
     }
 }

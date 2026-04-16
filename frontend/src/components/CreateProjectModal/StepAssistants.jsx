@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getUsers } from '../../api/usersApi';
+import { getUsers, createAssistantUser } from '../../api/usersApi';
 
 const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400';
 const errorCls = 'border-red-400 focus:ring-red-400';
@@ -28,6 +28,7 @@ export default function StepAssistants({ data, onChange }) {
   // Form for new user
   const [newForm, setNewForm]         = useState(EMPTY_NEW_FORM);
   const [newFormErrors, setNewFormErrors] = useState({});
+  const [savingNew, setSavingNew]     = useState(false);
 
   useEffect(() => {
     getUsers()
@@ -90,9 +91,10 @@ export default function StepAssistants({ data, onChange }) {
   const setNf = (field) => (e) =>
     setNewForm((f) => ({ ...f, [field]: e.target.value }));
 
-  const commitNew = () => {
+  const commitNew = async () => {
     const errs = {};
     if (!newForm.assistantUserId.trim()) errs.assistantUserId = 'שדה חובה';
+    else if (!/^\d{9}$/.test(newForm.assistantUserId.trim())) errs.assistantUserId = 'ת.ז. חייבת להכיל בדיוק 9 ספרות';
     if (!newForm.firstName.trim())       errs.firstName = 'שדה חובה';
     if (!newForm.lastName.trim())        errs.lastName = 'שדה חובה';
     if (!newForm.email.trim())           errs.email = 'שדה חובה';
@@ -104,8 +106,25 @@ export default function StepAssistants({ data, onChange }) {
     setNewFormErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
+    // Save user to DB immediately so they are permanently stored even if removed from this project's wizard
+    setSavingNew(true);
+    try {
+      await createAssistantUser({
+        userId: newForm.assistantUserId.trim(),
+        firstName: newForm.firstName.trim(),
+        lastName: newForm.lastName.trim(),
+        email: newForm.email.trim(),
+      });
+    } catch (err) {
+      const msg = err.response?.data?.message || 'שגיאה בשמירת עוזר המחקר';
+      setNewFormErrors({ assistantUserId: msg });
+      setSavingNew(false);
+      return;
+    }
+    setSavingNew(false);
+
     onChange([...data, {
-      isNewUser: true,
+      isNewUser: false, // already saved in DB
       assistantUserId: newForm.assistantUserId.trim(),
       firstName: newForm.firstName.trim(),
       lastName: newForm.lastName.trim(),
@@ -240,8 +259,8 @@ export default function StepAssistants({ data, onChange }) {
           </p>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <input type="text" placeholder="ת.ז. (10 ספרות) *" value={newForm.assistantUserId}
-                onChange={setNf('assistantUserId')} maxLength={10}
+              <input type="text" placeholder="ת.ז. (9 ספרות) *" value={newForm.assistantUserId}
+                onChange={setNf('assistantUserId')} maxLength={9}
                 className={`${inputCls} ${newFormErrors.assistantUserId ? errorCls : ''}`} />
               {newFormErrors.assistantUserId && <p className="text-xs text-red-500 mt-0.5">{newFormErrors.assistantUserId}</p>}
             </div>
@@ -270,12 +289,16 @@ export default function StepAssistants({ data, onChange }) {
               {newFormErrors.salaryPerHour && <p className="text-xs text-red-500 mt-0.5">{newFormErrors.salaryPerHour}</p>}
             </div>
           </div>
-          <button type="button" onClick={commitNew}
-            className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-dark transition-colors">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            הוסף עוזר מחקר חדש
+          <button type="button" onClick={commitNew} disabled={savingNew}
+            className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-dark disabled:opacity-60 transition-colors">
+            {savingNew ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            )}
+            {savingNew ? 'שומר...' : 'הוסף עוזר מחקר חדש'}
           </button>
         </div>
       )}

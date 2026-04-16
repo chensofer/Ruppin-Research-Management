@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import CategoryPicker from './CategoryPicker';
-import { getProviders } from '../../api/providersApi';
+import { getProviders, createProvider } from '../../api/providersApi';
 
 const inputCls =
   'w-full bg-white text-gray-900 border border-gray-200 rounded-lg px-3 py-2 text-sm ' +
@@ -26,13 +26,15 @@ const EMPTY_DRAFT = {
   files: [],
 };
 
-function AddExpenseForm({ onAdd }) {
+function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
   const [draft, setDraft]               = useState({ ...EMPTY_DRAFT });
   const [providerQuery, setProviderQuery] = useState('');
   const [showProviderDrop, setShowProviderDrop] = useState(false);
   const [providers, setProviders]       = useState([]);
   const [providerMode, setProviderMode] = useState('none'); // 'none' | 'existing' | 'new'
   const [errors, setErrors]             = useState({});
+  const [savingProvider, setSavingProvider] = useState(false);
+  const [providerSaveError, setProviderSaveError] = useState('');
   const fileRef                         = useRef(null);
 
   useEffect(() => {
@@ -54,6 +56,30 @@ function AddExpenseForm({ onAdd }) {
     setDraft((d) => ({ ...d, providerId: null, providerName: '', isNewProvider: false, newProvider: { ...EMPTY_NEW_PROVIDER } }));
     setProviderQuery('');
     setProviderMode('none');
+    setProviderSaveError('');
+  };
+
+  const saveNewProvider = async () => {
+    const name = draft.newProvider.providerName.trim();
+    if (!name) return;
+    setSavingProvider(true);
+    setProviderSaveError('');
+    try {
+      const res = await createProvider({
+        providerName: name,
+        phone: draft.newProvider.phone || null,
+        email: draft.newProvider.email || null,
+        notes: draft.newProvider.notes || null,
+      });
+      const saved = res.data;
+      setProviders((prev) => [...prev, saved]);
+      setDraft((d) => ({ ...d, providerId: saved.providerId, providerName: saved.providerName, isNewProvider: false, newProvider: { ...EMPTY_NEW_PROVIDER } }));
+      setProviderMode('existing');
+    } catch {
+      setProviderSaveError('שגיאה בשמירת הספק, נסה שנית');
+    } finally {
+      setSavingProvider(false);
+    }
   };
 
   const setNp = (field) => (e) =>
@@ -71,8 +97,15 @@ function AddExpenseForm({ onAdd }) {
   const submit = () => {
     const errs = {};
     if (!draft.categoryName.trim()) errs.categoryName = 'יש לבחור קטגוריה';
-    if (!draft.requestedAmount || parseFloat(draft.requestedAmount) <= 0)
+    if (!draft.requestedAmount || parseFloat(draft.requestedAmount) <= 0) {
       errs.requestedAmount = 'יש להזין סכום';
+    } else if (totalBudget > 0) {
+      const amount = parseFloat(draft.requestedAmount);
+      const remaining = totalBudget - existingTotal;
+      if (amount > remaining) {
+        errs.requestedAmount = `הסכום חורג מהתקציב הזמין (${fmt(remaining)})`;
+      }
+    }
     if (providerMode === 'new' && !draft.newProvider.providerName.trim())
       errs.providerName = 'שם הספק הוא שדה חובה';
 
@@ -200,19 +233,30 @@ function AddExpenseForm({ onAdd }) {
         )}
 
         {providerMode === 'new' && (
-          <div className="grid grid-cols-2 gap-2">
-            <div className="col-span-2">
-              <input type="text" placeholder="שם הספק *" value={draft.newProvider.providerName}
-                onChange={setNp('providerName')}
-                className={`${inputCls} ${errors.providerName ? errorCls : ''}`} />
-              {errors.providerName && <p className="text-xs text-red-500 mt-0.5">{errors.providerName}</p>}
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="col-span-2">
+                <input type="text" placeholder="שם הספק *" value={draft.newProvider.providerName}
+                  onChange={setNp('providerName')}
+                  className={`${inputCls} ${errors.providerName ? errorCls : ''}`} />
+                {errors.providerName && <p className="text-xs text-red-500 mt-0.5">{errors.providerName}</p>}
+              </div>
+              <input type="text" placeholder="טלפון" value={draft.newProvider.phone}
+                onChange={setNp('phone')} className={inputCls} />
+              <input type="email" placeholder="אימייל" value={draft.newProvider.email}
+                onChange={setNp('email')} className={inputCls} />
+              <input type="text" placeholder="תיאור" value={draft.newProvider.notes}
+                onChange={setNp('notes')} className={`${inputCls} col-span-2`} />
             </div>
-            <input type="text" placeholder="טלפון" value={draft.newProvider.phone}
-              onChange={setNp('phone')} className={inputCls} />
-            <input type="email" placeholder="אימייל" value={draft.newProvider.email}
-              onChange={setNp('email')} className={inputCls} />
-            <input type="text" placeholder="תיאור" value={draft.newProvider.notes}
-              onChange={setNp('notes')} className={`${inputCls} col-span-2`} />
+            {providerSaveError && <p className="text-xs text-red-500">{providerSaveError}</p>}
+            <button
+              type="button"
+              onClick={saveNewProvider}
+              disabled={savingProvider || !draft.newProvider.providerName.trim()}
+              className="w-full px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-dark disabled:opacity-50 transition-colors"
+            >
+              {savingProvider ? 'שומר...' : 'הוסף ספק'}
+            </button>
           </div>
         )}
       </div>
@@ -231,7 +275,8 @@ function AddExpenseForm({ onAdd }) {
           <ul className="space-y-1">
             {draft.files.map((f, i) => (
               <li key={i} className="flex items-center justify-between text-xs text-gray-700 bg-gray-50 rounded-lg px-2 py-1.5">
-                <span className="truncate">{f.name}</span>
+                <a href={URL.createObjectURL(f.file)} target="_blank" rel="noopener noreferrer"
+                  className="truncate text-blue-600 hover:underline">{f.name}</a>
                 <button type="button" onClick={() => removeFile(i)}
                   className="text-gray-400 hover:text-red-500 transition-colors mr-2">✕</button>
               </li>
@@ -254,7 +299,7 @@ function AddExpenseForm({ onAdd }) {
   );
 }
 
-export default function StepExpenses({ data, onChange }) {
+export default function StepExpenses({ data, onChange, totalBudget = 0 }) {
   const addRow = (draft) => onChange([...data, { ...draft, _key: crypto.randomUUID() }]);
   const removeRow = (key) => onChange(data.filter((r) => r._key !== key));
 
@@ -262,6 +307,16 @@ export default function StepExpenses({ data, onChange }) {
 
   return (
     <div className="space-y-4">
+      {/* Budget remaining indicator */}
+      {totalBudget > 0 && (
+        <div className={`flex justify-between text-xs px-3 py-2 rounded-lg ${
+          total > totalBudget ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-700'
+        }`}>
+          <span className="font-semibold">{fmt(totalBudget - total)}</span>
+          <span>יתרת תקציב זמינה להוצאות</span>
+        </div>
+      )}
+
       {/* Add form */}
       <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
         <div className="flex items-center gap-2 mb-3">
@@ -271,7 +326,7 @@ export default function StepExpenses({ data, onChange }) {
           </svg>
           <h3 className="text-sm font-semibold text-gray-700">הוסף הוצאה שכבר שולמה</h3>
         </div>
-        <AddExpenseForm onAdd={addRow} />
+        <AddExpenseForm onAdd={addRow} existingTotal={total} totalBudget={totalBudget} />
       </div>
 
       {/* Expense list */}
@@ -298,7 +353,14 @@ export default function StepExpenses({ data, onChange }) {
                       <p className="text-xs text-gray-400">{fmtDate(row.requestDate)}</p>
                     )}
                     {row.files?.length > 0 && (
-                      <p className="text-xs text-blue-500 mt-0.5">{row.files.length} קובץ מצורף</p>
+                      <div className="flex flex-wrap gap-1.5 mt-0.5">
+                        {row.files.map((f, i) => (
+                          <a key={i} href={URL.createObjectURL(f.file)} target="_blank" rel="noopener noreferrer"
+                            className="text-xs text-blue-500 hover:text-blue-700 hover:underline max-w-[150px] truncate inline-block">
+                            {f.name}
+                          </a>
+                        ))}
+                      </div>
                     )}
                   </div>
                   <div className="flex items-center gap-3 mr-3">

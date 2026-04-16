@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 
 const inputCls = 'border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400';
 
@@ -28,6 +29,7 @@ export default function StepDocuments({ files, folders, onFilesChange, onFolders
 
   const handleFilePick = (e) => {
     const picked = Array.from(e.target.files);
+    if (picked.length === 0) return;
     const newFiles = picked.map((file) => ({
       _key: crypto.randomUUID(),
       folder: selectedFolder,
@@ -36,6 +38,11 @@ export default function StepDocuments({ files, folders, onFilesChange, onFolders
     }));
     onFilesChange([...files, ...newFiles]);
     e.target.value = '';
+    toast.success(
+      picked.length === 1
+        ? `הקובץ "${picked[0].name}" נוסף לתיקייה "${selectedFolder}"`
+        : `${picked.length} קבצים נוספו לתיקייה "${selectedFolder}"`
+    );
   };
 
   const removeFile = (key) => onFilesChange(files.filter((f) => f._key !== key));
@@ -146,7 +153,12 @@ export default function StepDocuments({ files, folders, onFilesChange, onFolders
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
                         d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
-                    <span className="text-sm text-gray-700 flex-1 truncate">{f.fileName}</span>
+                    <a
+                      href={URL.createObjectURL(f.file)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline flex-1 truncate"
+                    >{f.fileName}</a>
                     <span className="text-xs text-gray-400">{formatSize(f.file.size)}</span>
                     <button type="button" onClick={() => removeFile(f._key)}
                       className="p-1 text-gray-300 hover:text-red-500 transition-colors">

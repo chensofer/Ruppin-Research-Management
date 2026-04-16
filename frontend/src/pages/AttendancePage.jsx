@@ -7,6 +7,7 @@ import {
   deleteHourReport,
   getMonthlyApproval,
   submitMonthlyApproval,
+  getMySubmissions,
 } from '../api/hourReportsApi';
 import Layout from '../components/Layout';
 
@@ -80,6 +81,11 @@ export default function AttendancePage() {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState('');
   const [saveError, setSaveError] = useState('');
+  const [dayErrors, setDayErrors] = useState({});
+
+  // Submitted reports
+  const [submissions, setSubmissions] = useState([]);
+  const [submissionFilter, setSubmissionFilter] = useState('all');
 
   // Refs for debounced auto-save (always point to latest saveAll / locked state)
   const saveAllRef = useRef(null);
@@ -89,6 +95,13 @@ export default function AttendancePage() {
     setToast(msg);
     setTimeout(() => setToast(''), 3000);
   };
+
+  useEffect(() => {
+    if (!user) return;
+    getMySubmissions(user.userId)
+      .then((r) => setSubmissions(r.data ?? []))
+      .catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -147,13 +160,22 @@ export default function AttendancePage() {
       const current = prev[day] || {};
       const updated = { ...current, [field]: value, saved: false };
 
-      // Auto-calculate workedHours when fromHour or toHour changes
+      // Auto-calculate workedHours when fromHour or toHour changes; validate order
       if (field === 'fromHour' || field === 'toHour') {
         const from = field === 'fromHour' ? value : current.fromHour;
-        const to = field === 'toHour' ? value : current.toHour;
-        const calculated = calcWorkedHours(from, to);
-        if (calculated !== null) {
-          updated.workedHours = String(calculated);
+        const to   = field === 'toHour'   ? value : current.toHour;
+        if (from && to) {
+          const [fh, fm] = from.split(':').map(Number);
+          const [th, tm] = to.split(':').map(Number);
+          if (fh * 60 + fm >= th * 60 + tm) {
+            setDayErrors((e) => ({ ...e, [day]: 'שעת ההתחלה חייבת להיות לפני שעת הסיום' }));
+          } else {
+            setDayErrors((e) => { const n = { ...e }; delete n[day]; return n; });
+            const calculated = calcWorkedHours(from, to);
+            if (calculated !== null) updated.workedHours = String(calculated);
+          }
+        } else {
+          setDayErrors((e) => { const n = { ...e }; delete n[day]; return n; });
         }
       }
 
@@ -192,6 +214,7 @@ export default function AttendancePage() {
     for (const [dayStr, draft] of Object.entries(drafts)) {
       const day = parseInt(dayStr);
       if (!draft?.fromHour && !draft?.toHour && !draft?.workedHours) continue;
+      if (dayErrors[day]) { failed++; if (!firstError) firstError = `יום ${day}: ${dayErrors[day]}`; continue; }
 
       const workedHours = draft.workedHours
         ? parseFloat(draft.workedHours)
@@ -289,6 +312,8 @@ export default function AttendancePage() {
       });
       setApproval(res.data);
       showToast('הדוח נשלח לאישור החוקר');
+      // Refresh the submissions list
+      getMySubmissions(user.userId).then((r) => setSubmissions(r.data ?? [])).catch(() => {});
     } catch {
       showToast('שגיאה בשליחת הדוח');
     } finally {
@@ -298,6 +323,22 @@ export default function AttendancePage() {
 
   const yearOptions = [year - 1, year, year + 1];
   const busy = saving || submitting;
+
+  // Submitted reports — filter and group by project
+  const filteredSubmissions = submissionFilter === 'all'
+    ? submissions
+    : submissions.filter((s) => s.approvalStatus === submissionFilter);
+
+  const submissionGroups = Object.values(
+    filteredSubmissions.reduce((acc, s) => {
+      const key = s.projectId ?? 0;
+      if (!acc[key]) {
+        acc[key] = { projectId: key, projectName: s.projectNameHe || `מחקר ${key}`, items: [] };
+      }
+      acc[key].items.push(s);
+      return acc;
+    }, {})
+  );
 
   return (
     <Layout>
@@ -419,7 +460,9 @@ export default function AttendancePage() {
                     return (
                       <div
                         key={day}
-                        className={`flex items-center gap-4 px-5 py-2.5 ${isWeekend ? 'bg-gray-50/70' : ''}`}
+                        className={`flex items-center gap-4 px-5 py-2.5 ${
+                          dayErrors[day] ? 'bg-red-50/60' : isWeekend ? 'bg-gray-50/70' : ''
+                        }`}
                       >
                         {/* Day label */}
                         <div className="w-16 flex-shrink-0 text-center">
@@ -477,13 +520,16 @@ export default function AttendancePage() {
 
                         {/* Status indicator + clear */}
                         <div className="flex items-center gap-2 flex-shrink-0 w-16 justify-end">
-                          {isSaved && !isDirty && (
+                          {dayErrors[day] && (
+                            <span className="text-xs text-red-500 font-medium whitespace-nowrap" title={dayErrors[day]}>שגיאה</span>
+                          )}
+                          {!dayErrors[day] && isSaved && !isDirty && (
                             <span className="text-xs text-green-600 font-medium">✓ נשמר</span>
                           )}
-                          {isDirty && saving && (
+                          {!dayErrors[day] && isDirty && saving && (
                             <span className="inline-block w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                           )}
-                          {isDirty && !saving && (
+                          {!dayErrors[day] && isDirty && !saving && (
                             <span className="text-xs text-amber-500 font-medium">ממתין...</span>
                           )}
                           {isSaved && !locked && (
@@ -547,6 +593,72 @@ export default function AttendancePage() {
             <p className="text-base">בחר מחקר להתחלת הדיווח</p>
           </div>
         )}
+
+        {/* ── Submitted Reports Section ─────────────────────────────────── */}
+        <div className="mt-10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-0.5 bg-gray-100 p-1 rounded-xl">
+              {[
+                { value: 'all',    label: 'הכל' },
+                { value: 'ממתין', label: 'ממתין' },
+                { value: 'אושר',  label: 'אושר' },
+                { value: 'נדחה',  label: 'נדחה' },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setSubmissionFilter(opt.value)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                    submissionFilter === opt.value
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <h2 className="text-lg font-bold text-gray-900">דוחות שנשלחו</h2>
+          </div>
+
+          {filteredSubmissions.length === 0 ? (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm py-12 text-center">
+              <p className="text-sm text-gray-400">
+                {submissions.length === 0 ? 'טרם נשלחו דוחות' : 'אין דוחות בסינון הנבחר'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {submissionGroups.map((group) => (
+                <div key={group.projectId} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                    <span className="text-xs text-gray-400">{group.items.length} דוחות</span>
+                    <h3 className="text-sm font-semibold text-gray-700">{group.projectName}</h3>
+                  </div>
+                  <div className="divide-y divide-gray-50">
+                    {group.items.map((s) => (
+                      <div key={s.monthlyApprovalId} className="flex items-center justify-between px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <StatusBadge status={s.approvalStatus} />
+                          {s.totalWorkedHours != null && (
+                            <span className="text-xs text-gray-400">{s.totalWorkedHours} שעות</span>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-gray-800">
+                            {MONTH_NAMES[(s.month ?? 1) - 1]} {s.year}
+                          </p>
+                          {s.comments && s.approvalStatus === 'נדחה' && (
+                            <p className="text-xs text-red-500 mt-0.5">{s.comments}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {toast && (

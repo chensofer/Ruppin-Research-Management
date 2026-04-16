@@ -414,6 +414,26 @@ namespace RupResearchAPI.Services
             }).ToList();
         }
 
+        public async Task<List<MonthlyApprovalDto>> GetAllSubmissionsForUser(string userId)
+        {
+            var trimmedId = userId.Trim();
+            var all = await _db.ResearchMonthlyWorkApprovals.ToListAsync();
+            var userRecords = all.Where(a => a.UserId?.Trim() == trimmedId).ToList();
+            if (userRecords.Count == 0) return [];
+
+            var allProjects = await _db.ResearchProjects.ToListAsync();
+            var projectDict = allProjects.ToDictionary(p => p.ProjectId);
+
+            return userRecords
+                .OrderByDescending(a => a.Year)
+                .ThenByDescending(a => a.Month)
+                .Select(a =>
+                {
+                    projectDict.TryGetValue(a.ProjectId ?? 0, out var project);
+                    return ToApprovalDto(a, project?.ProjectNameHe);
+                }).ToList();
+        }
+
         public async Task<List<AssistantProjectDto>> GetProjectsForAssistant(string userId)
         {
             List<int> projectIds;

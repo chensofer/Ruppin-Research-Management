@@ -23,3 +23,6 @@ export const getPendingHourApprovals = (researcherId) =>
 
 export const getAssistantProjects = (userId) =>
   axiosInstance.get('/hour-reports/my-projects', { params: { userId } });
+
+export const getMySubmissions = (userId) =>
+  axiosInstance.get('/hour-reports/my-submissions', { params: { userId } });

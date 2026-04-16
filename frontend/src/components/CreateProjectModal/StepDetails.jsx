@@ -166,7 +166,7 @@ export default function StepDetails({ data, onChange, errors }) {
 
       {/* Budget + Funding Source */}
       <div className="grid grid-cols-2 gap-4">
-        <Field label="תקציב מאושר (₪)" required error={errors.totalBudget}>
+        <Field label="הקצאת תקציב (₪)" required error={errors.totalBudget}>
           <input
             type="number"
             min={0}

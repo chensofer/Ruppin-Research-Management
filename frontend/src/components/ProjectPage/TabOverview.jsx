@@ -397,9 +397,9 @@ export default function TabOverview({ detail, onChanged }) {
           <Field label="משויך למרכז מחקר" value={detail.centerName} />
           <Field label="מקור מימון" value={detail.fundingSource} />
 
+          <Field label="תאריך יצירה" value={fmtDate(detail.createdDate)} />
           <Field label="תאריך התחלה" value={fmtDate(detail.startDate)} />
           <Field label="תאריך סיום משוערך" value={fmtDate(detail.endDate)} />
-          <div />
 
           <div>
             <dt className="text-xs text-gray-400 mb-1">בקשות תשלומים הממתינות לאישור</dt>

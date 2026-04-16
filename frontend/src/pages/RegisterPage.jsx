@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { register as registerApi } from '../api/authApi';
 import Logo from '../components/Logo';
 
 export default function RegisterPage() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     userId: '',
     firstName: '',
@@ -14,7 +15,6 @@ export default function RegisterPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -27,10 +27,16 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!/^\d{9}$/.test(form.userId.trim())) {
+      setError('מספר הזהות חייב להכיל בדיוק 9 ספרות');
+      return;
+    }
+
     setLoading(true);
     try {
       await registerApi(form);
-      setSuccess(true);
+      // Redirect to login with credentials pre-filled
+      navigate('/login', { state: { userId: form.userId.trim(), password: form.password } });
     } catch (err) {
       setError(err.response?.data?.message || 'שגיאה בהרשמה, נסה שנית');
     } finally {
@@ -49,32 +55,15 @@ export default function RegisterPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-          {success ? (
-            <div className="text-center py-4">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">ההרשמה הושלמה בהצלחה!</h2>
-              <p className="text-gray-500 text-sm mb-6">החשבון שלך נוצר. כעת תוכל להתחבר למערכת.</p>
-              <Link
-                to="/login"
-                className="inline-block w-full bg-primary hover:bg-primary-dark text-white font-semibold py-2.5 px-4 rounded-lg transition-colors text-sm text-center"
-              >
-                מעבר להתחברות
-              </Link>
-            </div>
-          ) : (
-            <>
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">הרשמה למערכת</h1>
+          <>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">הרשמה למערכת</h1>
               <p className="text-gray-500 text-sm mb-6">צרו חשבון חדש</p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className={labelClass}>מספר זהות / מזהה משתמש</label>
                   <input name="userId" value={form.userId} onChange={handleChange}
-                    required maxLength={10} placeholder="עד 10 תווים" className={inputClass} />
+                    required maxLength={9} placeholder="9 ספרות" className={inputClass} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -102,7 +91,6 @@ export default function RegisterPage() {
                     onChange={handleChange} className={inputClass}>
                     <option value="חוקר">חוקר</option>
                     <option value="מנהל מרכז">מנהל מרכז</option>
-                    <option value="מנהל רשות המחקר">מנהל רשות המחקר</option>
                     <option value="עוזר מחקר">עוזר מחקר</option>
                   </select>
                 </div>
@@ -132,7 +120,6 @@ export default function RegisterPage() {
                 </Link>
               </p>
             </>
-          )}
         </div>
       </div>
     </div>

@@ -20,6 +20,7 @@ namespace RupResearchAPI.DTOs
         public decimal TotalFuture { get; set; }
         public decimal RemainingBalance { get; set; }
         public decimal AvailableBalance { get; set; }
+        public int TeamMemberCount { get; set; }
     }
 
     public class CreateProjectDto

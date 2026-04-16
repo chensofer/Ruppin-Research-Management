@@ -141,7 +141,14 @@ export default function StepSummary({ details, budgetCategories, teamMembers, as
                       </p>
                     )}
                     {e.files?.length > 0 && (
-                      <p className="text-xs text-blue-500">{e.files.length} קובץ מצורף</p>
+                      <div className="flex flex-wrap gap-1.5 mt-0.5">
+                        {e.files.map((f, i) => (
+                          <a key={i} href={URL.createObjectURL(f.file)} target="_blank" rel="noopener noreferrer"
+                            className="text-xs text-blue-500 hover:underline max-w-[120px] truncate inline-block">
+                            {f.name}
+                          </a>
+                        ))}
+                      </div>
                     )}
                   </div>
                   <span className="font-semibold text-red-600">{fmt(e.requestedAmount) ?? '—'}</span>
@@ -163,7 +170,8 @@ export default function StepSummary({ details, budgetCategories, teamMembers, as
             {documents.map((d) => (
               <div key={d._key} className="flex items-center gap-2 text-sm text-gray-700 py-0.5">
                 <span className="text-gray-400 text-xs">📁 {d.folder} /</span>
-                <span className="truncate">{d.fileName}</span>
+                <a href={URL.createObjectURL(d.file)} target="_blank" rel="noopener noreferrer"
+                  className="truncate text-blue-600 hover:underline">{d.fileName}</a>
               </div>
             ))}
           </div>
