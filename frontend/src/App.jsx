@@ -8,6 +8,7 @@ import DashboardPage from './pages/DashboardPage';
 import ProjectPage from './pages/ProjectPage';
 import ApprovalsPage from './pages/ApprovalsPage';
 import AttendancePage from './pages/AttendancePage';
+import MyReportsPage from './pages/MyReportsPage';
 import ProfilePage from './pages/ProfilePage';
 
 // Redirects research assistants to their attendance page
@@ -42,6 +43,9 @@ export default function App() {
           {/* Attendance — only for research assistants */}
           <Route path="/attendance" element={
             <ProtectedRoute><AttendancePage /></ProtectedRoute>
+          } />
+          <Route path="/my-reports" element={
+            <ProtectedRoute><MyReportsPage /></ProtectedRoute>
           } />
 
           {/* Profile — all authenticated users */}

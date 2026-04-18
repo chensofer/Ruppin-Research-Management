@@ -1,10 +1,73 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { getProjects } from '../api/projectsApi';
 import Layout from '../components/Layout';
 import ProjectCard from '../components/ProjectCard';
 import CreateProjectModal from '../components/CreateProjectModal';
+import AlertsModal from '../components/AlertsModal';
+
+// ── Alert thresholds ─────────────────────────────────────────────────────────
+const BUDGET_ALERT_PCT = 10;   // show alert when available balance ≤ 10% of total
+const TIME_ALERT_PCT   = 80;   // show alert when ≥ 80% of the project duration has elapsed
+
+const SESSION_KEY = 'projectAlertsDismissedAt';
+
+function daysBetween(a, b) {
+  return Math.round((new Date(b) - new Date(a)) / 86400000);
+}
+
+function buildAlerts(projects) {
+  const today = new Date().toISOString().split('T')[0];
+  const budgetAlerts = [];
+  const timeAlerts   = [];
+
+  for (const p of projects) {
+    const rawActive = p.status === 'פעיל' || p.status === 'Active' || p.status === 'active';
+    const endStr    = p.endDate ? String(p.endDate).slice(0, 10) : null;
+    const active    = rawActive && (!endStr || endStr >= today);
+    if (!active) continue;
+
+    // ── Budget alert ──────────────────────────────────────────────────────
+    const budget    = p.totalBudget ?? 0;
+    const available = p.availableBalance ?? p.remainingBalance ?? (budget - (p.totalPaid ?? 0));
+    if (budget > 0) {
+      const pct = Math.round((available / budget) * 100);
+      if (pct <= BUDGET_ALERT_PCT) {
+        budgetAlerts.push({
+          projectId: p.projectId,
+          name:      p.projectNameHe || p.projectNameEn || `מחקר ${p.projectId}`,
+          budget,
+          available,
+          pct,
+        });
+      }
+    }
+
+    // ── Time alert ────────────────────────────────────────────────────────
+    const startStr = p.startDate ? String(p.startDate).slice(0, 10) : null;
+    if (startStr && endStr && endStr > startStr) {
+      const total       = daysBetween(startStr, endStr);
+      const elapsed     = daysBetween(startStr, today);
+      const elapsedPct  = Math.min(Math.round((elapsed / total) * 100), 100);
+      if (elapsedPct >= TIME_ALERT_PCT) {
+        const daysLeft = Math.max(daysBetween(today, endStr), 0);
+        const fmtDate  = new Date(endStr).toLocaleDateString('he-IL', {
+          day: 'numeric', month: 'long', year: 'numeric',
+        });
+        timeAlerts.push({
+          projectId: p.projectId,
+          name:      p.projectNameHe || p.projectNameEn || `מחקר ${p.projectId}`,
+          endDate:   fmtDate,
+          daysLeft,
+          elapsedPct,
+        });
+      }
+    }
+  }
+
+  return { budgetAlerts, timeAlerts };
+}
 
 // ── Sort options ────────────────────────────────────────────────────────────────
 const SORT_OPTIONS = [
@@ -64,19 +127,46 @@ export default function DashboardPage() {
   const [loading, setLoading]           = useState(true);
   const [showModal, setShowModal]       = useState(false);
 
-  const loadProjects = () => {
-    setLoading(true);
-    getProjects()
-      .then((res) => setProjects(res.data))
-      .catch(() => toast.error('שגיאה בטעינת המחקרים'))
-      .finally(() => setLoading(false));
+  // Alert modal state
+  const [alertsOpen, setAlertsOpen]       = useState(false);
+  const [budgetAlerts, setBudgetAlerts]   = useState([]);
+  const [timeAlerts, setTimeAlerts]       = useState([]);
+
+  const handleDismissAlerts = () => {
+    sessionStorage.setItem(SESSION_KEY, new Date().toISOString());
+    setAlertsOpen(false);
   };
 
-  useEffect(() => { loadProjects(); }, []);
+  const loadProjects = useCallback(() => {
+    setLoading(true);
+    getProjects()
+      .then((res) => {
+        const data = res.data ?? [];
+        setProjects(data);
+
+        // Check if already dismissed this session
+        // Always compute alerts so the bell stays visible
+        const { budgetAlerts: ba, timeAlerts: ta } = buildAlerts(data);
+        setBudgetAlerts(ba);
+        setTimeAlerts(ta);
+
+        // Auto-open only once per session
+        const dismissed = sessionStorage.getItem(SESSION_KEY);
+        if (!dismissed && (ba.length > 0 || ta.length > 0)) {
+          setAlertsOpen(true);
+        }
+      })
+      .catch(() => toast.error('שגיאה בטעינת המחקרים'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { loadProjects(); }, [loadProjects]);
 
   const handleCreated = (newProject) => {
     setShowModal(false);
     toast.success(`המחקר "${newProject.projectNameHe}" נוצר בהצלחה!`);
+    // Don't re-trigger alert popup after creating a project
+    sessionStorage.setItem(SESSION_KEY, new Date().toISOString());
     loadProjects();
   };
 
@@ -114,15 +204,34 @@ export default function DashboardPage() {
       <Layout>
         {/* Page header */}
         <div className="flex items-start justify-between mb-6">
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            יצירת מחקר חדש
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              יצירת מחקר חדש
+            </button>
+
+            {/* Alert bell — visible when there are active alerts */}
+            {(budgetAlerts.length > 0 || timeAlerts.length > 0) && (
+              <button
+                onClick={() => setAlertsOpen(true)}
+                title="הצג התראות"
+                className="relative p-2.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                <span className="absolute -top-1 -right-1 w-4.5 h-4.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center min-w-[18px] min-h-[18px] px-0.5">
+                  {budgetAlerts.length + timeAlerts.length}
+                </span>
+              </button>
+            )}
+          </div>
 
           <div className="text-right">
             <h1 className="text-2xl font-bold text-gray-900">רשימת מחקרים</h1>
@@ -276,6 +385,14 @@ export default function DashboardPage() {
         <CreateProjectModal
           onClose={() => setShowModal(false)}
           onCreated={handleCreated}
+        />
+      )}
+
+      {alertsOpen && (
+        <AlertsModal
+          budgetAlerts={budgetAlerts}
+          timeAlerts={timeAlerts}
+          onClose={handleDismissAlerts}
         />
       )}
     </>
