@@ -33,7 +33,7 @@ function ExpandedDetails({ row }) {
   return (
     <tr className="bg-blue-50/30">
       <td colSpan={6} className="px-10 py-3">
-        <div className="grid grid-cols-2 gap-4 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           {row.providerName && (
             <div>
               <dt className="text-gray-400 mb-0.5">שם ספק</dt>
@@ -279,8 +279,12 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
                       {r.requestTitle || `בקשה #${r.paymentRequestId}`}
                     </td>
                     <td className="px-5 py-3.5 text-gray-500">{r.categoryName || '—'}</td>
-                    <td className="px-5 py-3.5 font-medium text-red-600">
-                      {r.amount > 0 ? `−${fmt(r.amount)}` : '—'}
+                    <td className={`px-5 py-3.5 font-medium ${r.amount < 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {r.amount > 0
+                        ? `−${fmt(r.amount)}`
+                        : r.amount < 0
+                          ? `+${fmt(-r.amount)}`
+                          : '—'}
                     </td>
                     <td className={`px-5 py-3.5 font-semibold ${r.balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
                       {fmt(r.balance)}

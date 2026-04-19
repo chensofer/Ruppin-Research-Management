@@ -203,8 +203,8 @@ export default function DashboardPage() {
     <>
       <Layout>
         {/* Page header */}
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-2">
+        <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setShowModal(true)}
               className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2.5 rounded-lg text-sm transition-colors"

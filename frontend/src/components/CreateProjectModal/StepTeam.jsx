@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getUsers } from '../../api/usersApi';
 
 const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400';
@@ -9,6 +9,8 @@ export default function StepTeam({ data, onChange }) {
   const [loadError, setLoadError] = useState('');
   const [query, setQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const inputRef = useRef(null);
+  const [dropRect, setDropRect] = useState(null);
 
   useEffect(() => {
     getUsers()
@@ -31,7 +33,7 @@ export default function StepTeam({ data, onChange }) {
     );
   });
 
-  const displayed = query ? filtered : filtered.slice(0, 10);
+  const displayed = filtered;
 
   const addMember = (user) => {
     onChange([...data, {
@@ -64,18 +66,27 @@ export default function StepTeam({ data, onChange }) {
 
         <div className="relative">
           <input
+            ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => { setQuery(e.target.value); setShowDropdown(true); }}
-            onFocus={() => setShowDropdown(true)}
+            onFocus={() => { if (inputRef.current) setDropRect(inputRef.current.getBoundingClientRect()); setShowDropdown(true); }}
             onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
             placeholder={loading ? 'טוען משתמשים...' : 'חפש לפי שם או ת.ז...'}
             disabled={loading}
             className={inputCls}
           />
 
-          {showDropdown && !loading && (
-            <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+          {showDropdown && !loading && dropRect && (
+            <ul
+              style={{
+                position: 'fixed',
+                top: dropRect.bottom + 4,
+                left: dropRect.left,
+                width: dropRect.width,
+                zIndex: 9999,
+              }}
+              className="bg-white border border-gray-200 rounded-lg shadow-xl max-h-64 overflow-y-auto">
               {displayed.length > 0 ? (
                 <>
                   {displayed.map((u) => (
@@ -88,11 +99,6 @@ export default function StepTeam({ data, onChange }) {
                       <span className="text-xs text-gray-400">ת"ז - {u.userId} · {u.systemAuthorization}</span>
                     </li>
                   ))}
-                  {!query && filtered.length > 10 && (
-                    <li className="px-3 py-2 text-xs text-gray-400 text-center border-t border-gray-100">
-                      + {filtered.length - 10} נוספים — הקלד לסינון
-                    </li>
-                  )}
                 </>
               ) : (
                 <li className="px-3 py-3 text-sm text-gray-400 text-center">

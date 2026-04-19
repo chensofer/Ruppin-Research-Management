@@ -88,7 +88,7 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-3">
           <h3 className="text-sm font-semibold text-gray-700">הוצאה עתידית חדשה</h3>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-gray-500 mb-1">קטגוריה</label>
               <select value={form.categoryName} onChange={set('categoryName')} className={inputCls}>

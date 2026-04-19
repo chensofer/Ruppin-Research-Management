@@ -119,7 +119,8 @@ namespace RupResearchAPI.Controllers
                 LastName = dto.LastName.Trim(),
                 Email = dto.Email.Trim(),
                 SystemAuthorization = "עוזר מחקר",
-                Password = BCrypt.Net.BCrypt.HashPassword("Temp1234!"),
+                // Temporary password = the assistant's ID number
+                Password = BCrypt.Net.BCrypt.HashPassword(trimmedId),
             };
             _db.ResearchUsers.Add(user);
             await _db.SaveChangesAsync();

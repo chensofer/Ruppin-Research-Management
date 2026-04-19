@@ -90,6 +90,15 @@ namespace RupResearchAPI.Services
                 if (pi != null) piName = $"{pi.FirstName} {pi.LastName}".Trim();
             }
 
+            // Resolve creator name
+            string? createdByName = null;
+            if (!string.IsNullOrEmpty(project.CreatedBy))
+            {
+                var creator = await _db.ResearchUsers
+                    .FirstOrDefaultAsync(u => u.UserId.Trim() == project.CreatedBy.Trim());
+                if (creator != null) createdByName = $"{creator.FirstName} {creator.LastName}".Trim();
+            }
+
             // Resolve center name
             string? centerName = null;
             if (project.CenterId.HasValue)
@@ -174,6 +183,7 @@ namespace RupResearchAPI.Services
                 CenterName = centerName,
                 PrincipalResearcherId = project.PrincipalResearcherId,
                 PrincipalResearcherName = piName,
+                CreatedByName = createdByName,
                 FundingSource = project.FundingSource,
                 CreatedDate = project.CreatedDate,
                 StartDate = project.StartDate,
@@ -203,6 +213,7 @@ namespace RupResearchAPI.Services
                 CenterId = dto.CenterId,
                 PrincipalResearcherId = dto.PrincipalResearcherId,
                 CreatedDate = DateOnly.FromDateTime(DateTime.Today),
+                CreatedBy = creatorUserId,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
                 Status = dto.Status
@@ -274,6 +285,7 @@ namespace RupResearchAPI.Services
                     PrincipalResearcherId = dto.PrincipalResearcherId?.Trim(),
                     CenterId = dto.CenterId,
                     CreatedDate = DateOnly.FromDateTime(DateTime.Today),
+                    CreatedBy = requestedByUserId,
                 };
                 _db.ResearchProjects.Add(project);
                 await _db.SaveChangesAsync();
@@ -550,17 +562,20 @@ namespace RupResearchAPI.Services
                 throw new ArgumentException("שכר לשעה חייב להיות גדול מאפס");
 
             // Create the user if they don't already exist
-            var existingUser = await _db.ResearchUsers.FindAsync(req.UserId);
+            // Use FirstOrDefaultAsync + Trim() — research_users.user_id is char(10) (padded)
+            var trimmedUserId = req.UserId.Trim();
+            var existingUser = await _db.ResearchUsers.FirstOrDefaultAsync(u => u.UserId.Trim() == trimmedUserId);
             if (existingUser == null)
             {
                 existingUser = new Models.ResearchUser
                 {
-                    UserId = req.UserId,
-                    FirstName = req.FirstName,
-                    LastName = req.LastName,
-                    Email = req.Email,
+                    UserId = trimmedUserId,
+                    FirstName = req.FirstName.Trim(),
+                    LastName = req.LastName.Trim(),
+                    Email = req.Email.Trim(),
                     SystemAuthorization = "עוזר מחקר",
-                    Password = BCrypt.Net.BCrypt.HashPassword(req.UserId),
+                    // Temporary password = the assistant's ID number
+                    Password = BCrypt.Net.BCrypt.HashPassword(trimmedUserId),
                 };
                 _db.ResearchUsers.Add(existingUser);
                 await _db.SaveChangesAsync();
@@ -572,13 +587,13 @@ namespace RupResearchAPI.Services
 
             // Guard: already assigned to this project
             var alreadyExists = await _db.ResearchAssistants
-                .AnyAsync(a => a.ProjectId == projectId && a.AssistantUserId == req.UserId);
+                .AnyAsync(a => a.ProjectId == projectId && a.AssistantUserId.Trim() == trimmedUserId);
             if (alreadyExists)
                 throw new InvalidOperationException("עוזר המחקר כבר משויך למחקר זה");
 
             _db.ResearchAssistants.Add(new Models.ResearchAssistant
             {
-                AssistantUserId = req.UserId,
+                AssistantUserId = trimmedUserId,
                 ProjectId = projectId,
                 Role = "עוזר מחקר",
                 SalaryPerHour = req.SalaryPerHour,
@@ -587,7 +602,7 @@ namespace RupResearchAPI.Services
 
             return new AssistantDetailDto
             {
-                AssistantUserId = req.UserId,
+                AssistantUserId = trimmedUserId,
                 FirstName = existingUser.FirstName,
                 LastName = existingUser.LastName,
                 Role = "עוזר מחקר",
@@ -886,6 +901,79 @@ namespace RupResearchAPI.Services
                 });
                 await _db.SaveChangesAsync();
             }
+        }
+
+        public async Task<List<ProjectResponseDto>> GetAllProjects()
+        {
+            var all = await _db.ResearchProjects.ToListAsync();
+            return all.Select(ToDto).ToList();
+        }
+
+        public async Task TransferBudget(int sourceId, int targetId, decimal amount, string userId)
+        {
+            if (sourceId == targetId)
+                throw new InvalidOperationException("לא ניתן להעביר תקציב למחקר עצמו");
+
+            if (amount <= 0)
+                throw new ArgumentException("סכום ההעברה חייב להיות גדול מאפס");
+
+            var source = await _db.ResearchProjects.FindAsync(sourceId)
+                ?? throw new KeyNotFoundException("מחקר מקור לא נמצא");
+
+            var target = await _db.ResearchProjects.FindAsync(targetId)
+                ?? throw new KeyNotFoundException("מחקר יעד לא נמצא");
+
+            // Calculate available balance for source (budget - paid/approved - future commitments)
+            var sourcePayments = await _db.ResearchPaymentRequests
+                .Where(r => r.ProjectId == sourceId)
+                .ToListAsync();
+
+            var totalPaid = sourcePayments
+                .Where(r => r.Status == "אושר" || r.Status == "שולם")
+                .Sum(r => r.RequestedAmount ?? 0);
+
+            var totalFuture = await _db.ResearchFutureCommitments
+                .Where(c => c.ProjectId == sourceId && c.Status != "בוטל")
+                .SumAsync(c => c.ExpectedAmount) ?? 0;
+
+            var budget = source.TotalBudget ?? 0;
+            var availableBalance = budget - totalPaid - totalFuture;
+
+            if (availableBalance < amount)
+                throw new InvalidOperationException("יתרה זמינה לא מספיקה לביצוע ההעברה");
+
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var approvedBy = userId.Length > 10 ? userId[..10] : userId;
+            var sourceName = source.ProjectNameHe ?? source.ProjectNameEn ?? $"מחקר #{sourceId}";
+            var targetName = target.ProjectNameHe ?? target.ProjectNameEn ?? $"מחקר #{targetId}";
+
+            // Outgoing from source (positive amount → increases TotalPaid → reduces balance)
+            _db.ResearchPaymentRequests.Add(new ResearchPaymentRequest
+            {
+                ProjectId = sourceId,
+                CategoryName = "העברת תקציב",
+                RequestTitle = $"העברת תקציב למחקר {targetName}",
+                RequestedAmount = amount,
+                RequestDate = today,
+                Status = "שולם",
+                ApprovedByUserId = approvedBy,
+                DecisionDate = today,
+            });
+
+            // Incoming to target (negative amount → decreases TotalPaid → increases balance)
+            _db.ResearchPaymentRequests.Add(new ResearchPaymentRequest
+            {
+                ProjectId = targetId,
+                CategoryName = "העברת תקציב",
+                RequestTitle = $"קבלת תקציב ממחקר {sourceName}",
+                RequestedAmount = -amount,
+                RequestDate = today,
+                Status = "שולם",
+                ApprovedByUserId = approvedBy,
+                DecisionDate = today,
+            });
+
+            await _db.SaveChangesAsync();
         }
 
         private static ProjectResponseDto ToDto(ResearchProject p) => new()

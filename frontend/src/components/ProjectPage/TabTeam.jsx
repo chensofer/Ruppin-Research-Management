@@ -46,7 +46,7 @@ export default function TabTeam({ projectId, teamMembers, principalResearcherId,
     return u.userId.toLowerCase().includes(q) || `${u.firstName} ${u.lastName}`.toLowerCase().includes(q);
   });
 
-  const displayed = query ? filtered : filtered.slice(0, 10);
+  const displayed = filtered;
 
   const handleAdd = async (user) => {
     setQuery('');
@@ -106,7 +106,7 @@ export default function TabTeam({ projectId, teamMembers, principalResearcherId,
             className={inputCls}
           />
           {showDropdown && !loading && (
-            <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+            <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
               {displayed.length > 0 ? displayed.map((u) => (
                 <li key={u.userId} onMouseDown={() => handleAdd(u)}
                   className="px-3 py-2.5 cursor-pointer hover:bg-primary-light text-sm flex justify-between items-center">

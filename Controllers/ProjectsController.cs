@@ -312,6 +312,41 @@ namespace RupResearchAPI.Controllers
             return Ok(result);
         }
 
+        // GET /api/projects/all — all projects (used for transfer-budget target dropdown)
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAllProjects()
+        {
+            var projects = await _projectService.GetAllProjects();
+            return Ok(projects);
+        }
+
+        // POST /api/projects/{sourceId}/transfer-budget
+        [HttpPost("{sourceId}/transfer-budget")]
+        public async Task<IActionResult> TransferBudget(int sourceId, [FromBody] TransferBudgetRequest req)
+        {
+            if (req.Amount <= 0)
+                return BadRequest(new { message = "סכום ההעברה חייב להיות גדול מאפס" });
+
+            try
+            {
+                var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
+                await _projectService.TransferBudget(sourceId, req.TargetProjectId, req.Amount, userId);
+                return Ok(new { message = "ההעברה בוצעה בהצלחה" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // ── Future commitments endpoints ──────────────────────────────────────
 
         // GET /api/projects/{id}/commitments

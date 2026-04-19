@@ -41,6 +41,7 @@ namespace RupResearchAPI.DTOs
         public string? CenterName { get; set; }
         public string? PrincipalResearcherId { get; set; }
         public string? PrincipalResearcherName { get; set; }
+        public string? CreatedByName { get; set; }
         public string? FundingSource { get; set; }
         public DateOnly? CreatedDate { get; set; }
         public DateOnly? StartDate { get; set; }
@@ -87,6 +88,8 @@ namespace RupResearchAPI.DTOs
         DateOnly? ExpectedDate,
         decimal? ExpectedAmount,
         string? Notes);
+
+    public record TransferBudgetRequest(int TargetProjectId, decimal Amount);
     public record CreateProviderRequest(string ProviderName, string? Phone, string? Email, string? Notes);
 
     public class ProviderDto

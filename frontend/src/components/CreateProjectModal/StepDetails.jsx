@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import { getUsers } from '../../api/usersApi';
 import { getCenters } from '../../api/centersApi';
@@ -29,6 +29,8 @@ export default function StepDetails({ data, onChange, errors }) {
   const [piQuery, setPiQuery]           = useState('');
   const [showPiDrop, setShowPiDrop]     = useState(false);
   const [centers, setCenters]           = useState([]);
+  const piInputRef = useRef(null);
+  const [piDropRect, setPiDropRect]     = useState(null);
 
   useEffect(() => {
     getUsers()
@@ -50,8 +52,7 @@ export default function StepDetails({ data, onChange, errors }) {
         u.userId.toLowerCase().includes(q) ||
         `${u.firstName} ${u.lastName}`.toLowerCase().includes(q)
       );
-    })
-    .slice(0, 10);
+    });
 
   const selectPI = (user) => {
     onChange({
@@ -70,7 +71,7 @@ export default function StepDetails({ data, onChange, errors }) {
   return (
     <div className="space-y-4">
       {/* Names */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="שם מחקר" required error={errors.projectNameHe}>
           <input
             type="text"
@@ -117,17 +118,26 @@ export default function StepDetails({ data, onChange, errors }) {
         ) : (
           <div className="relative">
             <input
+              ref={piInputRef}
               type="text"
               value={piQuery}
               onChange={(e) => { setPiQuery(e.target.value); setShowPiDrop(true); }}
-              onFocus={() => setShowPiDrop(true)}
+              onFocus={() => { if (piInputRef.current) setPiDropRect(piInputRef.current.getBoundingClientRect()); setShowPiDrop(true); }}
               onBlur={() => setTimeout(() => setShowPiDrop(false), 150)}
               placeholder={usersLoading ? 'טוען חוקרים...' : 'חפש חוקר לפי שם או ת.ז...'}
               disabled={usersLoading}
               className={`${inputCls} ${errors.principalResearcherId ? errorCls : ''}`}
             />
-            {showPiDrop && !usersLoading && (
-              <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+            {showPiDrop && !usersLoading && piDropRect && (
+              <ul
+                style={{
+                  position: 'fixed',
+                  top: piDropRect.bottom + 4,
+                  left: piDropRect.left,
+                  width: piDropRect.width,
+                  zIndex: 9999,
+                }}
+                className="bg-white border border-gray-200 rounded-lg shadow-xl max-h-64 overflow-y-auto">
                 {piFiltered.length > 0 ? piFiltered.map((u) => (
                   <li key={u.userId} onMouseDown={() => selectPI(u)}
                     className="px-3 py-2.5 cursor-pointer hover:bg-primary-light text-sm flex items-center justify-between gap-2">
@@ -165,7 +175,7 @@ export default function StepDetails({ data, onChange, errors }) {
       </Field>
 
       {/* Budget + Funding Source */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="הקצאת תקציב (₪)" required error={errors.totalBudget}>
           <input
             type="number"
@@ -188,7 +198,7 @@ export default function StepDetails({ data, onChange, errors }) {
       </div>
 
       {/* Dates */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="תאריך התחלה" required error={errors.startDate}>
           <DatePicker
             selected={toDate(data.startDate)}

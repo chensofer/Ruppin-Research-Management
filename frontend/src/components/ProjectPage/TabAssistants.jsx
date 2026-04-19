@@ -50,11 +50,12 @@ function CreateAssistantModal({ onClose, onCreated, projectId }) {
 
   const validate = () => {
     const e = {};
-    if (!form.userId.trim())     e.userId    = 'שדה חובה';
-    if (!form.firstName.trim())  e.firstName = 'שדה חובה';
-    if (!form.lastName.trim())   e.lastName  = 'שדה חובה';
-    if (!form.email.trim())      e.email     = 'שדה חובה';
-    if (!form.salary || parseFloat(form.salary) <= 0) e.salary = 'יש להזין שכר חיובי';
+    if (!form.userId.trim())                          e.userId    = 'שדה חובה';
+    else if (!/^\d{9}$/.test(form.userId.trim()))    e.userId    = 'ת.ז. חייבת להכיל בדיוק 9 ספרות';
+    if (!form.firstName.trim())                       e.firstName = 'שדה חובה';
+    if (!form.lastName.trim())                        e.lastName  = 'שדה חובה';
+    if (!form.email.trim())                           e.email     = 'שדה חובה';
+    if (!form.salary || parseFloat(form.salary) <= 0) e.salary   = 'יש להזין שכר חיובי';
     return e;
   };
 
@@ -102,14 +103,15 @@ function CreateAssistantModal({ onClose, onCreated, projectId }) {
           )}
 
           <Field
-            label="תעודת זהות / מספר עובד"
+            label="תעודת זהות (9 ספרות)"
             name="userId"
             value={form.userId}
             onChange={handleChange}
             error={errors.userId}
-            placeholder="לדוגמה: 123456789"
+            placeholder="9 ספרות"
+            maxLength={9}
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="שם פרטי"  name="firstName" value={form.firstName} onChange={handleChange} error={errors.firstName} />
             <Field label="שם משפחה" name="lastName"  value={form.lastName}  onChange={handleChange} error={errors.lastName} />
           </div>
@@ -134,8 +136,8 @@ function CreateAssistantModal({ onClose, onCreated, projectId }) {
             placeholder="₪/שעה"
           />
 
-          <p className="text-xs text-gray-400">
-            הסיסמה הראשונית של המשתמש תהיה מספר הזהות / העובד שלו.
+          <p className="text-xs text-primary/70 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+            הסיסמה הזמנית תהיה מספר הת"ז שהוזן — ניתן לשנותה לאחר מכן.
           </p>
 
           {/* Footer */}
@@ -161,7 +163,7 @@ function CreateAssistantModal({ onClose, onCreated, projectId }) {
   );
 }
 
-function Field({ label, name, value, onChange, error, type = 'text', placeholder, min, step }) {
+function Field({ label, name, value, onChange, error, type = 'text', placeholder, min, step, maxLength }) {
   return (
     <div>
       <label className="block text-xs text-gray-500 mb-1">{label}</label>
@@ -173,6 +175,7 @@ function Field({ label, name, value, onChange, error, type = 'text', placeholder
         placeholder={placeholder}
         min={min}
         step={step}
+        maxLength={maxLength}
         className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400 ${
           error ? 'border-red-400 bg-red-50' : 'border-gray-200'
         }`}
@@ -331,7 +334,7 @@ function TrackingModal({ assistant, projectId, onClose }) {
           {data && (
             <>
               {/* Summary stat cards */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <StatCard label="סה״כ שעות" value={data.totalHours ? `${data.totalHours}` : '0'} sub="שעות מדווחות" />
                 <StatCard label="סה״כ שולם" value={fmt(data.totalPaid)} color="text-green-600" />
                 <StatCard label="ממתין לאישור" value={fmt(data.totalPending)} color="text-yellow-600" />
@@ -491,7 +494,7 @@ export default function TabAssistants({ projectId, assistants, onChanged }) {
     return u.userId.toLowerCase().includes(q) || `${u.firstName} ${u.lastName}`.toLowerCase().includes(q);
   });
 
-  const displayed = query ? filtered : filtered.slice(0, 10);
+  const displayed = filtered;
 
   const stageUser = (user) => {
     setStagedUser(user);
@@ -570,7 +573,7 @@ export default function TabAssistants({ projectId, assistants, onChanged }) {
             className={inputCls}
           />
           {showDropdown && !loading && (
-            <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+            <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
               {displayed.length > 0 ? displayed.map((u) => (
                 <li key={u.userId} onMouseDown={() => stageUser(u)}
                   className="px-3 py-2.5 cursor-pointer hover:bg-primary-light text-sm flex justify-between items-center">

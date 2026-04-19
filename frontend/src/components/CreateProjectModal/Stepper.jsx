@@ -3,7 +3,7 @@ const STEPS = [
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
   )},
-  { id: 'budget',     label: 'תקציב', icon: (
+  { id: 'budget',     label: 'הקצאת תקציב', icon: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
       d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
   )},
@@ -35,47 +35,49 @@ export default function Stepper({ currentStep }) {
   const currentIndex = STEP_IDS.indexOf(currentStep);
 
   return (
-    <div dir="rtl" className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-gray-100">
-      {STEPS.map((step, idx) => {
-        const isCompleted = idx < currentIndex;
-        const isActive    = idx === currentIndex;
+    <div dir="rtl" className="border-b border-gray-100 px-3 pt-4 pb-3">
+      <div className="flex items-start">
+        {STEPS.map((step, idx) => {
+          const isCompleted = idx < currentIndex;
+          const isActive    = idx === currentIndex;
 
-        return (
-          <div key={step.id} className="flex items-center flex-1">
-            {/* Step circle + label */}
-            <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                isCompleted ? 'bg-green-500' :
-                isActive    ? 'bg-primary'   : 'bg-gray-100 border border-gray-200'
-              }`}>
-                {isCompleted ? (
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <svg className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-400'}`}
-                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {step.icon}
-                  </svg>
-                )}
+          return (
+            <div key={step.id} className="flex items-center flex-1 min-w-0">
+              {/* Circle + label */}
+              <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                  isCompleted ? 'bg-green-500' :
+                  isActive    ? 'bg-primary'   : 'bg-gray-100 border border-gray-200'
+                }`}>
+                  {isCompleted ? (
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className={`w-4 h-4 ${isActive ? 'text-white' : 'text-gray-400'}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {step.icon}
+                    </svg>
+                  )}
+                </div>
+                <span className={`text-center leading-tight whitespace-nowrap text-[10px] font-medium ${
+                  isCompleted ? 'text-green-600' :
+                  isActive    ? 'text-primary'   : 'text-gray-400'
+                }`}>
+                  {step.label}
+                </span>
               </div>
-              <span className={`text-xs font-medium whitespace-nowrap ${
-                isCompleted ? 'text-green-600' :
-                isActive    ? 'text-primary'   : 'text-gray-400'
-              }`}>
-                {step.label}
-              </span>
-            </div>
 
-            {/* Connector line (not after last step) */}
-            {idx < STEPS.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-2 mb-5 transition-colors ${
-                idx < currentIndex ? 'bg-green-400' : 'bg-gray-200'
-              }`} />
-            )}
-          </div>
-        );
-      })}
+              {/* Connector line */}
+              {idx < STEPS.length - 1 && (
+                <div className={`flex-1 h-0.5 mx-1 mb-4 transition-colors ${
+                  idx < currentIndex ? 'bg-green-400' : 'bg-gray-200'
+                }`} />
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

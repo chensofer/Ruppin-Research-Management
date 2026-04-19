@@ -43,5 +43,9 @@ namespace RupResearchAPI.Services
         Task<List<ProviderDto>> GetProviders();
         Task<ProviderDto> CreateProvider(CreateProviderRequest req);
 
+        // Budget transfer
+        Task TransferBudget(int sourceProjectId, int targetProjectId, decimal amount, string userId);
+        Task<List<ProjectResponseDto>> GetAllProjects();
+
     }
 }

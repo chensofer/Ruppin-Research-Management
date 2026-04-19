@@ -198,8 +198,8 @@ export default function CreateProjectModal({ onClose, onCreated }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/40">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-3xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-1">
@@ -217,7 +217,7 @@ export default function CreateProjectModal({ onClose, onCreated }) {
         <Stepper currentStep={step} />
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-5">
           {submitError && (
             <div className="mb-4 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-lg">
               {submitError}

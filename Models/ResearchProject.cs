@@ -32,6 +32,10 @@ namespace RupResearchAPI.Models
         [StringLength(10)]
         public string? PrincipalResearcherId { get; set; }
 
+        [Column("created_by")]
+        [StringLength(10)]
+        public string? CreatedBy { get; set; }
+
         [Column("created_date")]
         public DateOnly? CreatedDate { get; set; }
 

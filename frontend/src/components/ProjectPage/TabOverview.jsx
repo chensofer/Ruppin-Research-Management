@@ -21,7 +21,7 @@ const fmtDate = (d) => {
 // ── Display-mode field ──────────────────────────────────────────────────────────
 function Field({ label, value, span = 1, highlight }) {
   const display = value !== null && value !== undefined && value !== '' ? value : '—';
-  const spanClass = span === 3 ? 'col-span-3' : span === 2 ? 'col-span-2' : '';
+  const spanClass = span === 3 ? 'col-span-1 sm:col-span-2 md:col-span-3' : span === 2 ? 'col-span-1 sm:col-span-2' : '';
   return (
     <div className={spanClass}>
       <dt className="text-xs text-gray-400 mb-1">{label}</dt>
@@ -37,7 +37,7 @@ const inputCls = 'w-full bg-white text-gray-900 border border-gray-200 rounded-l
 const errCls   = 'border-red-400 focus:ring-red-400';
 
 function EditField({ label, children, error, span = 1, required = false }) {
-  const spanClass = span === 3 ? 'col-span-3' : span === 2 ? 'col-span-2' : '';
+  const spanClass = span === 3 ? 'col-span-1 sm:col-span-2 md:col-span-3' : span === 2 ? 'col-span-1 sm:col-span-2' : '';
   return (
     <div className={spanClass}>
       <label className="block text-xs text-gray-500 mb-1">
@@ -61,8 +61,7 @@ function PIPicker({ value, name: displayName, onChange, error, allUsers, loading
       const q = query.toLowerCase();
       return u.userId.toLowerCase().includes(q) ||
              `${u.firstName} ${u.lastName}`.toLowerCase().includes(q);
-    })
-    .slice(0, 10);
+    });
 
   const select = (u) => {
     onChange({ id: u.userId, name: `${u.firstName} ${u.lastName}` });
@@ -104,7 +103,7 @@ function PIPicker({ value, name: displayName, onChange, error, allUsers, loading
         className={`${inputCls} ${error ? errCls : ''}`}
       />
       {open && !loading && (
-        <ul className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-44 overflow-y-auto">
+        <ul className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
           {filtered.length > 0 ? filtered.map((u) => (
             <li key={u.userId} onMouseDown={() => select(u)}
               className="px-3 py-2.5 cursor-pointer hover:bg-primary/5 text-sm flex justify-between items-center">
@@ -244,7 +243,7 @@ export default function TabOverview({ detail, onChanged }) {
             <h2 className="text-sm font-semibold text-gray-700">עריכת פרטי המחקר</h2>
           </div>
 
-          <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
             {/* Row 1: Name + ID (read-only) */}
             <EditField label="שם מחקר (עברית)" error={errors.projectNameHe} span={2} required>
               <input
@@ -387,7 +386,7 @@ export default function TabOverview({ detail, onChanged }) {
           <h2 className="text-sm font-semibold text-gray-700">פרטי המחקר</h2>
         </div>
 
-        <dl className="grid grid-cols-3 gap-x-8 gap-y-5">
+        <dl className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-5">
           <Field label="שם מחקר" value={detail.projectNameHe || detail.projectNameEn} span={2} />
           <Field label="מזהה מחקר" value={detail.projectId ? `#${detail.projectId}` : null} />
 
@@ -397,6 +396,7 @@ export default function TabOverview({ detail, onChanged }) {
           <Field label="משויך למרכז מחקר" value={detail.centerName} />
           <Field label="מקור מימון" value={detail.fundingSource} />
 
+          <Field label="יוצר המחקר" value={detail.createdByName} />
           <Field label="תאריך יצירה" value={fmtDate(detail.createdDate)} />
           <Field label="תאריך התחלה" value={fmtDate(detail.startDate)} />
           <Field label="תאריך סיום משוערך" value={fmtDate(detail.endDate)} />

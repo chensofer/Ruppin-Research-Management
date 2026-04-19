@@ -40,8 +40,7 @@ function DetailsTab({ form, setForm, errors, allUsers, usersLoading, centers }) 
       if (!piQuery) return true;
       const q = piQuery.toLowerCase();
       return u.userId.toLowerCase().includes(q) || `${u.firstName} ${u.lastName}`.toLowerCase().includes(q);
-    })
-    .slice(0, 10);
+    });
 
   const selectPI = (user) => {
     setForm((f) => ({
@@ -104,7 +103,7 @@ function DetailsTab({ form, setForm, errors, allUsers, usersLoading, centers }) 
               disabled={usersLoading}
               className={`${inputCls} ${errors.principalResearcherId ? errorCls : ''}`} />
             {showPiDrop && !usersLoading && (
-              <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+              <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
                 {piFiltered.length > 0 ? piFiltered.map((u) => (
                   <li key={u.userId} onMouseDown={() => selectPI(u)}
                     className="px-3 py-2.5 cursor-pointer hover:bg-primary-light text-sm flex items-center justify-between gap-2">

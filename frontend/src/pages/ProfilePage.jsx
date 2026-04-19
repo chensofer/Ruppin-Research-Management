@@ -123,7 +123,7 @@ export default function ProfilePage() {
           )}
 
           <form onSubmit={handleProfileSave} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="שם פרטי" error={profileErrors.firstName}>
                 <input
                   type="text"

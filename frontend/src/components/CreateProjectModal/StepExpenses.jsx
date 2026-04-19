@@ -36,6 +36,8 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
   const [savingProvider, setSavingProvider] = useState(false);
   const [providerSaveError, setProviderSaveError] = useState('');
   const fileRef                         = useRef(null);
+  const providerInputRef                = useRef(null);
+  const [providerDropRect, setProviderDropRect] = useState(null);
 
   useEffect(() => {
     getProviders().then((res) => setProviders(res.data)).catch(() => {});
@@ -206,16 +208,25 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
             ) : (
               <>
                 <input
+                  ref={providerInputRef}
                   type="text"
                   value={providerQuery}
                   onChange={(e) => { setProviderQuery(e.target.value); setShowProviderDrop(true); }}
-                  onFocus={() => setShowProviderDrop(true)}
+                  onFocus={() => { if (providerInputRef.current) setProviderDropRect(providerInputRef.current.getBoundingClientRect()); setShowProviderDrop(true); }}
                   onBlur={() => setTimeout(() => setShowProviderDrop(false), 150)}
                   placeholder="חפש ספק לפי שם..."
                   className={inputCls}
                 />
-                {showProviderDrop && (
-                  <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                {showProviderDrop && providerDropRect && (
+                  <ul
+                    style={{
+                      position: 'fixed',
+                      top: providerDropRect.bottom + 4,
+                      left: providerDropRect.left,
+                      width: providerDropRect.width,
+                      zIndex: 9999,
+                    }}
+                    className="bg-white border border-gray-200 rounded-lg shadow-xl max-h-40 overflow-y-auto">
                     {filteredProviders.length > 0 ? filteredProviders.map((p) => (
                       <li key={p.providerId} onMouseDown={() => selectProvider(p)}
                         className="px-3 py-2 cursor-pointer hover:bg-primary-light text-sm text-gray-800">
@@ -234,8 +245,8 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
 
         {providerMode === 'new' && (
           <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="sm:col-span-2">
                 <input type="text" placeholder="שם הספק *" value={draft.newProvider.providerName}
                   onChange={setNp('providerName')}
                   className={`${inputCls} ${errors.providerName ? errorCls : ''}`} />

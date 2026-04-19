@@ -19,6 +19,7 @@ import TabAssistants from '../components/ProjectPage/TabAssistants';
 import TabTransactions from '../components/ProjectPage/TabTransactions';
 import TabDocuments from '../components/ProjectPage/TabDocuments';
 import TabFutureExpenses from '../components/ProjectPage/TabFutureExpenses';
+import TabBudgetTransfer from '../components/ProjectPage/TabBudgetTransfer';
 
 const TABS = [
   { id: 'overview',     label: 'סקירה כללית' },
@@ -28,6 +29,7 @@ const TABS = [
   { id: 'assistants',   label: 'עוזרי מחקר' },
   { id: 'documents',    label: 'מסמכים' },
   { id: 'future',       label: 'הוצאות עתידיות' },
+  { id: 'transfer',     label: 'העברת תקציב בין מחקרים' },
 ];
 
 const fmt = (n) =>
@@ -186,8 +188,8 @@ export default function ProjectPage() {
           חזרה לרשימה
         </button>
 
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap order-2 sm:order-1">
             <StatusBadge status={detail.status} />
             <button
               onClick={() => setShowDeleteModal(true)}
@@ -200,8 +202,8 @@ export default function ProjectPage() {
               מחק מחקר
             </button>
           </div>
-          <div className="text-right">
-            <h1 className="text-2xl font-bold text-gray-900">
+          <div className="text-right order-1 sm:order-2 w-full sm:w-auto">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
               {detail.projectNameHe || detail.projectNameEn || `מחקר #${detail.projectId}`}
             </h1>
             {detail.projectNameEn && detail.projectNameHe && (
@@ -457,6 +459,14 @@ export default function ProjectPage() {
           commitments={commitments}
           availableBalance={available}
           onChanged={() => { reloadCommitments(); reloadDetail(); }}
+        />
+      )}
+      {activeTab === 'transfer' && (
+        <TabBudgetTransfer
+          projectId={id}
+          projectName={detail.projectNameHe || detail.projectNameEn}
+          availableBalance={available}
+          onTransferred={() => { reloadPayments(); reloadDetail(); }}
         />
       )}
     </Layout>

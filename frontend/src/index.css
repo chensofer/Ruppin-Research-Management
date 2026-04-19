@@ -10,5 +10,6 @@
   body {
     @apply bg-page-bg text-gray-800;
     direction: rtl;
+    overflow-x: hidden;
   }
 }

@@ -44,3 +44,8 @@ export const getCommitments = (projectId) => axiosInstance.get(`/projects/${proj
 export const addCommitment = (projectId, data) => axiosInstance.post(`/projects/${projectId}/commitments`, data);
 export const deleteCommitment = (projectId, commitmentId) =>
   axiosInstance.delete(`/projects/${projectId}/commitments/${commitmentId}`);
+
+// Budget transfer
+export const getAllProjects = () => axiosInstance.get('/projects/all');
+export const transferBudget = (sourceId, data) =>
+  axiosInstance.post(`/projects/${sourceId}/transfer-budget`, data);

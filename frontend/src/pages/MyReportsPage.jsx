@@ -177,7 +177,7 @@ export default function MyReportsPage() {
         </div>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           {[
             { label: 'ממתין לאישור', status: 'ממתין', color: 'yellow' },
             { label: 'אושרו',        status: 'אושר',  color: 'green' },

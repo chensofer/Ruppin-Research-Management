@@ -315,7 +315,7 @@ export default function AttendancePage() {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto" dir="rtl">
-        <div className="mb-6 flex items-start justify-between">
+        <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">דיווח נוכחות</h1>
             <p className="text-gray-500 text-sm mt-1">
@@ -336,7 +336,7 @@ export default function AttendancePage() {
 
         {/* Selectors */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-5">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1.5 font-medium">מחקר</label>
               {projects.length === 0 ? (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getUsers, createAssistantUser } from '../../api/usersApi';
 
 const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400';
@@ -19,6 +19,8 @@ export default function StepAssistants({ data, onChange }) {
   const [query, setQuery]               = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [tab, setTab]                   = useState('existing');
+  const inputRef = useRef(null);
+  const [dropdownRect, setDropdownRect] = useState(null);
 
   // Staging for existing user
   const [stagedUser, setStagedUser]         = useState(null);
@@ -56,7 +58,7 @@ export default function StepAssistants({ data, onChange }) {
     );
   });
 
-  const displayed = query ? filtered : filtered.slice(0, 10);
+  const displayed = filtered;
 
   // --- Existing user flow ---
   const stageExisting = (user) => {
@@ -166,17 +168,29 @@ export default function StepAssistants({ data, onChange }) {
 
           <div className="relative">
             <input
+              ref={inputRef}
               type="text"
               value={query}
               onChange={(e) => { setQuery(e.target.value); setShowDropdown(true); setStagedUser(null); }}
-              onFocus={() => setShowDropdown(true)}
+              onFocus={() => {
+                if (inputRef.current) setDropdownRect(inputRef.current.getBoundingClientRect());
+                setShowDropdown(true);
+              }}
               onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
               placeholder={loading ? 'טוען משתמשים...' : 'חפש עוזר מחקר לפי שם או ת.ז...'}
               disabled={loading}
               className={inputCls}
             />
-            {showDropdown && !loading && (
-              <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+            {showDropdown && !loading && dropdownRect && (
+              <ul
+                style={{
+                  position: 'fixed',
+                  top: dropdownRect.bottom + 4,
+                  left: dropdownRect.left,
+                  width: dropdownRect.width,
+                  zIndex: 9999,
+                }}
+                className="bg-white border border-gray-200 rounded-lg shadow-xl max-h-64 overflow-y-auto">
                 {displayed.length > 0 ? (
                   <>
                     {displayed.map((u) => (
@@ -191,11 +205,6 @@ export default function StepAssistants({ data, onChange }) {
                         <p className="text-xs text-gray-400">ת"ז - {u.userId}</p>
                       </li>
                     ))}
-                    {!query && filtered.length > 10 && (
-                      <li className="px-3 py-2 text-xs text-gray-400 text-center border-t border-gray-100">
-                        + {filtered.length - 10} נוספים — הקלד לסינון
-                      </li>
-                    )}
                   </>
                 ) : (
                   <li className="px-3 py-3 text-sm text-gray-400 text-center">
@@ -254,10 +263,10 @@ export default function StepAssistants({ data, onChange }) {
       {/* --- Tab: New user --- */}
       {tab === 'new' && (
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
-          <p className="text-xs text-gray-500">
-            עוזר חדש ייצור חשבון משתמש עם סיסמה זמנית: <code className="bg-gray-100 px-1 rounded">Temp1234!</code>
+          <p className="text-xs text-primary/70 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+            הסיסמה הזמנית של העוזר תהיה מספר הת"ז שהוזן — ניתן לשנותה לאחר מכן.
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
               <input type="text" placeholder="ת.ז. (9 ספרות) *" value={newForm.assistantUserId}
                 onChange={setNf('assistantUserId')} maxLength={9}
@@ -282,7 +291,7 @@ export default function StepAssistants({ data, onChange }) {
                 className={`${inputCls} ${newFormErrors.email ? errorCls : ''}`} />
               {newFormErrors.email && <p className="text-xs text-red-500 mt-0.5">{newFormErrors.email}</p>}
             </div>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <input type="number" placeholder="שכר לשעה (₪) *" value={newForm.salaryPerHour}
                 onChange={setNf('salaryPerHour')}
                 className={`${inputCls} ${newFormErrors.salaryPerHour ? errorCls : ''}`} />
@@ -305,8 +314,9 @@ export default function StepAssistants({ data, onChange }) {
 
       {/* --- Unified selected assistants list --- */}
       {data.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-gray-500 mb-1">עוזרי מחקר ({data.length})</p>
+        <div>
+          <p className="text-xs font-semibold text-gray-500 mb-2">עוזרי מחקר שנוספו ({data.length})</p>
+          <div className="space-y-2 max-h-60 overflow-y-auto pr-0.5">
           {data.map((a, idx) => (
             <div key={a.assistantUserId ?? idx}
               className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
@@ -342,6 +352,7 @@ export default function StepAssistants({ data, onChange }) {
               </button>
             </div>
           ))}
+          </div>
         </div>
       )}
 

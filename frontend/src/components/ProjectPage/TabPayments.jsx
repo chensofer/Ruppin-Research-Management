@@ -140,7 +140,7 @@ export default function TabPayments({ projectId, payments, onCreated }) {
           <h3 className="text-sm font-semibold text-gray-700">בקשת תשלום חדשה</h3>
           {error && <p className="text-xs text-red-500">{error}</p>}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-gray-500 mb-1">קטגורית הוצאה <span className="text-red-500">*</span></label>
               <select value={form.categoryName} onChange={set('categoryName')} className={inputCls}>
@@ -172,7 +172,7 @@ export default function TabPayments({ projectId, payments, onCreated }) {
               <label className="block text-xs text-gray-500 mb-1">ספק <span className="text-red-500">*</span></label>
               {showNewProvider ? (
                 <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <input type="text" value={newProvider.providerName}
                       onChange={(e) => setNewProvider((p) => ({ ...p, providerName: e.target.value }))}
                       placeholder="שם הספק *" className={inputCls} />
@@ -340,7 +340,7 @@ export default function TabPayments({ projectId, payments, onCreated }) {
                     {expandedRow === p.paymentRequestId && (
                       <tr key={`${p.paymentRequestId}-expanded`} className="bg-blue-50/40">
                         <td colSpan={6} className="px-8 py-4">
-                          <div className="grid grid-cols-3 gap-4 text-xs">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                             <div>
                               <dt className="text-gray-400 mb-0.5">שולח הבקשה</dt>
                               <dd className="text-gray-700 font-medium">{p.requestedByUserName || p.requestedByUserId || '—'}</dd>
