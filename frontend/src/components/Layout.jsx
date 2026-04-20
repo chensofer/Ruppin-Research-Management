@@ -1,72 +1,53 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Logo from './Logo';
-
-const RESEARCHER_NAV = [
-  {
-    to: '/dashboard',
-    label: 'רשימת מחקרים',
-    icon: (
-      <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-      </svg>
-    ),
-  },
-  {
-    to: '/approvals',
-    label: 'אישורים ממתינים',
-    icon: (
-      <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
-];
+import {
+  HiSquares2X2, HiCheckCircle, HiCalendarDays, HiDocumentChartBar,
+  HiArrowRightOnRectangle, HiBars3, HiChartBar,
+} from 'react-icons/hi2';
+import { getPendingPaymentRequests } from '../api/paymentRequestsApi';
+import { getPendingHourApprovals } from '../api/hourReportsApi';
 
 const ASSISTANT_NAV = [
-  {
-    to: '/attendance',
-    label: 'דיווח נוכחות',
-    icon: (
-      <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    ),
-  },
-  {
-    to: '/my-reports',
-    label: 'הדוחות שלי',
-    icon: (
-      <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ),
-  },
+  { to: '/attendance', label: 'דיווח נוכחות', icon: <HiCalendarDays      className="w-5 h-5 flex-shrink-0" /> },
+  { to: '/my-reports', label: 'הדוחות שלי',   icon: <HiDocumentChartBar className="w-5 h-5 flex-shrink-0" /> },
 ];
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const navItems = user?.systemAuthorization === 'עוזר מחקר' ? ASSISTANT_NAV : RESEARCHER_NAV;
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileOpen, setMobileOpen]       = useState(false);
+  const [pendingCount, setPendingCount]   = useState(0);
 
-  const profilePic = user?.userId
-    ? localStorage.getItem(`profilePic_${user.userId}`)
-    : null;
+  const isResearcher = user?.systemAuthorization !== 'עוזר מחקר';
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const RESEARCHER_NAV = [
+    { to: '/dashboard',   label: 'רשימת מחקרים',        icon: <HiSquares2X2 className="w-5 h-5 flex-shrink-0" /> },
+    { to: '/comparison',  label: 'השוואות בין מחקרים',   icon: <HiChartBar   className="w-5 h-5 flex-shrink-0" /> },
+    { to: '/approvals',   label: 'אישורים ממתינים',      icon: <HiCheckCircle className="w-5 h-5 flex-shrink-0" />, badge: pendingCount },
+  ];
+
+  const navItems = isResearcher ? RESEARCHER_NAV : ASSISTANT_NAV;
+
+  const profilePic = user?.userId ? localStorage.getItem(`profilePic_${user.userId}`) : null;
+
+  const handleLogout = () => { logout(); navigate('/login'); };
 
   const initials =
     ((user?.firstName?.[0] ?? '') + (user?.lastName?.[0] ?? '')).toUpperCase() ||
     (user?.userId?.[0] ?? '?').toUpperCase();
+
+  // Fetch pending approvals count on mount (researchers only)
+  useEffect(() => {
+    if (!isResearcher || !user?.userId) return;
+    Promise.all([
+      getPendingPaymentRequests().catch(() => ({ data: [] })),
+      getPendingHourApprovals(user.userId).catch(() => ({ data: [] })),
+    ]).then(([pRes, hRes]) => {
+      setPendingCount((pRes.data?.length ?? 0) + (hRes.data?.length ?? 0));
+    });
+  }, [user, isResearcher]);
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full" style={{ background: 'linear-gradient(180deg, #003478 0%, #001E50 100%)' }}>
@@ -91,7 +72,13 @@ export default function Layout({ children }) {
             }
           >
             {item.icon}
-            <span>{item.label}</span>
+            <span className="flex-1">{item.label}</span>
+            {/* Pending badge */}
+            {item.badge > 0 && (
+              <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center leading-none">
+                {item.badge > 99 ? '99+' : item.badge}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>
@@ -132,10 +119,7 @@ export default function Layout({ children }) {
             className="flex-shrink-0 p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
             title="התנתקות"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
+            <HiArrowRightOnRectangle className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -144,47 +128,24 @@ export default function Layout({ children }) {
 
   return (
     <div className="flex min-h-screen bg-page-bg" dir="rtl">
-      {/* Mobile overlay */}
       {mobileOpen && (
-        <div
-          className="fixed inset-0 z-20 bg-black/50 backdrop-blur-sm md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
+        <div className="fixed inset-0 z-20 bg-black/50 backdrop-blur-sm md:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
       {/* Right Sidebar */}
-      <aside
-        className={`
-          fixed right-0 top-0 h-full z-30 w-64 flex flex-col shadow-sidebar
-          transform transition-transform duration-200 ease-in-out
-          ${mobileOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
-        `}
-      >
+      <aside className={`fixed right-0 top-0 h-full z-30 w-64 flex flex-col shadow-sidebar transform transition-transform duration-200 ease-in-out ${mobileOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}>
         <SidebarContent />
       </aside>
 
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 right-0 left-0 z-10 bg-sidebar-bg shadow-md flex items-center justify-between px-4 py-3"
         style={{ background: 'linear-gradient(90deg, #001E50 0%, #003478 100%)' }}>
-        <button
-          onClick={handleLogout}
-          className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-all"
-          title="התנתקות"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
+        <button onClick={handleLogout} className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-all" title="התנתקות">
+          <HiArrowRightOnRectangle className="w-5 h-5" />
         </button>
         <Logo size="xs" />
-        <button
-          onClick={() => setMobileOpen(true)}
-          className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all"
-          title="תפריט"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+        <button onClick={() => setMobileOpen(true)} className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all" title="תפריט">
+          <HiBars3 className="w-6 h-6" />
         </button>
       </div>
 

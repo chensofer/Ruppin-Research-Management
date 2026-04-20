@@ -8,6 +8,7 @@ namespace RupResearchAPI.DTOs
         public string? ProjectRole { get; set; }
         public string? SystemAuthorization { get; set; }
         public bool IsPrincipalInvestigator { get; set; }
+        public bool IsCreator { get; set; }
     }
 
     public class AssistantDetailDto

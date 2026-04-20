@@ -370,25 +370,25 @@ namespace RupResearchAPI.Services
 
         public async Task<List<MonthlyApprovalDto>> GetPendingForResearcher(string researcherId)
         {
-            // Get all project IDs where this user is the principal researcher
-            var projectIds = await _db.ResearchProjects
-                .Where(p => p.PrincipalResearcherId == researcherId)
+            // principal_researcher_id is char(10) in DB — load in memory and Trim to avoid
+            // char vs nvarchar trailing-space mismatch that causes SQL comparison to return zero rows.
+            var trimmedId = researcherId.Trim();
+            var allProjects = await _db.ResearchProjects.ToListAsync();
+            var projectIds = allProjects
+                .Where(p => p.PrincipalResearcherId?.Trim() == trimmedId)
                 .Select(p => p.ProjectId)
-                .ToListAsync();
+                .ToHashSet();
 
             if (projectIds.Count == 0) return [];
 
-            var allPending = await _db.ResearchMonthlyWorkApprovals
-                .Where(a => a.ApprovalStatus == "ממתין")
-                .ToListAsync();
-
-            var relevant = allPending
-                .Where(a => a.ProjectId.HasValue && projectIds.Contains(a.ProjectId.Value))
+            // Also load approvals in memory to handle any char-type padding on approval_status
+            var allApprovals = await _db.ResearchMonthlyWorkApprovals.ToListAsync();
+            var relevant = allApprovals
+                .Where(a => a.ApprovalStatus?.Trim() == "ממתין" && a.ProjectId.HasValue && projectIds.Contains(a.ProjectId.Value))
                 .ToList();
 
             if (relevant.Count == 0) return [];
 
-            var allProjects = await _db.ResearchProjects.ToListAsync();
             var projectDict = allProjects.ToDictionary(p => p.ProjectId);
 
             var allUsers = await _db.ResearchUsers.ToListAsync();

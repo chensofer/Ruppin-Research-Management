@@ -396,7 +396,22 @@ export default function TabOverview({ detail, onChanged }) {
           <Field label="משויך למרכז מחקר" value={detail.centerName} />
           <Field label="מקור מימון" value={detail.fundingSource} />
 
-          <Field label="יוצר המחקר" value={detail.createdByName} />
+          {/* Creator — prominent display with avatar initials */}
+          <div>
+            <dt className="text-xs text-gray-400 mb-1">יוצר המחקר</dt>
+            <dd className="mt-0.5">
+              {detail.createdByName ? (
+                <div className="inline-flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+                    {detail.createdByName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-semibold text-gray-800">{detail.createdByName}</span>
+                </div>
+              ) : (
+                <span className="text-sm text-gray-400">—</span>
+              )}
+            </dd>
+          </div>
           <Field label="תאריך יצירה" value={fmtDate(detail.createdDate)} />
           <Field label="תאריך התחלה" value={fmtDate(detail.startDate)} />
           <Field label="תאריך סיום משוערך" value={fmtDate(detail.endDate)} />
@@ -443,22 +458,54 @@ function ResearchersCard({ detail }) {
       </h2>
       {detail.teamMembers?.length > 0 ? (
         <div className="space-y-3">
-          {detail.teamMembers.map((m) => (
-            <div key={m.userId} className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                {(m.firstName?.[0] ?? '') + (m.lastName?.[0] ?? '')}
+          {detail.teamMembers.map((m) => {
+            const fullName = `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim();
+            const isCreator = m.isCreator;
+            const isPI      = m.isPrincipalInvestigator;
+            return (
+              <div
+                key={m.userId}
+                className={`flex items-center gap-3 p-2.5 rounded-xl transition-colors ${
+                  isCreator ? 'bg-primary/5 border border-primary/15' : 'hover:bg-gray-50'
+                }`}
+              >
+                {/* Avatar */}
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${isCreator ? 'bg-primary' : 'bg-gray-400'}`}>
+                  {(m.firstName?.[0] ?? '') + (m.lastName?.[0] ?? '')}
+                </div>
+
+                {/* Name + ID */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800">{fullName || m.userId}</p>
+                  <p className="text-xs text-gray-400">{m.userId}</p>
+                </div>
+
+                {/* Badges */}
+                <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
+                  {/* Always show the project role */}
+                  {m.projectRole && (
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${
+                      isCreator
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {m.projectRole}
+                    </span>
+                  )}
+                  {/* PI badge shown in addition when the member is also PI */}
+                  {isPI && (
+                    <span className="text-[11px] bg-accent-light text-accent-dark px-2 py-0.5 rounded-full font-semibold">
+                      חוקר ראשי
+                    </span>
+                  )}
+                  {/* Creator indicator (small crown icon) */}
+                  {isCreator && (
+                    <span className="text-[10px] text-primary/60 font-medium">יוצר המחקר</span>
+                  )}
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800">{m.firstName} {m.lastName}</p>
-                <p className="text-xs text-gray-400">{m.userId}</p>
-              </div>
-              {m.projectRole && (
-                <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-full">
-                  {m.projectRole}
-                </span>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <p className="text-sm text-gray-400">לא משויכים חוקרים</p>

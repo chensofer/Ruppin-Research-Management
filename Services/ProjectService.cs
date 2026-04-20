@@ -45,9 +45,13 @@ namespace RupResearchAPI.Services
                 .ToList();
 
             // Load budget data in memory for all user projects
-            var allPayments = await _db.ResearchPaymentRequests.ToListAsync();
+            var allPayments    = await _db.ResearchPaymentRequests.ToListAsync();
             var allCommitments = await _db.ResearchFutureCommitments.ToListAsync();
             var allTeamMembers = await _db.ResearchUsersProjects.ToListAsync();
+            var allBudgetPlans = await _db.ResearchBudgetPlans.ToListAsync();
+            var allHourApprovals = await _db.ResearchMonthlyWorkApprovals.ToListAsync();
+
+            const string salaryCategory = "שכר לעוזרי מחקר";
 
             return userProjects.Select(p =>
             {
@@ -56,17 +60,43 @@ namespace RupResearchAPI.Services
                     .Where(r => r.Status == "אושר" || r.Status == "שולם")
                     .Sum(r => r.RequestedAmount ?? 0);
                 var pendingCount = payments.Count(r => r.Status == "ממתין");
+                var pendingHourApprovalsCount = allHourApprovals
+                    .Count(a => a.ProjectId == p.ProjectId && a.ApprovalStatus?.Trim() == "ממתין");
                 var totalFuture = allCommitments
                     .Where(c => c.ProjectId == p.ProjectId && c.Status != "בוטל")
                     .Sum(c => c.ExpectedAmount ?? 0);
                 var budget = p.TotalBudget ?? 0;
+
+                var salaryBudgetPlanned = allBudgetPlans
+                    .Where(b => b.ProjectId == p.ProjectId && b.CategoryName == salaryCategory)
+                    .Sum(b => b.PlannedAmount ?? 0);
+                var salaryActualPaid = payments
+                    .Where(r => (r.Status == "אושר" || r.Status == "שולם") && r.CategoryName == salaryCategory)
+                    .Sum(r => r.RequestedAmount ?? 0);
+                var salaryFutureCommitted = allCommitments
+                    .Where(c => c.ProjectId == p.ProjectId && c.Status != "בוטל" && c.CategoryName == salaryCategory)
+                    .Sum(c => c.ExpectedAmount ?? 0);
+
+                // Count team members: unique members in the table + PI if not already listed
+                var memberIds = allTeamMembers
+                    .Where(up => up.ProjectId == p.ProjectId)
+                    .Select(up => up.UserId?.Trim())
+                    .ToHashSet();
+                var piTrimmed = p.PrincipalResearcherId?.Trim();
+                var teamMemberCount = memberIds.Count
+                    + (!string.IsNullOrEmpty(piTrimmed) && !memberIds.Contains(piTrimmed) ? 1 : 0);
+
                 var dto = ToDto(p);
                 dto.TotalPaid = totalPaid;
                 dto.PendingCount = pendingCount;
+                dto.PendingHourApprovalsCount = pendingHourApprovalsCount;
                 dto.TotalFuture = totalFuture;
                 dto.RemainingBalance = budget - totalPaid;
                 dto.AvailableBalance = budget - totalPaid - totalFuture;
-                dto.TeamMemberCount = allTeamMembers.Count(up => up.ProjectId == p.ProjectId);
+                dto.TeamMemberCount = teamMemberCount;
+                dto.SalaryBudgetPlanned = salaryBudgetPlanned;
+                dto.SalaryActualPaid = salaryActualPaid;
+                dto.SalaryFutureCommitted = salaryFutureCommitted;
                 return dto;
             }).ToList();
         }
@@ -82,11 +112,15 @@ namespace RupResearchAPI.Services
             var project = await _db.ResearchProjects.FindAsync(id);
             if (project == null) return null;
 
+            // Load all users in memory once — avoids char(10) vs nvarchar SQL comparison issues
+            var allUsers = await _db.ResearchUsers.ToListAsync();
+
             // Resolve PI name
             string? piName = null;
             if (!string.IsNullOrEmpty(project.PrincipalResearcherId))
             {
-                var pi = await _db.ResearchUsers.FindAsync(project.PrincipalResearcherId);
+                var piTrimmed = project.PrincipalResearcherId.Trim();
+                var pi = allUsers.FirstOrDefault(u => u.UserId?.Trim() == piTrimmed);
                 if (pi != null) piName = $"{pi.FirstName} {pi.LastName}".Trim();
             }
 
@@ -94,8 +128,8 @@ namespace RupResearchAPI.Services
             string? createdByName = null;
             if (!string.IsNullOrEmpty(project.CreatedBy))
             {
-                var creator = await _db.ResearchUsers
-                    .FirstOrDefaultAsync(u => u.UserId.Trim() == project.CreatedBy.Trim());
+                var creatorTrimmed = project.CreatedBy.Trim();
+                var creator = allUsers.FirstOrDefault(u => u.UserId?.Trim() == creatorTrimmed);
                 if (creator != null) createdByName = $"{creator.FirstName} {creator.LastName}".Trim();
             }
 
@@ -108,7 +142,8 @@ namespace RupResearchAPI.Services
             }
 
             // Team members
-            var piId = project.PrincipalResearcherId?.Trim() ?? "";
+            var piId      = project.PrincipalResearcherId?.Trim() ?? "";
+            var creatorId = project.CreatedBy?.Trim() ?? "";
             List<TeamMemberDetailDto> teamMembers;
             try
             {
@@ -125,14 +160,25 @@ namespace RupResearchAPI.Services
                         SystemAuthorization = u.SystemAuthorization
                     }).ToListAsync();
 
-                // Resolve IsPrincipalInvestigator in memory so char(10) trimming is safe
+                // Resolve flags in memory so char(10) trimming is safe
                 foreach (var m in rawMembers)
-                    m.IsPrincipalInvestigator = !string.IsNullOrEmpty(piId) &&
-                                                m.UserId?.Trim() == piId;
+                {
+                    m.IsPrincipalInvestigator = !string.IsNullOrEmpty(piId) && m.UserId?.Trim() == piId;
+                    m.IsCreator = !string.IsNullOrEmpty(creatorId) && m.UserId?.Trim() == creatorId;
+                }
 
                 teamMembers = rawMembers;
             }
             catch { teamMembers = []; }
+
+            // If createdByName is still null (old project with null CreatedBy),
+            // fall back to the team member flagged as creator, then to PI name.
+            if (string.IsNullOrEmpty(createdByName))
+            {
+                var creatorMember = teamMembers.FirstOrDefault(m => m.IsCreator);
+                if (creatorMember != null)
+                    createdByName = $"{creatorMember.FirstName} {creatorMember.LastName}".Trim();
+            }
 
             // Assistants
             List<AssistantDetailDto> assistants;
@@ -222,8 +268,10 @@ namespace RupResearchAPI.Services
             _db.ResearchProjects.Add(project);
             await _db.SaveChangesAsync();
 
-            // Auto-add creator to team so they can see this project
-            await EnsureUserInTeam(project.ProjectId, creatorUserId, "יוצר");
+            // Auto-add creator to team with their correct system role
+            var creatorRecord = (await _db.ResearchUsers.ToListAsync())
+                .FirstOrDefault(u => u.UserId?.Trim() == creatorUserId.Trim());
+            await EnsureUserInTeam(project.ProjectId, creatorUserId, ResolveTeamRole(creatorRecord?.SystemAuthorization));
 
             return ToDto(project);
         }
@@ -339,7 +387,9 @@ namespace RupResearchAPI.Services
             try
             {
                 var toAdd = new List<ResearchUsersProject>();
-                var alreadyIncluded = new HashSet<string>(members.Select(m => m.UserId));
+                var alreadyIncluded = new HashSet<string>(
+                    members.Select(m => m.UserId?.Trim() ?? ""),
+                    StringComparer.OrdinalIgnoreCase);
 
                 foreach (var member in members)
                 {
@@ -354,11 +404,14 @@ namespace RupResearchAPI.Services
                 var trimmedCreator = requestedByUserId?.Trim() ?? "";
                 if (!alreadyIncluded.Contains(trimmedCreator) && !string.IsNullOrEmpty(trimmedCreator))
                 {
+                    // Look up creator's system role so we store the correct team role
+                    var allUsers = await _db.ResearchUsers.ToListAsync();
+                    var creatorUser = allUsers.FirstOrDefault(u => u.UserId?.Trim() == trimmedCreator);
                     toAdd.Add(new ResearchUsersProject
                     {
                         UserId = trimmedCreator,
                         ProjectId = projectId,
-                        ProjectRole = "יוצר",
+                        ProjectRole = ResolveTeamRole(creatorUser?.SystemAuthorization),
                     });
                 }
 
@@ -886,16 +939,26 @@ namespace RupResearchAPI.Services
 
         // ── Helpers ───────────────────────────────────────────────────────────
 
+        private static string ResolveTeamRole(string? systemAuthorization) =>
+            systemAuthorization?.Trim() switch
+            {
+                "מנהל מרכז מחקר" => "מנהל מרכז מחקר",
+                _ => "חוקר",
+            };
+
         private async Task EnsureUserInTeam(int projectId, string userId, string role)
         {
             if (string.IsNullOrWhiteSpace(userId)) return;
-            var exists = await _db.ResearchUsersProjects
-                .AnyAsync(up => up.ProjectId == projectId && up.UserId == userId);
-            if (!exists)
+            var trimmedId = userId.Trim();
+            // Load in memory — UserId is char(10), SQL comparison can miss due to padding
+            var existing = await _db.ResearchUsersProjects
+                .Where(up => up.ProjectId == projectId)
+                .ToListAsync();
+            if (!existing.Any(up => up.UserId?.Trim() == trimmedId))
             {
                 _db.ResearchUsersProjects.Add(new ResearchUsersProject
                 {
-                    UserId = userId,
+                    UserId = trimmedId,
                     ProjectId = projectId,
                     ProjectRole = role,
                 });

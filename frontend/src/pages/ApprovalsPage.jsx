@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { getPendingPaymentRequests, updatePaymentRequestStatus } from '../api/paymentRequestsApi';
 import { getPendingHourApprovals, decideMonthlyApproval } from '../api/hourReportsApi';
 import Layout from '../components/Layout';
+import { requestNotificationPermission, sendNotification } from '../utils/notifications';
 
 const MONTH_NAMES = [
   '', 'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
@@ -292,6 +293,18 @@ export default function ApprovalsPage() {
       ]);
       setRequests(pRes.data);
       setHourRecords(hRes.data);
+
+      // Push notification when there are pending items
+      const totalPending = (pRes.data?.length ?? 0) + (hRes.data?.length ?? 0);
+      if (totalPending > 0) {
+        const granted = await requestNotificationPermission();
+        if (granted) {
+          sendNotification(
+            `יש ${totalPending} בקשות ממתינות לאישור`,
+            `${pRes.data?.length ?? 0} בקשות תשלום · ${hRes.data?.length ?? 0} דוחות שעות`
+          );
+        }
+      }
     } catch {
       setError('שגיאה בטעינת הבקשות');
     } finally {

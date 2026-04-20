@@ -17,10 +17,16 @@ namespace RupResearchAPI.DTOs
         // Computed budget stats
         public decimal TotalPaid { get; set; }
         public int PendingCount { get; set; }
+        public int PendingHourApprovalsCount { get; set; }
         public decimal TotalFuture { get; set; }
         public decimal RemainingBalance { get; set; }
         public decimal AvailableBalance { get; set; }
         public int TeamMemberCount { get; set; }
+
+        // Salary-specific budget tracking (for performance score)
+        public decimal SalaryBudgetPlanned { get; set; }
+        public decimal SalaryActualPaid { get; set; }
+        public decimal SalaryFutureCommitted { get; set; }
     }
 
     public class CreateProjectDto

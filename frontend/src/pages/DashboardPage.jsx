@@ -7,8 +7,8 @@ import ProjectCard from '../components/ProjectCard';
 import CreateProjectModal from '../components/CreateProjectModal';
 import AlertsModal from '../components/AlertsModal';
 
-const BUDGET_ALERT_PCT = 10;
-const TIME_ALERT_PCT   = 80;
+const BUDGET_ALERT_PCT = 20;
+const TIME_ALERT_PCT   = 70;
 const SESSION_KEY = 'projectAlertsDismissedAt';
 
 function daysBetween(a, b) {
@@ -335,11 +335,13 @@ export default function DashboardPage() {
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-                  {displayed.map((project) => (
-                    <ProjectCard key={project.projectId} project={project} />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {displayed.map((project) => (
+                      <ProjectCard key={project.projectId} project={project} />
+                    ))}
+                  </div>
+                </>
               )}
             </>
           )}

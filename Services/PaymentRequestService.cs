@@ -145,25 +145,30 @@ namespace RupResearchAPI.Services
 
         private async Task<List<int>> GetUserProjectIds(string userId)
         {
-            var asPrincipal = await _db.ResearchProjects
-                .Where(p => p.PrincipalResearcherId == userId)
+            // All three role columns are char(10) in the DB — load in memory and Trim to avoid
+            // char vs nvarchar SQL comparison mismatches (same pattern as ProjectService).
+            var trimmedId = userId.Trim();
+
+            var allProjects = await _db.ResearchProjects.ToListAsync();
+            var asPrincipal = allProjects
+                .Where(p => p.PrincipalResearcherId?.Trim() == trimmedId)
                 .Select(p => p.ProjectId)
-                .ToListAsync();
+                .ToList();
 
             List<int> asTeamMember;
             try
             {
-                asTeamMember = await _db.ResearchUsersProjects
-                    .Where(u => u.UserId == userId)
+                var allMembers = await _db.ResearchUsersProjects.ToListAsync();
+                asTeamMember = allMembers
+                    .Where(u => u.UserId?.Trim() == trimmedId)
                     .Select(u => u.ProjectId)
-                    .ToListAsync();
+                    .ToList();
             }
             catch { asTeamMember = []; }
 
             List<int> asAssistant;
             try
             {
-                var trimmedId = userId.Trim();
                 var allAssistants = await _db.ResearchAssistants.ToListAsync();
                 asAssistant = allAssistants
                     .Where(a => a.AssistantUserId?.Trim() == trimmedId)
