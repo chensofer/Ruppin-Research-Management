@@ -71,8 +71,8 @@ export default function Layout({ children }) {
   const SidebarContent = () => (
     <div className="flex flex-col h-full" style={{ background: 'linear-gradient(180deg, #003478 0%, #001E50 100%)' }}>
       {/* Logo */}
-      <div className="px-5 pt-5 pb-4 flex items-center justify-center border-b border-white/10">
-        <Logo size="sm" />
+      <div className="px-5 pt-6 pb-5 flex items-center justify-center border-b border-white/10">
+        <Logo size="md" />
       </div>
 
       {/* Navigation */}
