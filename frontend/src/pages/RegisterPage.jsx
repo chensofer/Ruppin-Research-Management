@@ -44,19 +44,19 @@ export default function RegisterPage() {
     }
   };
 
-  const inputClass = "w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400 bg-white";
-  const labelClass = "block text-sm font-medium text-gray-700 mb-1.5";
+  const inputClass = "input-field";
+  const labelClass = "block text-sm font-semibold text-gray-700 mb-1.5";
 
   return (
     <div className="min-h-screen bg-page-bg flex items-center justify-center p-4" dir="rtl">
       <div className="w-full max-w-md">
-        <div className="flex justify-center mt-6 mb-4">
-          <Logo size="lg" />
+        <div className="flex justify-center mt-6 mb-6">
+          <Logo size="md" />
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+        <div className="card p-8">
           <>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">הרשמה למערכת</h1>
+            <h1 className="text-2xl font-extrabold text-gray-900 mb-1">הרשמה למערכת</h1>
               <p className="text-gray-500 text-sm mb-6">צרו חשבון חדש</p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -102,20 +102,25 @@ export default function RegisterPage() {
                 </div>
 
                 {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-lg">
+                  <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">
                     {error}
                   </div>
                 )}
 
                 <button type="submit" disabled={loading}
-                  className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors text-sm mt-2">
-                  {loading ? 'נרשם...' : 'הרשמה'}
+                  className="w-full btn-primary justify-center flex items-center gap-2 mt-1">
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      נרשם...
+                    </>
+                  ) : 'הרשמה'}
                 </button>
               </form>
 
               <p className="text-center text-sm text-gray-500 mt-6">
                 כבר יש לכם חשבון?{' '}
-                <Link to="/login" className="text-primary font-medium hover:underline">
+                <Link to="/login" className="text-primary font-semibold hover:text-primary-dark transition-colors">
                   התחברות
                 </Link>
               </p>

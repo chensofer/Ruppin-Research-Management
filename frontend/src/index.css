@@ -4,7 +4,9 @@
 
 @layer base {
   * {
-    font-family: 'Heebo', sans-serif;
+    font-family: 'Assistant', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
@@ -12,4 +14,47 @@
     direction: rtl;
     overflow-x: hidden;
   }
+
+  h1 { @apply font-extrabold tracking-tight; }
+  h2 { @apply font-bold tracking-tight; }
+  h3 { @apply font-semibold; }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #C3CEDE; border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: #9AAAC0; }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl border border-gray-100/80 shadow-card;
+  }
+
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-dark active:scale-95 text-white font-semibold
+           px-5 py-2.5 rounded-xl transition-all duration-150 shadow-sm hover:shadow-md
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  .btn-accent {
+    @apply bg-accent hover:bg-accent-dark active:scale-95 text-white font-semibold
+           px-5 py-2.5 rounded-xl transition-all duration-150 shadow-sm hover:shadow-md
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  .btn-ghost {
+    @apply text-gray-600 hover:bg-gray-100 hover:text-gray-900 font-medium
+           px-4 py-2 rounded-xl transition-all duration-150;
+  }
+
+  .input-field {
+    @apply w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white
+           focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+           placeholder-gray-400 transition-all duration-150;
+  }
+
+  .badge-green  { @apply bg-accent-light text-accent-dark text-xs font-semibold px-2.5 py-1 rounded-full; }
+  .badge-blue   { @apply bg-primary-light text-primary text-xs font-semibold px-2.5 py-1 rounded-full; }
+  .badge-yellow { @apply bg-yellow-50 text-yellow-700 text-xs font-semibold px-2.5 py-1 rounded-full; }
+  .badge-red    { @apply bg-red-50 text-red-700 text-xs font-semibold px-2.5 py-1 rounded-full; }
 }

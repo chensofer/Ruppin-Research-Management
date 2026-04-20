@@ -8,7 +8,7 @@ const RESEARCHER_NAV = [
     to: '/dashboard',
     label: 'רשימת מחקרים',
     icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
       </svg>
@@ -18,7 +18,7 @@ const RESEARCHER_NAV = [
     to: '/approvals',
     label: 'אישורים ממתינים',
     icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
@@ -31,7 +31,7 @@ const ASSISTANT_NAV = [
     to: '/attendance',
     label: 'דיווח נוכחות',
     icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
       </svg>
@@ -41,7 +41,7 @@ const ASSISTANT_NAV = [
     to: '/my-reports',
     label: 'הדוחות שלי',
     icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
@@ -55,74 +55,91 @@ export default function Layout({ children }) {
   const navItems = user?.systemAuthorization === 'עוזר מחקר' ? ASSISTANT_NAV : RESEARCHER_NAV;
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const profilePic = user?.userId
+    ? localStorage.getItem(`profilePic_${user.userId}`)
+    : null;
+
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const initials = user?.firstName?.[0] || user?.userId?.[0] || '?';
+  const initials =
+    ((user?.firstName?.[0] ?? '') + (user?.lastName?.[0] ?? '')).toUpperCase() ||
+    (user?.userId?.[0] ?? '?').toUpperCase();
 
   const SidebarContent = () => (
-    <>
+    <div className="flex flex-col h-full" style={{ background: 'linear-gradient(180deg, #003478 0%, #001E50 100%)' }}>
       {/* Logo */}
-      <div className="px-6 py-2 border-b border-gray-100 flex items-center justify-center">
-        <Logo />
+      <div className="px-5 pt-5 pb-4 flex items-center justify-center border-b border-white/10">
+        <Logo size="sm" />
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-5 space-y-0.5" dir="rtl">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             onClick={() => setMobileOpen(false)}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
                 isActive
-                  ? 'bg-primary-light text-primary'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+                  ? 'bg-accent text-white shadow-lg shadow-accent/30'
+                  : 'text-white/65 hover:bg-white/10 hover:text-white'
               }`
             }
           >
             {item.icon}
-            {item.label}
+            <span>{item.label}</span>
           </NavLink>
         ))}
       </nav>
 
       {/* User section */}
-      <div className="px-4 py-4 border-t border-gray-100">
-        <div className="flex items-center gap-3">
+      <div className="px-3 py-4 border-t border-white/10">
+        <div className="flex items-center gap-3 px-1">
+          {/* Avatar */}
           <button
             onClick={() => { navigate('/profile'); setMobileOpen(false); }}
-            className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm flex-shrink-0 hover:opacity-80 transition-opacity"
+            className="flex-shrink-0 w-9 h-9 rounded-full overflow-hidden ring-2 ring-white/20 hover:ring-accent/70 transition-all"
             title="הפרופיל שלי"
           >
-            {initials}
+            {profilePic ? (
+              <img src={profilePic} alt="פרופיל" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-accent flex items-center justify-center text-white font-bold text-xs">
+                {initials}
+              </div>
+            )}
           </button>
+
+          {/* Name */}
           <button
             onClick={() => { navigate('/profile'); setMobileOpen(false); }}
             className="flex-1 min-w-0 text-right hover:opacity-80 transition-opacity"
             title="הפרופיל שלי"
           >
-            <p className="text-sm font-medium text-gray-800 truncate">
+            <p className="text-sm font-semibold text-white leading-tight truncate">
               {user?.firstName} {user?.lastName}
             </p>
-            <p className="text-xs text-gray-500 truncate">{user?.userId}</p>
+            <p className="text-xs text-white/45 truncate mt-0.5">{user?.userId}</p>
           </button>
+
+          {/* Logout */}
           <button
             onClick={handleLogout}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="flex-shrink-0 p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
             title="התנתקות"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
           </button>
         </div>
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -130,15 +147,15 @@ export default function Layout({ children }) {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/40 md:hidden"
+          className="fixed inset-0 z-20 bg-black/50 backdrop-blur-sm md:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
-      {/* Right Sidebar — fixed on desktop, slide-in on mobile */}
+      {/* Right Sidebar */}
       <aside
         className={`
-          fixed right-0 top-0 h-full z-30 w-64 bg-white border-l border-gray-200 flex flex-col shadow-sm
+          fixed right-0 top-0 h-full z-30 w-64 flex flex-col shadow-sidebar
           transform transition-transform duration-200 ease-in-out
           ${mobileOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
         `}
@@ -147,10 +164,11 @@ export default function Layout({ children }) {
       </aside>
 
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 right-0 left-0 z-10 bg-white border-b border-gray-200 flex items-center justify-between px-4 py-3 shadow-sm">
+      <div className="md:hidden fixed top-0 right-0 left-0 z-10 bg-sidebar-bg shadow-md flex items-center justify-between px-4 py-3"
+        style={{ background: 'linear-gradient(90deg, #001E50 0%, #003478 100%)' }}>
         <button
           onClick={handleLogout}
-          className="text-gray-400 hover:text-gray-600 transition-colors"
+          className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-all"
           title="התנתקות"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,7 +179,7 @@ export default function Layout({ children }) {
         <Logo size="xs" />
         <button
           onClick={() => setMobileOpen(true)}
-          className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+          className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all"
           title="תפריט"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

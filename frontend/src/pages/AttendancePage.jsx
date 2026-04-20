@@ -25,40 +25,23 @@ function pad(n) {
   return String(n).padStart(2, '0');
 }
 
-// Parse day-of-month from "YYYY-MM-DD" without timezone issues
 function parseDayFromDate(dateStr) {
   if (!dateStr) return null;
   const s = String(dateStr);
   return parseInt(s.slice(8, 10), 10);
 }
 
-// Ensure time is "HH:mm:ss" (TimeOnly requires seconds)
 function toTimeStr(t) {
   if (!t) return null;
   return t.length === 5 ? t + ':00' : t;
 }
 
-// Compute worked hours from from/to strings ("HH:mm")
 function calcWorkedHours(from, to) {
   if (!from || !to) return null;
   const [fh, fm] = from.split(':').map(Number);
   const [th, tm] = to.split(':').map(Number);
   const diff = (th * 60 + tm) - (fh * 60 + fm);
   return diff > 0 ? parseFloat((diff / 60).toFixed(2)) : null;
-}
-
-function StatusBadge({ status }) {
-  if (!status) return null;
-  const styles = {
-    'אושר': 'bg-green-100 text-green-700',
-    'נדחה': 'bg-red-100 text-red-700',
-    'ממתין': 'bg-yellow-100 text-yellow-700',
-  };
-  return (
-    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
-      {status}
-    </span>
-  );
 }
 
 export default function AttendancePage() {
@@ -75,16 +58,13 @@ export default function AttendancePage() {
   const [approval, setApproval] = useState(null);
   const [loadingReports, setLoadingReports] = useState(false);
 
-  // drafts[day] = { reportId?, fromHour, toHour, workedHours, comments }
   const [drafts, setDrafts] = useState({});
-
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState('');
   const [saveError, setSaveError] = useState('');
   const [dayErrors, setDayErrors] = useState({});
 
-  // Refs for debounced auto-save (always point to latest saveAll / locked state)
   const saveAllRef = useRef(null);
   const autoSaveTimerRef = useRef(null);
 
@@ -117,7 +97,6 @@ export default function AttendancePage() {
       setReports(fetchedReports);
       setApproval(aRes.data);
 
-      // Build drafts from saved reports
       const d = {};
       for (const r of fetchedReports) {
         const day = parseDayFromDate(r.reportDate);
@@ -150,7 +129,6 @@ export default function AttendancePage() {
       const current = prev[day] || {};
       const updated = { ...current, [field]: value, saved: false };
 
-      // Auto-calculate workedHours when fromHour or toHour changes; validate order
       if (field === 'fromHour' || field === 'toHour') {
         const from = field === 'fromHour' ? value : current.fromHour;
         const to   = field === 'toHour'   ? value : current.toHour;
@@ -172,7 +150,6 @@ export default function AttendancePage() {
       return { ...prev, [day]: updated };
     });
 
-    // Debounced auto-save — fires 1.5 s after the last field change
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
       autoSaveTimerRef.current = null;
@@ -180,7 +157,6 @@ export default function AttendancePage() {
     }, 1500);
   };
 
-  // Total hours from current drafts (not just DB-saved rows)
   const totalHoursFromDrafts = Object.values(drafts).reduce((sum, d) => {
     if (!d?.fromHour && !d?.toHour && !d?.workedHours) return sum;
     const wh = d.workedHours
@@ -193,7 +169,6 @@ export default function AttendancePage() {
     (d) => d?.fromHour || d?.toHour || d?.workedHours
   );
 
-  // Save all days that have data
   const saveAll = async () => {
     if (!selectedProject || !user) return;
     setSaving(true);
@@ -236,7 +211,6 @@ export default function AttendancePage() {
       }
     }
 
-    // Refresh reports list from DB
     const rRes = await getHourReports(user.userId, selectedProject.projectId, month, year)
       .catch(() => ({ data: reports }));
     setReports(rRes.data);
@@ -250,7 +224,6 @@ export default function AttendancePage() {
     return failed === 0;
   };
 
-  // Keep the ref current so the debounce timer always calls the latest version
   saveAllRef.current = saveAll;
 
   const clearDay = async (day) => {
@@ -276,14 +249,9 @@ export default function AttendancePage() {
     setSubmitting(true);
     setSaveError('');
 
-    // Save all first
     const saved = await saveAll();
-    if (!saved) {
-      setSubmitting(false);
-      return;
-    }
+    if (!saved) { setSubmitting(false); return; }
 
-    // Recalculate total from fresh reports
     const rRes = await getHourReports(user.userId, selectedProject.projectId, month, year)
       .catch(() => ({ data: reports }));
     const freshReports = rRes.data ?? [];
@@ -295,8 +263,7 @@ export default function AttendancePage() {
       const res = await submitMonthlyApproval({
         userId: user.userId,
         projectId: selectedProject.projectId,
-        month,
-        year,
+        month, year,
         totalWorkedHours: total,
         comments: null,
       });
@@ -315,16 +282,18 @@ export default function AttendancePage() {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto" dir="rtl">
+
+        {/* Header */}
         <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">דיווח נוכחות</h1>
+            <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">דיווח נוכחות</h1>
             <p className="text-gray-500 text-sm mt-1">
               {user?.firstName} {user?.lastName} — מלא את שעות העבודה שלך לחודש הנבחר
             </p>
           </div>
           <button
             onClick={() => navigate('/my-reports')}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 hover:border-primary hover:text-primary shadow-sm transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 hover:border-primary hover:text-primary shadow-sm transition-all"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -335,12 +304,12 @@ export default function AttendancePage() {
         </div>
 
         {/* Selectors */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-5">
+        <div className="card p-5 mb-5">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5 font-medium">מחקר</label>
+              <label className="block text-xs text-gray-500 mb-1.5 font-semibold">מחקר</label>
               {projects.length === 0 ? (
-                <p className="text-sm text-gray-400">לא משויך למחקרים</p>
+                <p className="text-sm text-gray-400 py-2">לא משויך למחקרים</p>
               ) : (
                 <select
                   value={selectedProject?.projectId ?? ''}
@@ -348,7 +317,7 @@ export default function AttendancePage() {
                     const p = projects.find((pr) => String(pr.projectId) === e.target.value);
                     setSelectedProject(p || null);
                   }}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="input-field"
                 >
                   <option value="">— בחר מחקר —</option>
                   {projects.map((p) => (
@@ -360,18 +329,16 @@ export default function AttendancePage() {
               )}
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5 font-medium">חודש</label>
-              <select value={month} onChange={(e) => setMonth(Number(e.target.value))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+              <label className="block text-xs text-gray-500 mb-1.5 font-semibold">חודש</label>
+              <select value={month} onChange={(e) => setMonth(Number(e.target.value))} className="input-field">
                 {MONTH_NAMES.map((name, i) => (
                   <option key={i + 1} value={i + 1}>{name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5 font-medium">שנה</label>
-              <select value={year} onChange={(e) => setYear(Number(e.target.value))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+              <label className="block text-xs text-gray-500 mb-1.5 font-semibold">שנה</label>
+              <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="input-field">
                 {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
@@ -382,31 +349,55 @@ export default function AttendancePage() {
           <>
             {/* Approval status banner */}
             {approval && (
-              <div className={`px-5 py-3.5 rounded-xl mb-4 border ${
-                isApproved ? 'bg-green-50 border-green-200'
-                  : approval.approvalStatus === 'נדחה' ? 'bg-red-50 border-red-200'
-                  : 'bg-yellow-50 border-yellow-200'
+              <div className={`px-5 py-4 rounded-2xl mb-4 border flex items-start gap-3 ${
+                isApproved
+                  ? 'bg-accent-light border-accent/30'
+                  : approval.approvalStatus === 'נדחה'
+                  ? 'bg-red-50 border-red-200'
+                  : 'bg-amber-50 border-amber-200'
               }`}>
-                <div className="flex items-center gap-2.5">
-                  <StatusBadge status={approval.approvalStatus} />
-                  <span className="text-sm text-gray-700">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  isApproved ? 'bg-accent text-white'
+                    : approval.approvalStatus === 'נדחה' ? 'bg-red-100 text-red-600'
+                    : 'bg-amber-100 text-amber-600'
+                }`}>
+                  {isApproved ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : approval.approvalStatus === 'נדחה' ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <p className={`text-sm font-semibold ${
+                    isApproved ? 'text-accent-dark'
+                      : approval.approvalStatus === 'נדחה' ? 'text-red-700'
+                      : 'text-amber-700'
+                  }`}>
                     {isApproved
                       ? `הדוח אושר — סה"כ ${approval.totalWorkedHours} שעות`
                       : isPending
                       ? `ממתין לאישור החוקר — סה"כ ${approval.totalWorkedHours} שעות`
                       : 'הדוח נדחה — ניתן לערוך ולשלוח מחדש'}
-                  </span>
-                </div>
-                {approval.approvalStatus === 'נדחה' && approval.comments && (
-                  <p className="text-sm text-red-700 mt-2 pr-1">
-                    <span className="font-medium">סיבת הדחייה: </span>{approval.comments}
                   </p>
-                )}
+                  {approval.approvalStatus === 'נדחה' && approval.comments && (
+                    <p className="text-sm text-red-600 mt-1">
+                      <span className="font-medium">סיבת הדחייה: </span>{approval.comments}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
             {saveError && (
-              <div className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 px-4 py-2.5 rounded-lg">
+              <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 px-4 py-3 rounded-xl">
                 {saveError}
               </div>
             )}
@@ -415,21 +406,30 @@ export default function AttendancePage() {
             {loadingReports ? (
               <div className="space-y-2">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />
+                  <div key={i} className="h-12 bg-gray-100 rounded-2xl animate-pulse" />
                 ))}
               </div>
             ) : (
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-5">
-                <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-700">
+              <div className="card overflow-hidden mb-5">
+                {/* Grid header */}
+                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                  <span className="text-sm font-bold text-gray-800">
                     {MONTH_NAMES[month - 1]} {year}
                   </span>
-                  <span className="text-xs text-gray-500">
-                    סה"כ שעות:{' '}
-                    <span className="font-semibold text-gray-800">
-                      {totalHoursFromDrafts.toFixed(1)}
+                  <div className="flex items-center gap-2">
+                    {saving && !submitting && (
+                      <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                        <span className="inline-block w-3 h-3 border-2 border-primary/50 border-t-primary rounded-full animate-spin" />
+                        שומר...
+                      </span>
+                    )}
+                    <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full font-medium">
+                      סה"כ:{' '}
+                      <span className="text-gray-700 font-bold">
+                        {totalHoursFromDrafts.toFixed(1)} שע'
+                      </span>
                     </span>
-                  </span>
+                  </div>
                 </div>
 
                 <div className="divide-y divide-gray-50">
@@ -444,42 +444,48 @@ export default function AttendancePage() {
                     return (
                       <div
                         key={day}
-                        className={`flex items-center gap-4 px-5 py-2.5 ${
-                          dayErrors[day] ? 'bg-red-50/60' : isWeekend ? 'bg-gray-50/70' : ''
+                        className={`flex items-center gap-3 px-5 py-2.5 transition-colors ${
+                          dayErrors[day]
+                            ? 'bg-red-50/70'
+                            : isWeekend
+                            ? 'bg-gray-50/60'
+                            : hasData
+                            ? 'bg-primary-light/20'
+                            : ''
                         }`}
                       >
                         {/* Day label */}
-                        <div className="w-16 flex-shrink-0 text-center">
-                          <p className="text-sm font-semibold text-gray-700">{day}</p>
-                          <p className={`text-xs ${isWeekend ? 'text-orange-400' : 'text-gray-400'}`}>
+                        <div className="w-14 flex-shrink-0 text-center">
+                          <p className={`text-sm font-bold ${isWeekend ? 'text-gray-400' : 'text-gray-800'}`}>{day}</p>
+                          <p className={`text-[10px] font-medium ${isWeekend ? 'text-orange-400' : 'text-gray-400'}`}>
                             {DAY_NAMES[dayOfWeek]}
                           </p>
                         </div>
 
                         {/* Inputs */}
-                        <div className="flex flex-1 items-center gap-3 flex-wrap">
-                          <div className="flex items-center gap-1.5">
-                            <label className="text-xs text-gray-400 whitespace-nowrap">משעה</label>
+                        <div className="flex flex-1 items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-1">
+                            <label className="text-[10px] text-gray-400 whitespace-nowrap font-medium">משעה</label>
                             <input
                               type="time"
                               value={draft?.fromHour || ''}
                               onChange={(e) => setDayField(day, 'fromHour', e.target.value)}
                               disabled={locked}
-                              className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50 disabled:text-gray-400 w-24"
+                              className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-24 bg-white"
                             />
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <label className="text-xs text-gray-400 whitespace-nowrap">עד שעה</label>
+                          <div className="flex items-center gap-1">
+                            <label className="text-[10px] text-gray-400 whitespace-nowrap font-medium">עד שעה</label>
                             <input
                               type="time"
                               value={draft?.toHour || ''}
                               onChange={(e) => setDayField(day, 'toHour', e.target.value)}
                               disabled={locked}
-                              className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50 disabled:text-gray-400 w-24"
+                              className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-24 bg-white"
                             />
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <label className="text-xs text-gray-400 whitespace-nowrap">שעות</label>
+                          <div className="flex items-center gap-1">
+                            <label className="text-[10px] text-gray-400 whitespace-nowrap font-medium">שעות</label>
                             <input
                               type="number"
                               step="0.5"
@@ -489,7 +495,7 @@ export default function AttendancePage() {
                               onChange={(e) => setDayField(day, 'workedHours', e.target.value)}
                               placeholder="0"
                               disabled={locked}
-                              className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50 disabled:text-gray-400 w-16"
+                              className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-16 bg-white"
                             />
                           </div>
                           <input
@@ -498,30 +504,35 @@ export default function AttendancePage() {
                             onChange={(e) => setDayField(day, 'comments', e.target.value)}
                             placeholder="הערות..."
                             disabled={locked}
-                            className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-gray-50 disabled:text-gray-400"
+                            className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white placeholder-gray-300"
                           />
                         </div>
 
                         {/* Status indicator + clear */}
-                        <div className="flex items-center gap-2 flex-shrink-0 w-16 justify-end">
+                        <div className="flex items-center gap-1.5 flex-shrink-0 w-16 justify-end">
                           {dayErrors[day] && (
-                            <span className="text-xs text-red-500 font-medium whitespace-nowrap" title={dayErrors[day]}>שגיאה</span>
+                            <span className="text-[10px] text-red-500 font-semibold whitespace-nowrap" title={dayErrors[day]}>שגיאה</span>
                           )}
                           {!dayErrors[day] && isSaved && !isDirty && (
-                            <span className="text-xs text-green-600 font-medium">✓ נשמר</span>
+                            <span className="text-[10px] text-accent font-bold flex items-center gap-0.5">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                              </svg>
+                              נשמר
+                            </span>
                           )}
                           {!dayErrors[day] && isDirty && saving && (
-                            <span className="inline-block w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                            <span className="inline-block w-3 h-3 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
                           )}
                           {!dayErrors[day] && isDirty && !saving && (
-                            <span className="text-xs text-amber-500 font-medium">ממתין...</span>
+                            <span className="text-[10px] text-amber-500 font-semibold">ממתין</span>
                           )}
                           {isSaved && !locked && (
                             <button
                               type="button"
                               onClick={() => clearDay(day)}
                               disabled={busy}
-                              className="text-gray-300 hover:text-red-500 transition-colors disabled:opacity-40"
+                              className="text-gray-300 hover:text-red-400 transition-colors disabled:opacity-40 p-0.5"
                               title="מחק יום זה"
                             >
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -537,17 +548,19 @@ export default function AttendancePage() {
               </div>
             )}
 
-            {/* Action buttons */}
+            {/* Action bar */}
             {!locked && (
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4 bg-white border border-gray-100 rounded-2xl px-5 py-4 shadow-sm">
                 <p className="text-xs text-gray-400 flex items-center gap-2">
                   {saving && !submitting ? (
                     <>
-                      <span className="inline-block w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <span className="inline-block w-3 h-3 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
                       שומר אוטומטית...
                     </>
                   ) : hasDraftData ? (
-                    `${Object.values(drafts).filter(d => d?.fromHour || d?.toHour || d?.workedHours).length} ימים מולאו`
+                    <span className="text-gray-600 font-medium">
+                      {Object.values(drafts).filter(d => d?.fromHour || d?.toHour || d?.workedHours).length} ימים מולאו
+                    </span>
                   ) : (
                     'מלא שעות לימים בהם עבדת'
                   )}
@@ -556,16 +569,16 @@ export default function AttendancePage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={busy || !hasDraftData}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="btn-primary flex items-center gap-2 px-6"
                 >
                   {submitting ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                   ) : (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   )}
-                  {submitting ? 'שולח...' : `שלח לאישור (${totalHoursFromDrafts.toFixed(1)} שעות)`}
+                  {submitting ? 'שולח...' : `שלח לאישור (${totalHoursFromDrafts.toFixed(1)} שע')`}
                 </button>
               </div>
             )}
@@ -573,15 +586,26 @@ export default function AttendancePage() {
         )}
 
         {!selectedProject && projects.length > 0 && (
-          <div className="text-center py-16 text-gray-400">
-            <p className="text-base">בחר מחקר להתחלת הדיווח</p>
+          <div className="card py-20 text-center">
+            <div className="w-14 h-14 bg-primary-light rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <svg className="w-7 h-7 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <p className="text-sm font-semibold text-gray-700">בחר מחקר להתחלת הדיווח</p>
+            <p className="text-xs text-gray-400 mt-1">בחר מחקר וחודש מהתפריטים למעלה</p>
           </div>
         )}
 
       </div>
 
+      {/* Toast */}
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-sm px-5 py-3 rounded-xl shadow-lg z-50">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-sm px-5 py-3 rounded-2xl shadow-xl z-50 flex items-center gap-2">
+          <svg className="w-4 h-4 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+          </svg>
           {toast}
         </div>
       )}

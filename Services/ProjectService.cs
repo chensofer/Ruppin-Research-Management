@@ -947,11 +947,11 @@ namespace RupResearchAPI.Services
             var sourceName = source.ProjectNameHe ?? source.ProjectNameEn ?? $"מחקר #{sourceId}";
             var targetName = target.ProjectNameHe ?? target.ProjectNameEn ?? $"מחקר #{targetId}";
 
-            // Outgoing from source (positive amount → increases TotalPaid → reduces balance)
+            // Outgoing from source: expense record (reduces available balance)
             _db.ResearchPaymentRequests.Add(new ResearchPaymentRequest
             {
                 ProjectId = sourceId,
-                CategoryName = "העברת תקציב",
+                CategoryName = null,
                 RequestTitle = $"העברת תקציב למחקר {targetName}",
                 RequestedAmount = amount,
                 RequestDate = today,
@@ -960,12 +960,12 @@ namespace RupResearchAPI.Services
                 DecisionDate = today,
             });
 
-            // Incoming to target (negative amount → decreases TotalPaid → increases balance)
+            // Incoming to target: negative expense = income (increases available balance)
             _db.ResearchPaymentRequests.Add(new ResearchPaymentRequest
             {
                 ProjectId = targetId,
-                CategoryName = "העברת תקציב",
-                RequestTitle = $"קבלת תקציב ממחקר {sourceName}",
+                CategoryName = null,
+                RequestTitle = $"העברת תקציב ממחקר {sourceName}",
                 RequestedAmount = -amount,
                 RequestDate = today,
                 Status = "שולם",

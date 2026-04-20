@@ -35,12 +35,17 @@ const TABS = [
 const fmt = (n) =>
   n != null ? `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)}` : '—';
 
-function StatCard({ label, value, color = 'text-gray-900', sub }) {
+function StatCard({ label, value, valueClass = 'text-gray-900', sub, icon, bg = 'bg-white' }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-      <p className="text-xs text-gray-400 mb-1">{label}</p>
-      <p className={`text-xl font-bold ${color}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+    <div className={`${bg} rounded-2xl border border-gray-100 shadow-card p-4 flex flex-col gap-2`}>
+      <div className="flex items-center justify-between">
+        <div className="w-8 h-8 rounded-xl bg-gray-100/80 flex items-center justify-center text-gray-400 flex-shrink-0">
+          {icon}
+        </div>
+        <p className="text-[11px] text-gray-400 font-semibold text-right leading-tight">{label}</p>
+      </div>
+      <p className={`text-2xl font-extrabold tabular-nums text-right leading-none ${valueClass}`}>{value}</p>
+      {sub && <p className="text-[11px] text-gray-400 text-right">{sub}</p>}
     </div>
   );
 }
@@ -48,15 +53,11 @@ function StatCard({ label, value, color = 'text-gray-900', sub }) {
 function StatusBadge({ status }) {
   const isActive = status === 'פעיל' || status === 'Active' || status === 'active';
   return (
-    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${
-      isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${
+      isActive ? 'bg-accent-light text-accent-dark' : 'bg-gray-100 text-gray-500'
     }`}>
-      {isActive && (
-        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-        </svg>
-      )}
-      {isActive ? 'פעיל' : (status || 'לא ידוע')}
+      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? 'bg-accent' : 'bg-gray-400'}`} />
+      {isActive ? 'פעיל' : (status || 'לא פעיל')}
     </span>
   );
 }
@@ -177,39 +178,42 @@ export default function ProjectPage() {
   return (
     <Layout>
       {/* Back + header */}
-      <div className="mb-5">
+      <div className="mb-6" dir="rtl">
         <button
           onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary mb-5 transition-colors font-medium group"
         >
-          <svg className="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           חזרה לרשימה
         </button>
 
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2 flex-wrap order-2 sm:order-1">
-            <StatusBadge status={detail.status} />
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              className="flex items-center gap-1.5 text-xs font-medium text-red-500 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              מחק מחקר
-            </button>
-          </div>
-          <div className="text-right order-1 sm:order-2 w-full sm:w-auto">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-              {detail.projectNameHe || detail.projectNameEn || `מחקר #${detail.projectId}`}
-            </h1>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          {/* Title — right in RTL */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 flex-wrap mb-1">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 leading-tight">
+                {detail.projectNameHe || detail.projectNameEn || `מחקר #${detail.projectId}`}
+              </h1>
+              <StatusBadge status={detail.status} />
+            </div>
             {detail.projectNameEn && detail.projectNameHe && (
-              <p className="text-sm text-gray-400 mt-0.5">{detail.projectNameEn}</p>
+              <p className="text-sm text-gray-400 font-medium">{detail.projectNameEn}</p>
             )}
           </div>
+
+          {/* Delete button — left in RTL */}
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-red-500 border border-red-200 px-3 py-2 rounded-xl hover:bg-red-50 hover:border-red-300 transition-all flex-shrink-0"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            מחק מחקר
+          </button>
         </div>
       </div>
 
@@ -332,22 +336,46 @@ export default function ProjectPage() {
       })()}
 
       {/* Budget summary — 5 stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
-        <StatCard label="תקציב כולל" value={fmt(budget)} />
-        <StatCard label="יתרה (לאחר תשלומים)" value={fmt(remaining)}
-          color={remaining < 0 ? 'text-red-600' : 'text-green-600'} />
-        <StatCard label="סה״כ הוצאות בפועל" value={fmt(totalPaid)} color="text-primary" />
-        <StatCard label="התחייבויות עתידיות" value={fmt(totalFuture)} color="text-orange-500"
-          sub={`${commitments.length} רשומות`} />
-        <StatCard label="יתרה זמינה" value={fmt(available)}
-          color={available < 0 ? 'text-red-600' : 'text-emerald-600'}
-          sub="לאחר ניכוי עתידיות" />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4" dir="rtl">
+        <StatCard
+          label="תקציב כולל"
+          value={fmt(budget)}
+          valueClass="text-gray-900"
+          icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+        />
+        <StatCard
+          label="יתרה לאחר תשלומים"
+          value={fmt(remaining)}
+          valueClass={remaining < 0 ? 'text-red-600' : 'text-accent-dark'}
+          icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
+        />
+        <StatCard
+          label="הוצאות בפועל"
+          value={fmt(totalPaid)}
+          valueClass="text-primary"
+          icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
+        />
+        <StatCard
+          label="התחייבויות עתידיות"
+          value={fmt(totalFuture)}
+          valueClass="text-amber-600"
+          sub={`${commitments.length} רשומות`}
+          icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+        />
+        <StatCard
+          label="יתרה זמינה"
+          value={fmt(available)}
+          valueClass={available < 0 ? 'text-red-600' : 'text-accent-dark'}
+          sub="לאחר ניכוי עתידיות"
+          bg={available >= 0 ? 'bg-accent-light/50' : 'bg-red-50'}
+          icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+        />
       </div>
 
-      {/* Budget pie chart */}
+      {/* Budget donut chart */}
       {budget > 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-5 py-4 mb-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-1 text-right">התפלגות תקציב</h3>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-card px-5 py-5 mb-4">
+          <h3 className="text-sm font-bold text-gray-700 mb-4 text-right">התפלגות תקציב</h3>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
@@ -358,52 +386,68 @@ export default function ProjectPage() {
                 ].filter((d) => d.value > 0)}
                 cx="50%"
                 cy="50%"
-                innerRadius={55}
-                outerRadius={85}
+                innerRadius={62}
+                outerRadius={90}
                 dataKey="value"
-                paddingAngle={2}
+                paddingAngle={3}
+                strokeWidth={0}
               >
-                <Cell fill="#6366f1" />
-                <Cell fill="#f97316" />
-                <Cell fill="#10b981" />
+                <Cell fill="#003478" />
+                <Cell fill="#F59E0B" />
+                <Cell fill="#5CB800" />
               </Pie>
-              <Tooltip formatter={(v) => `₪${new Intl.NumberFormat('he-IL').format(v)}`} />
+              <Tooltip
+                formatter={(v) => `₪${new Intl.NumberFormat('he-IL').format(v)}`}
+                contentStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 12 }}
+              />
               <Legend
-                formatter={(value) => <span style={{ fontSize: 12 }}>{value}</span>}
+                iconType="circle"
+                iconSize={8}
+                formatter={(value) => <span style={{ fontSize: 12, color: '#6b7280' }}>{value}</span>}
               />
             </PieChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      {/* Budget bar */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-5 py-4 mb-6">
-        <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-          <span>{fmt(totalPaid)} הוצא</span>
-          <span>{usagePercent}% ניצול מתוך {fmt(budget)}</span>
+      {/* Budget usage bar */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-card px-5 py-4 mb-6" dir="rtl">
+        <div className="flex justify-between items-center text-xs text-gray-500 mb-2.5">
+          <span className="text-gray-400">{fmt(totalPaid)} הוצא</span>
+          <span className="font-semibold text-gray-700">{usagePercent}% ניצול מתוך {fmt(budget)}</span>
         </div>
-        <div className="w-full bg-gray-100 rounded-full h-2">
-          <div className="bg-primary rounded-full h-2 transition-all" style={{ width: `${usagePercent}%` }} />
+        <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${usagePercent}%`,
+              background: usagePercent >= 90
+                ? 'linear-gradient(90deg,#ef4444,#dc2626)'
+                : usagePercent >= 70
+                  ? 'linear-gradient(90deg,#f59e0b,#d97706)'
+                  : 'linear-gradient(90deg,#003478,#1B4080)',
+            }}
+          />
         </div>
         {totalFuture > 0 && (
-          <div className="flex justify-between text-xs text-gray-400 mt-1">
-            <span className="text-orange-500">{fmt(totalFuture)} התחייבויות עתידיות</span>
-            <span className="text-emerald-600">{fmt(available)} זמין</span>
+          <div className="flex justify-between text-xs mt-2">
+            <span className="text-amber-500 font-medium">{fmt(totalFuture)} התחייבויות</span>
+            <span className="text-accent-dark font-medium">{fmt(available)} זמין</span>
           </div>
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6 overflow-x-auto">
-        <div className="flex gap-0 min-w-max">
+      {/* Tabs — pill style */}
+      <div className="mb-6 overflow-x-auto pb-1" dir="rtl">
+        <div className="flex gap-1.5 min-w-max bg-gray-100/70 p-1.5 rounded-2xl w-fit">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              className={`px-4 py-2 text-sm font-semibold rounded-xl whitespace-nowrap transition-all duration-150 ${
                 activeTab === tab.id
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'bg-white text-primary shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'
               }`}
             >
               {tab.label}

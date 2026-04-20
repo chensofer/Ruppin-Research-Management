@@ -27,7 +27,7 @@ namespace RupResearchAPI.Controllers
             return Ok(projects);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
             var project = await _projectService.GetById(id);
@@ -36,7 +36,7 @@ namespace RupResearchAPI.Controllers
         }
 
         // GET /api/projects/{id}/detail — rich DTO with PI name, center, team, assistants, budget stats
-        [HttpGet("{id}/detail")]
+        [HttpGet("{id:int}/detail")]
         public async Task<IActionResult> GetDetail(int id)
         {
             var detail = await _projectService.GetDetail(id);
@@ -52,7 +52,7 @@ namespace RupResearchAPI.Controllers
             return CreatedAtAction(nameof(GetById), new { id = created.ProjectId }, created);
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateProjectDto dto)
         {
             var errs = ValidateProjectFields(
@@ -82,7 +82,7 @@ namespace RupResearchAPI.Controllers
             return errors;
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -98,7 +98,7 @@ namespace RupResearchAPI.Controllers
         }
 
         // GET /api/projects/{id}/budget-categories
-        [HttpGet("{id}/budget-categories")]
+        [HttpGet("{id:int}/budget-categories")]
         public async Task<IActionResult> GetBudgetCategories(int id)
         {
             var categories = await _projectService.GetBudgetCategories(id);
@@ -106,7 +106,7 @@ namespace RupResearchAPI.Controllers
         }
 
         // PUT /api/projects/{id}/budget-categories — replace all budget categories
-        [HttpPut("{id}/budget-categories")]
+        [HttpPut("{id:int}/budget-categories")]
         public async Task<IActionResult> UpdateBudgetCategories(int id, [FromBody] UpdateBudgetCategoriesRequest req)
         {
             var project = await _projectService.GetById(id);
@@ -154,7 +154,7 @@ namespace RupResearchAPI.Controllers
         }
 
         // POST /api/projects/{id}/files — upload a single file for a project
-        [HttpPost("{id}/files")]
+        [HttpPost("{id:int}/files")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UploadFile(int id, IFormFile file, [FromForm] string? folderName)
         {
@@ -186,7 +186,7 @@ namespace RupResearchAPI.Controllers
         }
 
         // GET /api/projects/{id}/files
-        [HttpGet("{id}/files")]
+        [HttpGet("{id:int}/files")]
         public async Task<IActionResult> GetFiles(int id)
         {
             var files = await _projectService.GetFiles(id);
@@ -194,7 +194,7 @@ namespace RupResearchAPI.Controllers
         }
 
         // DELETE /api/projects/{id}/files/{fileId}
-        [HttpDelete("{id}/files/{fileId}")]
+        [HttpDelete("{id:int}/files/{fileId}")]
         public async Task<IActionResult> DeleteFile(int id, int fileId)
         {
             var deleted = await _projectService.DeleteFile(fileId);
@@ -205,7 +205,7 @@ namespace RupResearchAPI.Controllers
         // ── Team endpoints ────────────────────────────────────────────────────
 
         // GET /api/projects/{id}/team
-        [HttpGet("{id}/team")]
+        [HttpGet("{id:int}/team")]
         public async Task<IActionResult> GetTeam(int id)
         {
             var team = await _projectService.GetTeam(id);
@@ -213,7 +213,7 @@ namespace RupResearchAPI.Controllers
         }
 
         // POST /api/projects/{id}/team
-        [HttpPost("{id}/team")]
+        [HttpPost("{id:int}/team")]
         public async Task<IActionResult> AddTeamMember(int id, [FromBody] AddTeamMemberRequest req)
         {
             try
@@ -230,7 +230,7 @@ namespace RupResearchAPI.Controllers
         }
 
         // DELETE /api/projects/{id}/team/{userId}
-        [HttpDelete("{id}/team/{userId}")]
+        [HttpDelete("{id:int}/team/{userId}")]
         public async Task<IActionResult> RemoveTeamMember(int id, string userId)
         {
             var removed = await _projectService.RemoveTeamMember(id, userId);
@@ -241,7 +241,7 @@ namespace RupResearchAPI.Controllers
         // ── Assistant endpoints ───────────────────────────────────────────────
 
         // GET /api/projects/{id}/assistants
-        [HttpGet("{id}/assistants")]
+        [HttpGet("{id:int}/assistants")]
         public async Task<IActionResult> GetAssistants(int id)
         {
             var assistants = await _projectService.GetAssistants(id);
@@ -249,7 +249,7 @@ namespace RupResearchAPI.Controllers
         }
 
         // POST /api/projects/{id}/assistants
-        [HttpPost("{id}/assistants")]
+        [HttpPost("{id:int}/assistants")]
         public async Task<IActionResult> AddAssistant(int id, [FromBody] AddAssistantRequest req)
         {
             var assistant = await _projectService.AddAssistant(id, req.AssistantUserId, req.Role, req.SalaryPerHour);
@@ -259,7 +259,7 @@ namespace RupResearchAPI.Controllers
         }
 
         // DELETE /api/projects/{id}/assistants/{userId}
-        [HttpDelete("{id}/assistants/{userId}")]
+        [HttpDelete("{id:int}/assistants/{userId}")]
         public async Task<IActionResult> RemoveAssistant(int id, string userId)
         {
             var removed = await _projectService.RemoveAssistant(id, userId);
@@ -268,7 +268,7 @@ namespace RupResearchAPI.Controllers
         }
 
         // POST /api/projects/{id}/assistants/new — create new RA user + assign to project
-        [HttpPost("{id}/assistants/new")]
+        [HttpPost("{id:int}/assistants/new")]
         public async Task<IActionResult> CreateAndAddAssistant(int id, [FromBody] CreateAndAddAssistantRequest req)
         {
             if (string.IsNullOrWhiteSpace(req.UserId) || string.IsNullOrWhiteSpace(req.FirstName) ||
@@ -292,7 +292,7 @@ namespace RupResearchAPI.Controllers
         }
 
         // PUT /api/projects/{id}/assistants/{userId}
-        [HttpPut("{id}/assistants/{userId}")]
+        [HttpPut("{id:int}/assistants/{userId}")]
         public async Task<IActionResult> UpdateAssistant(int id, string userId, [FromBody] UpdateAssistantRequest req)
         {
             if (req.SalaryPerHour.HasValue && req.SalaryPerHour.Value <= 0)
@@ -304,7 +304,7 @@ namespace RupResearchAPI.Controllers
         }
 
         // GET /api/projects/{id}/assistants/{userId}/tracking
-        [HttpGet("{id}/assistants/{userId}/tracking")]
+        [HttpGet("{id:int}/assistants/{userId}/tracking")]
         public async Task<IActionResult> GetAssistantTracking(int id, string userId)
         {
             var result = await _projectService.GetAssistantTracking(id, userId);
@@ -321,10 +321,10 @@ namespace RupResearchAPI.Controllers
         }
 
         // POST /api/projects/{sourceId}/transfer-budget
-        [HttpPost("{sourceId}/transfer-budget")]
+        [HttpPost("{sourceId:int}/transfer-budget")]
         public async Task<IActionResult> TransferBudget(int sourceId, [FromBody] TransferBudgetRequest req)
         {
-            if (req.Amount <= 0)
+            if (req == null || req.Amount <= 0)
                 return BadRequest(new { message = "סכום ההעברה חייב להיות גדול מאפס" });
 
             try
@@ -345,12 +345,17 @@ namespace RupResearchAPI.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
+            catch (Exception ex)
+            {
+                var detail = ex.InnerException?.Message ?? ex.Message;
+                return StatusCode(500, new { message = $"שגיאת שרת: {detail}" });
+            }
         }
 
         // ── Future commitments endpoints ──────────────────────────────────────
 
         // GET /api/projects/{id}/commitments
-        [HttpGet("{id}/commitments")]
+        [HttpGet("{id:int}/commitments")]
         public async Task<IActionResult> GetCommitments(int id)
         {
             var commitments = await _projectService.GetCommitments(id);
@@ -358,7 +363,7 @@ namespace RupResearchAPI.Controllers
         }
 
         // POST /api/projects/{id}/commitments
-        [HttpPost("{id}/commitments")]
+        [HttpPost("{id:int}/commitments")]
         public async Task<IActionResult> AddCommitment(int id, [FromBody] CreateFutureCommitmentRequest req)
         {
             var commitment = await _projectService.AddCommitment(id, req);
@@ -366,7 +371,7 @@ namespace RupResearchAPI.Controllers
         }
 
         // DELETE /api/projects/{id}/commitments/{commitmentId}
-        [HttpDelete("{id}/commitments/{commitmentId}")]
+        [HttpDelete("{id:int}/commitments/{commitmentId}")]
         public async Task<IActionResult> DeleteCommitment(int id, int commitmentId)
         {
             var deleted = await _projectService.DeleteCommitment(commitmentId);
