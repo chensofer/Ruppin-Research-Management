@@ -370,6 +370,15 @@ namespace RupResearchAPI.Controllers
             return Ok(commitment);
         }
 
+        // PUT /api/projects/{id}/commitments/{commitmentId}
+        [HttpPut("{id:int}/commitments/{commitmentId}")]
+        public async Task<IActionResult> UpdateCommitment(int id, int commitmentId, [FromBody] CreateFutureCommitmentRequest req)
+        {
+            var updated = await _projectService.UpdateCommitment(commitmentId, req);
+            if (updated == null) return NotFound();
+            return Ok(updated);
+        }
+
         // DELETE /api/projects/{id}/commitments/{commitmentId}
         [HttpDelete("{id:int}/commitments/{commitmentId}")]
         public async Task<IActionResult> DeleteCommitment(int id, int commitmentId)

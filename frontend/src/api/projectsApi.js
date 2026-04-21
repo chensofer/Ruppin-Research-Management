@@ -42,6 +42,8 @@ export const updateBudgetCategories = (projectId, categories) =>
 // Future commitments
 export const getCommitments = (projectId) => axiosInstance.get(`/projects/${projectId}/commitments`);
 export const addCommitment = (projectId, data) => axiosInstance.post(`/projects/${projectId}/commitments`, data);
+export const updateCommitment = (projectId, commitmentId, data) =>
+  axiosInstance.put(`/projects/${projectId}/commitments/${commitmentId}`, data);
 export const deleteCommitment = (projectId, commitmentId) =>
   axiosInstance.delete(`/projects/${projectId}/commitments/${commitmentId}`);
 

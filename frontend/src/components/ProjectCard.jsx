@@ -247,8 +247,7 @@ export default function ProjectCard({ project }) {
 
   return (
     <div
-      onClick={() => navigate(`/projects/${project.projectId}`)}
-      className="group bg-white rounded-2xl border border-gray-100 shadow-card hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200 overflow-hidden cursor-pointer flex flex-col"
+      className="group bg-white rounded-2xl border border-gray-100 shadow-card hover:shadow-card-hover transition-all duration-200 overflow-hidden flex flex-col"
     >
       {/* Status stripe */}
       <div
@@ -325,12 +324,16 @@ export default function ProjectCard({ project }) {
 
       {/* CTA */}
       <div className="px-5 pb-5">
-        <div className="w-full flex items-center justify-center gap-2 bg-primary group-hover:bg-primary-dark text-white text-sm font-semibold py-2.5 rounded-xl transition-colors duration-150">
+        <button
+          type="button"
+          onClick={() => navigate(`/projects/${project.projectId}`)}
+          className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold py-2.5 rounded-xl transition-colors duration-150 cursor-pointer"
+        >
           כניסה למחקר
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
           </svg>
-        </div>
+        </button>
       </div>
     </div>
   );

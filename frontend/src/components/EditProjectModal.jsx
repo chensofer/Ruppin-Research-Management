@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getProjectDetail, updateProject, getBudgetCategories, updateBudgetCategories } from '../api/projectsApi';
+import HebrewDatePicker from './HebrewDatePicker';
 import { getUsers } from '../api/usersApi';
 import { getCenters } from '../api/centersApi';
 import CategoryPicker from './CreateProjectModal/CategoryPicker';
@@ -149,12 +150,21 @@ function DetailsTab({ form, setForm, errors, allUsers, usersLoading, centers }) 
       {/* Dates */}
       <div className="grid grid-cols-2 gap-4">
         <Field label="תאריך התחלה" required error={errors.startDate}>
-          <input type="date" value={form.startDate} onChange={set('startDate')}
-            className={`${inputCls} ${errors.startDate ? errorCls : ''}`} />
+          <HebrewDatePicker
+            value={form.startDate}
+            onChange={(iso) => setForm((f) => ({ ...f, startDate: iso }))}
+            placeholder="בחר תאריך התחלה"
+            className={`${inputCls} ${errors.startDate ? errorCls : ''}`}
+          />
         </Field>
         <Field label="תאריך סיום משוער" required error={errors.endDate}>
-          <input type="date" value={form.endDate} onChange={set('endDate')}
-            className={`${inputCls} ${errors.endDate ? errorCls : ''}`} />
+          <HebrewDatePicker
+            value={form.endDate}
+            onChange={(iso) => setForm((f) => ({ ...f, endDate: iso }))}
+            placeholder="בחר תאריך סיום"
+            minDate={form.startDate}
+            className={`${inputCls} ${errors.endDate ? errorCls : ''}`}
+          />
         </Field>
       </div>
 

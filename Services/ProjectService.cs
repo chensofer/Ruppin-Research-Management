@@ -351,6 +351,9 @@ namespace RupResearchAPI.Services
 
                 foreach (var exp in dto.Expenses)
                 {
+                    if (exp.RequestDate.HasValue && exp.RequestDate.Value > DateOnly.FromDateTime(DateTime.Today))
+                        throw new InvalidOperationException("תאריך הוצאה לא יכול להיות בעתיד.");
+
                     _db.ResearchPaymentRequests.Add(new ResearchPaymentRequest
                     {
                         ProjectId = project.ProjectId,
@@ -824,6 +827,21 @@ namespace RupResearchAPI.Services
             _db.ResearchFutureCommitments.Add(commitment);
             await _db.SaveChangesAsync();
             return ToCommitmentDto(commitment);
+        }
+
+        public async Task<FutureCommitmentDto?> UpdateCommitment(int commitmentId, CreateFutureCommitmentRequest req)
+        {
+            var entry = await _db.ResearchFutureCommitments.FindAsync(commitmentId);
+            if (entry == null) return null;
+
+            entry.CategoryName = req.CategoryName;
+            entry.CommitmentDescription = req.CommitmentDescription;
+            entry.ExpectedDate = req.ExpectedDate;
+            entry.ExpectedAmount = req.ExpectedAmount;
+            entry.Notes = req.Notes;
+
+            await _db.SaveChangesAsync();
+            return ToCommitmentDto(entry);
         }
 
         public async Task<bool> DeleteCommitment(int commitmentId)

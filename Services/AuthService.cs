@@ -24,13 +24,13 @@ namespace RupResearchAPI.Services
         {
             bool exists = await _db.ResearchUsers.AnyAsync(u => u.UserId == dto.UserId);
             if (exists)
-                throw new InvalidOperationException("User ID already exists.");
+                throw new InvalidOperationException("משתמש עם מזהה זה כבר קיים במערכת.");
 
             if (!string.IsNullOrEmpty(dto.SystemAuthorization))
             {
                 bool roleExists = await _db.ResearchRoles.AnyAsync(r => r.RoleName == dto.SystemAuthorization);
                 if (!roleExists)
-                    throw new InvalidOperationException($"Role '{dto.SystemAuthorization}' does not exist.");
+                    throw new InvalidOperationException($"התפקיד '{dto.SystemAuthorization}' אינו קיים במערכת.");
             }
 
             var user = new ResearchUser
@@ -54,7 +54,7 @@ namespace RupResearchAPI.Services
         {
             var user = await _db.ResearchUsers.FirstOrDefaultAsync(u => u.UserId == dto.UserId);
             if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.Password))
-                throw new UnauthorizedAccessException("Invalid user ID or password.");
+                throw new UnauthorizedAccessException("מזהה משתמש או סיסמה שגויים.");
 
             return BuildAuthResponse(user);
         }

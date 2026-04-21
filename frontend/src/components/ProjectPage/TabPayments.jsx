@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { getCategories } from '../../api/categoriesApi';
+import HebrewDatePicker from '../HebrewDatePicker';
 import { getProviders, createProvider } from '../../api/providersApi';
 import { createPaymentRequest, uploadQuotationFile } from '../../api/paymentRequestsApi';
+import { triggerSuccessFeedback } from '../../utils/successFeedback';
 import { useEffect } from 'react';
 
 const fmt = (n) =>
@@ -43,6 +45,7 @@ export default function TabPayments({ projectId, payments, onCreated }) {
   const [providers, setProviders] = useState([]);
   const [newProvider, setNewProvider] = useState({ providerName: '', phone: '', email: '', notes: '' });
   const [showNewProvider, setShowNewProvider] = useState(false);
+  const [providerError, setProviderError] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -58,7 +61,15 @@ export default function TabPayments({ projectId, payments, onCreated }) {
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
   const handleAddProvider = async () => {
-    if (!newProvider.providerName.trim()) return;
+    setProviderError('');
+    if (!newProvider.providerName.trim()) {
+      setProviderError('שם הספק הוא שדה חובה');
+      return;
+    }
+    if (!newProvider.phone.trim() && !newProvider.email.trim()) {
+      setProviderError('יש להזין מספר טלפון או כתובת אימייל לפחות');
+      return;
+    }
     try {
       const res = await createProvider({
         providerName: newProvider.providerName.trim(),
@@ -100,6 +111,7 @@ export default function TabPayments({ projectId, payments, onCreated }) {
       setForm(EMPTY_FORM);
       setSelectedFiles([]);
       setShowForm(false);
+      triggerSuccessFeedback('בקשת התשלום נשלחה בהצלחה!');
       onCreated();
 
       // Upload files sequentially; refresh again when done
@@ -165,7 +177,12 @@ export default function TabPayments({ projectId, payments, onCreated }) {
 
             <div>
               <label className="block text-xs text-gray-500 mb-1">תאריך בקשה</label>
-              <input type="date" value={form.requestDate} readOnly className={`${inputCls} bg-gray-50 cursor-default`} />
+              <HebrewDatePicker
+                value={form.requestDate}
+                onChange={(iso) => setForm((f) => ({ ...f, requestDate: iso }))}
+                maxDate={new Date().toISOString().slice(0, 10)}
+                className={inputCls}
+              />
             </div>
 
             <div>
@@ -186,10 +203,13 @@ export default function TabPayments({ projectId, payments, onCreated }) {
                       onChange={(e) => setNewProvider((p) => ({ ...p, notes: e.target.value }))}
                       placeholder="הערות" className={inputCls} />
                   </div>
+                  {providerError && (
+                    <p className="text-xs text-red-500">{providerError}</p>
+                  )}
                   <div className="flex gap-2">
                     <button type="button" onClick={handleAddProvider}
                       className="px-3 py-1.5 bg-primary text-white text-xs rounded-lg hover:bg-primary-dark">הוסף ספק</button>
-                    <button type="button" onClick={() => { setShowNewProvider(false); setNewProvider({ providerName: '', phone: '', email: '', notes: '' }); }}
+                    <button type="button" onClick={() => { setShowNewProvider(false); setNewProvider({ providerName: '', phone: '', email: '', notes: '' }); setProviderError(''); }}
                       className="px-3 py-1.5 text-gray-500 border border-gray-200 text-xs rounded-lg hover:bg-gray-50">ביטול</button>
                   </div>
                 </div>

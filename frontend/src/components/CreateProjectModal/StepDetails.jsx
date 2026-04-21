@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import DatePicker from 'react-datepicker';
+import HebrewDatePicker from '../HebrewDatePicker';
 import { getUsers } from '../../api/usersApi';
 import { getCenters } from '../../api/centersApi';
 
-const toDate = (str) => (str ? new Date(str) : null);
-const toStr  = (d)   => (d   ? d.toISOString().split('T')[0] : '');
 
 function Field({ label, required, children, error }) {
   return (
@@ -200,24 +198,20 @@ export default function StepDetails({ data, onChange, errors }) {
       {/* Dates */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="תאריך התחלה" required error={errors.startDate}>
-          <DatePicker
-            selected={toDate(data.startDate)}
-            onChange={(d) => onChange({ ...data, startDate: toStr(d) })}
-            dateFormat="dd/MM/yyyy"
-            placeholderText="בחר תאריך התחלה"
+          <HebrewDatePicker
+            value={data.startDate}
+            onChange={(iso) => onChange({ ...data, startDate: iso })}
+            placeholder="בחר תאריך התחלה"
             className={`${inputCls} ${errors.startDate ? errorCls : ''}`}
-            wrapperClassName="w-full"
           />
         </Field>
         <Field label="תאריך סיום משוער" required error={errors.endDate}>
-          <DatePicker
-            selected={toDate(data.endDate)}
-            onChange={(d) => onChange({ ...data, endDate: toStr(d) })}
-            dateFormat="dd/MM/yyyy"
-            placeholderText="בחר תאריך סיום"
-            minDate={toDate(data.startDate)}
+          <HebrewDatePicker
+            value={data.endDate}
+            onChange={(iso) => onChange({ ...data, endDate: iso })}
+            placeholder="בחר תאריך סיום"
+            minDate={data.startDate}
             className={`${inputCls} ${errors.endDate ? errorCls : ''}`}
-            wrapperClassName="w-full"
           />
         </Field>
       </div>
