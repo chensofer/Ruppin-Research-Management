@@ -16,6 +16,25 @@ const isActive = (p) => {
   return active && (!p.endDate || String(p.endDate).slice(0, 10) >= TODAY);
 };
 
+function CustomXTick({ x, y, payload }) {
+  const full = payload.value;
+  const display = full.length > 15 ? full.slice(0, 14) + '…' : full;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <title>{full}</title>
+      <text
+        x={0} y={0} dy={4}
+        textAnchor="end"
+        fill="#6b7280"
+        fontSize={11}
+        transform="rotate(-45)"
+      >
+        {display}
+      </text>
+    </g>
+  );
+}
+
 // Custom tooltip
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -47,7 +66,7 @@ export default function ComparisonPage() {
   useEffect(() => { load(); }, [load]);
 
   const chartData = projects.map((p) => ({
-    name: (p.projectNameHe || p.projectNameEn || `#${p.projectId}`).slice(0, 16),
+    name: p.projectNameHe || p.projectNameEn || `#${p.projectId}`,
     'תקציב כולל':  p.totalBudget     ?? 0,
     'שולם':         p.totalPaid       ?? 0,
     'יתרה זמינה':  p.availableBalance ?? 0,
@@ -102,14 +121,12 @@ export default function ComparisonPage() {
           ) : projects.length === 0 ? (
             <p className="text-center text-gray-400 py-20 text-sm">אין מחקרים פעילים להצגה</p>
           ) : (
-            <ResponsiveContainer width="100%" height={380}>
-              <BarChart data={chartData} margin={{ top: 4, right: 10, left: 10, bottom: 40 }}>
+            <ResponsiveContainer width="100%" height={420}>
+              <BarChart data={chartData} margin={{ top: 4, right: 10, left: 10, bottom: 90 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 11, fill: '#6b7280' }}
-                  angle={-30}
-                  textAnchor="end"
+                  tick={<CustomXTick />}
                   interval={0}
                 />
                 <YAxis

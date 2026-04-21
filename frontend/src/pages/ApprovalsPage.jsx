@@ -5,6 +5,7 @@ import { getPendingPaymentRequests, updatePaymentRequestStatus } from '../api/pa
 import { getPendingHourApprovals, decideMonthlyApproval } from '../api/hourReportsApi';
 import Layout from '../components/Layout';
 import { requestNotificationPermission, sendNotification } from '../utils/notifications';
+import { triggerSuccessFeedback } from '../utils/successFeedback';
 
 const MONTH_NAMES = [
   '', 'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
@@ -318,7 +319,7 @@ export default function ApprovalsPage() {
     try {
       await updatePaymentRequestStatus(id, { status: 'אושר', approvedByUserId: user?.userId });
       setRequests((prev) => prev.filter((r) => r.paymentRequestId !== id));
-      showToast('הבקשה אושרה בהצלחה ✓');
+      triggerSuccessFeedback('הבקשה אושרה בהצלחה!');
     } catch { showToast('שגיאה באישור הבקשה'); }
   };
 

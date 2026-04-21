@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
+import HebrewDatePicker from '../HebrewDatePicker';
 
 const fmt = (n) =>
   n != null ? `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)}` : '—';
@@ -225,13 +226,23 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
         <span className="text-xs text-gray-500 font-medium">סינון לפי תאריך:</span>
         <div className="flex items-center gap-1.5">
           <label className="text-xs text-gray-400">מ-</label>
-          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-white" />
+          <HebrewDatePicker
+            value={fromDate}
+            onChange={setFromDate}
+            placeholder="מ-"
+            className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+            wrapperClassName=""
+          />
         </div>
         <div className="flex items-center gap-1.5">
           <label className="text-xs text-gray-400">עד</label>
-          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-white" />
+          <HebrewDatePicker
+            value={toDate}
+            onChange={setToDate}
+            placeholder="עד"
+            className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+            wrapperClassName=""
+          />
         </div>
         {(fromDate || toDate) && (
           <button onClick={() => { setFromDate(''); setToDate(''); }}

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import toast from 'react-hot-toast';
+import { triggerSuccessFeedback } from '../utils/successFeedback';
 import { useAuth } from '../context/AuthContext';
 import { getProjects } from '../api/projectsApi';
 import Layout from '../components/Layout';
@@ -103,7 +103,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [projects, setProjects]         = useState([]);
   const [search, setSearch]             = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('active');
   const [sortBy, setSortBy]             = useState('default');
   const [loading, setLoading]           = useState(true);
   const [showModal, setShowModal]       = useState(false);
@@ -138,13 +138,13 @@ export default function DashboardPage() {
 
   const handleCreated = (newProject) => {
     setShowModal(false);
-    toast.success(`המחקר "${newProject.projectNameHe}" נוצר בהצלחה!`);
+    triggerSuccessFeedback(`המחקר "${newProject.projectNameHe}" נוצר בהצלחה!`);
     sessionStorage.setItem(SESSION_KEY, new Date().toISOString());
     loadProjects();
   };
 
-  const resetFilters = () => { setSearch(''); setStatusFilter('all'); setSortBy('default'); };
-  const hasActiveFilters = search !== '' || statusFilter !== 'all' || sortBy !== 'default';
+  const resetFilters = () => { setSearch(''); setStatusFilter('active'); setSortBy('default'); };
+  const hasActiveFilters = search !== '' || statusFilter !== 'active' || sortBy !== 'default';
   const totalAlerts = budgetAlerts.length + timeAlerts.length;
 
   const afterSearch = projects.filter((p) => {

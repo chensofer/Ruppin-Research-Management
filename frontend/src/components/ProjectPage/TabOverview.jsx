@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import DatePicker from 'react-datepicker';
+import HebrewDatePicker from '../HebrewDatePicker';
 import toast from 'react-hot-toast';
 import { getUsers } from '../../api/usersApi';
 import { getCenters } from '../../api/centersApi';
 import { updateProject } from '../../api/projectsApi';
 
-const toDate = (str) => (str ? new Date(str) : null);
-const toStr  = (d)   => (d   ? d.toISOString().split('T')[0] : '');
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 const fmt = (n) =>
@@ -332,25 +330,21 @@ export default function TabOverview({ detail, onChanged }) {
 
             {/* Row 6: Dates */}
             <EditField label="תאריך התחלה" error={errors.startDate} required>
-              <DatePicker
-                selected={toDate(form.startDate)}
-                onChange={(d) => setForm((f) => ({ ...f, startDate: toStr(d) }))}
-                dateFormat="dd/MM/yyyy"
-                placeholderText="בחר תאריך התחלה"
+              <HebrewDatePicker
+                value={form.startDate}
+                onChange={(iso) => setForm((f) => ({ ...f, startDate: iso }))}
+                placeholder="בחר תאריך התחלה"
                 className={`${inputCls} ${errors.startDate ? errCls : ''}`}
-                wrapperClassName="w-full"
               />
             </EditField>
 
             <EditField label="תאריך סיום משוערך" error={errors.endDate} required>
-              <DatePicker
-                selected={toDate(form.endDate)}
-                onChange={(d) => setForm((f) => ({ ...f, endDate: toStr(d) }))}
-                dateFormat="dd/MM/yyyy"
-                placeholderText="בחר תאריך סיום"
-                minDate={toDate(form.startDate)}
+              <HebrewDatePicker
+                value={form.endDate}
+                onChange={(iso) => setForm((f) => ({ ...f, endDate: iso }))}
+                placeholder="בחר תאריך סיום"
+                minDate={form.startDate}
                 className={`${inputCls} ${errors.endDate ? errCls : ''}`}
-                wrapperClassName="w-full"
               />
             </EditField>
 
@@ -396,50 +390,16 @@ export default function TabOverview({ detail, onChanged }) {
           <Field label="משויך למרכז מחקר" value={detail.centerName} />
           <Field label="מקור מימון" value={detail.fundingSource} />
 
-          {/* Creator — prominent display with avatar initials */}
           <div>
             <dt className="text-xs text-gray-400 mb-1">יוצר המחקר</dt>
             <dd className="mt-0.5">
-              {detail.createdByName ? (
-                <div className="inline-flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
-                    {detail.createdByName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
-                  </div>
-                  <span className="text-sm font-semibold text-gray-800">{detail.createdByName}</span>
-                </div>
-              ) : (
-                <span className="text-sm text-gray-400">—</span>
-              )}
+              <span className="text-sm font-semibold text-gray-800">{detail.createdByName || '—'}</span>
             </dd>
           </div>
           <Field label="תאריך יצירה" value={fmtDate(detail.createdDate)} />
           <Field label="תאריך התחלה" value={fmtDate(detail.startDate)} />
           <Field label="תאריך סיום משוערך" value={fmtDate(detail.endDate)} />
 
-          <div>
-            <dt className="text-xs text-gray-400 mb-1">בקשות תשלומים הממתינות לאישור</dt>
-            <dd className="text-sm font-medium mt-0.5">
-              {detail.pendingCount > 0 ? (
-                <span className="inline-flex items-center gap-1.5 text-yellow-700 bg-yellow-50 px-2.5 py-0.5 rounded-full text-xs font-semibold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 inline-block" />
-                  {detail.pendingCount} ממתינות
-                </span>
-              ) : (
-                <span className="text-gray-400 text-sm">אין בקשות ממתינות</span>
-              )}
-            </dd>
-          </div>
-
-          <div>
-            <dt className="text-xs text-gray-400 mb-1">סה״כ הוצאות שאושרו</dt>
-            <dd className={`text-sm font-semibold mt-0.5 ${
-              (detail.approvedTotal ?? detail.totalPaid ?? 0) > 0
-                ? 'text-green-600'
-                : 'text-gray-400'
-            }`}>
-              {fmt(detail.approvedTotal ?? detail.totalPaid)}
-            </dd>
-          </div>
         </dl>
       </div>
 

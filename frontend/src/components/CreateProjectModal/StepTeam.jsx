@@ -3,7 +3,7 @@ import { getUsers } from '../../api/usersApi';
 
 const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400';
 
-export default function StepTeam({ data, onChange }) {
+export default function StepTeam({ data, onChange, excludeIds = [] }) {
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -20,11 +20,13 @@ export default function StepTeam({ data, onChange }) {
   }, []);
 
   const selectedIds = new Set(data.map((m) => m.userId));
+  const excludedIds = new Set(excludeIds);
 
-  // Exclude research assistants — allow חוקר, מנהל מרכז מחקר, and any other non-assistant role
+  // Exclude research assistants, already-selected members, logged-in user, and principal researcher
   const filtered = allUsers.filter((u) => {
     if (u.systemAuthorization === 'עוזר מחקר') return false;
     if (selectedIds.has(u.userId)) return false;
+    if (excludedIds.has(u.userId)) return false;
     if (!query) return true;
     const q = query.toLowerCase();
     return (

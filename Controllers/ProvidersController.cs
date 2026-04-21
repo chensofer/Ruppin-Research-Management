@@ -30,6 +30,9 @@ namespace RupResearchAPI.Controllers
             if (string.IsNullOrWhiteSpace(req.ProviderName))
                 return BadRequest(new { message = "שם הספק הוא שדה חובה" });
 
+            if (string.IsNullOrWhiteSpace(req.Phone) && string.IsNullOrWhiteSpace(req.Email))
+                return BadRequest(new { message = "יש להזין מספר טלפון או כתובת אימייל לפחות" });
+
             var provider = await _projectService.CreateProvider(req);
             return Ok(provider);
         }

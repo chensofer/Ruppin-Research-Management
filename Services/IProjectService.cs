@@ -29,6 +29,7 @@ namespace RupResearchAPI.Services
         // Future commitments
         Task<List<FutureCommitmentDto>> GetCommitments(int projectId);
         Task<FutureCommitmentDto> AddCommitment(int projectId, CreateFutureCommitmentRequest req);
+        Task<FutureCommitmentDto?> UpdateCommitment(int commitmentId, CreateFutureCommitmentRequest req);
         Task<bool> DeleteCommitment(int commitmentId);
 
         // Files

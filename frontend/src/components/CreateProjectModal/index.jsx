@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import Stepper, { STEP_IDS } from './Stepper';
 import StepDetails from './StepDetails';
 import StepBudget from './StepBudget';
@@ -26,6 +27,7 @@ const INITIAL_DETAILS = {
 };
 
 export default function CreateProjectModal({ onClose, onCreated }) {
+  const { user } = useAuth();
   const [step, setStep] = useState(STEP_IDS[0]);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -236,7 +238,11 @@ export default function CreateProjectModal({ onClose, onCreated }) {
             />
           )}
           {step === 'team' && (
-            <StepTeam data={teamMembers} onChange={setTeamMembers} />
+            <StepTeam
+              data={teamMembers}
+              onChange={setTeamMembers}
+              excludeIds={[user?.userId, details.principalResearcherId].filter(Boolean)}
+            />
           )}
           {step === 'assistants' && (
             <StepAssistants data={assistants} onChange={setAssistants} />

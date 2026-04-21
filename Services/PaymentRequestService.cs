@@ -66,6 +66,9 @@ namespace RupResearchAPI.Services
 
         public async Task<PaymentRequestResponseDto> Create(int projectId, CreatePaymentRequestDto dto)
         {
+            if (dto.RequestDate.HasValue && dto.RequestDate.Value > DateOnly.FromDateTime(DateTime.Today))
+                throw new InvalidOperationException("תאריך הוצאה לא יכול להיות בעתיד.");
+
             // Budget validation (skip for pre-paid expenses which already have status "שולם")
             if (dto.Status != "שולם" && dto.RequestedAmount.HasValue && dto.RequestedAmount > 0)
             {

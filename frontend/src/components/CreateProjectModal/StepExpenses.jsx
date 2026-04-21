@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import CategoryPicker from './CategoryPicker';
+import HebrewDatePicker from '../HebrewDatePicker';
 import { getProviders, createProvider } from '../../api/providersApi';
 
 const inputCls =
@@ -63,7 +64,14 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
 
   const saveNewProvider = async () => {
     const name = draft.newProvider.providerName.trim();
-    if (!name) return;
+    if (!name) {
+      setProviderSaveError('שם הספק הוא שדה חובה');
+      return;
+    }
+    if (!draft.newProvider.phone?.trim() && !draft.newProvider.email?.trim()) {
+      setProviderSaveError('יש להזין מספר טלפון או כתובת אימייל לפחות');
+      return;
+    }
     setSavingProvider(true);
     setProviderSaveError('');
     try {
@@ -160,11 +168,13 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
           />
           {errors.requestedAmount && <p className="text-xs text-red-500 mt-1">{errors.requestedAmount}</p>}
         </div>
-        <input
-          type="date"
+        <HebrewDatePicker
           value={draft.requestDate}
-          onChange={(e) => setDraft((d) => ({ ...d, requestDate: e.target.value }))}
+          onChange={(iso) => setDraft((d) => ({ ...d, requestDate: iso }))}
+          placeholder="בחר תאריך"
+          maxDate={new Date().toISOString().slice(0, 10)}
           className={`${inputCls} flex-1`}
+          wrapperClassName="flex-1"
         />
       </div>
 
