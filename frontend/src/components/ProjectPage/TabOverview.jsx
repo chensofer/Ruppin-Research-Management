@@ -214,6 +214,7 @@ export default function TabOverview({ detail, onChanged }) {
         <div className="bg-white rounded-xl border border-primary/30 shadow-sm p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-5 pb-3 border-b border-gray-100">
+            <h2 className="text-sm font-semibold text-gray-700">עריכת פרטי המחקר</h2>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -238,7 +239,6 @@ export default function TabOverview({ detail, onChanged }) {
                 ביטול
               </button>
             </div>
-            <h2 className="text-sm font-semibold text-gray-700">עריכת פרטי המחקר</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
@@ -364,12 +364,15 @@ export default function TabOverview({ detail, onChanged }) {
     <div className="space-y-5">
 
       {/* Main info card */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-        <div className="flex items-center justify-between mb-5 pb-3 border-b border-gray-100">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+        {/* Card header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/60">
+          <h2 className="text-sm font-bold text-gray-800 tracking-wide">פרטי המחקר</h2>
           <button
             type="button"
             onClick={enterEdit}
-            className="flex items-center gap-1.5 text-xs font-medium text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 hover:text-gray-700 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-primary border border-primary/30 bg-primary/5 px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -377,34 +380,112 @@ export default function TabOverview({ detail, onChanged }) {
             </svg>
             עריכה
           </button>
-          <h2 className="text-sm font-semibold text-gray-700">פרטי המחקר</h2>
         </div>
 
-        <dl className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-5">
-          <Field label="שם מחקר" value={detail.projectNameHe || detail.projectNameEn} span={2} />
-          <Field label="מזהה מחקר" value={detail.projectId ? `#${detail.projectId}` : null} />
+        <div className="p-6 space-y-6">
 
-          <Field label="תיאור מחקר" value={detail.projectDescription} span={3} />
-
-          <Field label="חוקר ראשי" value={detail.principalResearcherName || detail.principalResearcherId} />
-          <Field label="משויך למרכז מחקר" value={detail.centerName} />
-          <Field label="מקור מימון" value={detail.fundingSource} />
-
-          <div>
-            <dt className="text-xs text-gray-400 mb-1">יוצר המחקר</dt>
-            <dd className="mt-0.5">
-              <span className="text-sm font-semibold text-gray-800">{detail.createdByName || '—'}</span>
-            </dd>
+          {/* Section: name + ID */}
+          <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-6">
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1">שם המחקר</p>
+              <p className="text-base font-bold text-gray-900 leading-snug">
+                {detail.projectNameHe || detail.projectNameEn || '—'}
+              </p>
+              {detail.projectNameEn && detail.projectNameHe && (
+                <p className="text-xs text-gray-400 mt-0.5 italic">{detail.projectNameEn}</p>
+              )}
+            </div>
+            <div className="flex-shrink-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1">מזהה</p>
+              <span className="inline-block bg-primary/8 text-primary font-bold text-sm px-3 py-1 rounded-lg">
+                #{detail.projectId}
+              </span>
+            </div>
           </div>
-          <Field label="תאריך יצירה" value={fmtDate(detail.createdDate)} />
-          <Field label="תאריך התחלה" value={fmtDate(detail.startDate)} />
-          <Field label="תאריך סיום משוערך" value={fmtDate(detail.endDate)} />
 
-        </dl>
+          {/* Description */}
+          {detail.projectDescription && (
+            <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">תיאור</p>
+              <p className="text-sm text-gray-700 leading-relaxed">{detail.projectDescription}</p>
+            </div>
+          )}
+
+          {/* Section: people */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <InfoChip
+              icon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              }
+              label="חוקר ראשי"
+              value={detail.principalResearcherName || detail.principalResearcherId}
+              accent
+            />
+            <InfoChip
+              icon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              }
+              label="מרכז מחקר"
+              value={detail.centerName}
+            />
+            <InfoChip
+              icon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              }
+              label="מקור מימון"
+              value={detail.fundingSource}
+            />
+          </div>
+
+          {/* Section: dates */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 border-t border-gray-100">
+            <DateChip label="יוצר" value={detail.createdByName} />
+            <DateChip label="נוצר" value={fmtDate(detail.createdDate)} />
+            <DateChip label="התחלה" value={fmtDate(detail.startDate)} highlight="green" />
+            <DateChip label="סיום משוערך" value={fmtDate(detail.endDate)} highlight="red" />
+          </div>
+
+        </div>
       </div>
 
       <ResearchersCard detail={detail} />
       <AssistantsCard detail={detail} />
+    </div>
+  );
+}
+
+function InfoChip({ icon, label, value, accent }) {
+  return (
+    <div className={`flex items-start gap-3 rounded-xl p-3.5 border ${accent ? 'bg-primary/5 border-primary/15' : 'bg-gray-50 border-gray-100'}`}>
+      <div className={`mt-0.5 flex-shrink-0 ${accent ? 'text-primary' : 'text-gray-400'}`}>{icon}</div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-0.5">{label}</p>
+        <p className={`text-sm font-semibold truncate ${accent ? 'text-primary' : 'text-gray-800'}`}>
+          {value || '—'}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function DateChip({ label, value, highlight }) {
+  const colors =
+    highlight === 'green' ? 'text-green-600' :
+    highlight === 'red'   ? 'text-red-500'   :
+    'text-gray-800';
+  return (
+    <div className="text-center">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">{label}</p>
+      <p className={`text-sm font-bold tabular-nums ${colors}`}>{value || '—'}</p>
     </div>
   );
 }

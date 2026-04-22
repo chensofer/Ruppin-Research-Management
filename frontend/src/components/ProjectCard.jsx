@@ -37,8 +37,12 @@ function calcPerformanceScore(project) {
   const timeElapsedPct = timeMetrics?.raw ?? 0;
   const budgetUsedPct  = budget > 0 ? Math.min((paid / budget) * 100, 100) : 0;
 
-  // ── Penalty 1: Pending approvals (max −25) ─────────────────────────────────
+  // ── Penalty 1a: Pending payment approvals (max −25) ───────────────────────
   const pendingPenalty = Math.min(pending * 5, 25);
+
+  // ── Penalty 1b: Pending hour approvals (max −20) ──────────────────────────
+  const hourPending = project.pendingHourApprovalsCount ?? 0;
+  const hourPenalty = Math.min(hourPending * 5, 20);
 
   // ── Penalty 2: High spending + commitments vs remaining time (max −40) ─────
   // committedPct = (paid + future) / budget — everything already spent or reserved.
@@ -60,7 +64,7 @@ function calcPerformanceScore(project) {
     else if (budgetUsedPct < 70) underutilPenalty = 10;
   }
 
-  const score = 100 - pendingPenalty - burnPenalty - underutilPenalty;
+  const score = 100 - pendingPenalty - hourPenalty - burnPenalty - underutilPenalty;
   return Math.min(Math.max(Math.round(score), 0), 100);
 }
 
@@ -85,13 +89,24 @@ function buildPerformanceExplanation(project) {
   const reasons      = [];
   const improvements = [];
 
-  // 1. Pending approvals
+  const hourPending = project.pendingHourApprovalsCount ?? 0;
+
+  // 1a. Pending payment approvals
   if (pending === 0) {
     reasons.push('✅ אין בקשות תשלום ממתינות לאישור');
   } else {
     const icon = pending > 4 ? '🔴' : '⚠️';
     reasons.push(`${icon} ${pending} בקשות תשלום ממתינות לאישור`);
-    improvements.push('אשר או דחה את הבקשות הממתינות בהקדם');
+    improvements.push('אשר או דחה את בקשות התשלום הממתינות בהקדם');
+  }
+
+  // 1b. Pending hour approvals
+  if (hourPending === 0) {
+    reasons.push('✅ אין דוחות שעות ממתינים לאישור');
+  } else {
+    const icon = hourPending > 3 ? '🔴' : '⚠️';
+    reasons.push(`${icon} ${hourPending} דוחות שעות של עוזרי מחקר ממתינים לאישור`);
+    improvements.push('אשר או דחה את דוחות השעות הממתינים בהקדם');
   }
 
   // 2. Spending + commitments vs remaining time

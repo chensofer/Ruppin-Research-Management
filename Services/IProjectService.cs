@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using RupResearchAPI.DTOs;
 
 namespace RupResearchAPI.Services
@@ -31,6 +32,7 @@ namespace RupResearchAPI.Services
         Task<FutureCommitmentDto> AddCommitment(int projectId, CreateFutureCommitmentRequest req);
         Task<FutureCommitmentDto?> UpdateCommitment(int commitmentId, CreateFutureCommitmentRequest req);
         Task<bool> DeleteCommitment(int commitmentId);
+        Task<string?> AppendCommitmentFile(int commitmentId, IFormFile file, string uploadsRoot);
 
         // Files
         Task<List<FileRecordDto>> GetFiles(int projectId);

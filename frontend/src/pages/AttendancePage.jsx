@@ -441,105 +441,110 @@ export default function AttendancePage() {
                     const hasData = !!(draft?.fromHour || draft?.toHour || draft?.workedHours);
                     const isDirty = hasData && !isSaved;
 
+                    const StatusIndicator = () => (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {dayErrors[day] && (
+                          <span className="text-[10px] text-red-500 font-semibold whitespace-nowrap" title={dayErrors[day]}>שגיאה</span>
+                        )}
+                        {!dayErrors[day] && isSaved && !isDirty && (
+                          <span className="text-[10px] text-accent font-bold flex items-center gap-0.5">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                            </svg>
+                            נשמר
+                          </span>
+                        )}
+                        {!dayErrors[day] && isDirty && saving && (
+                          <span className="inline-block w-3 h-3 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
+                        )}
+                        {!dayErrors[day] && isDirty && !saving && (
+                          <span className="text-[10px] text-amber-500 font-semibold">ממתין</span>
+                        )}
+                        {isSaved && !locked && (
+                          <button
+                            type="button"
+                            onClick={() => clearDay(day)}
+                            disabled={busy}
+                            className="text-gray-300 hover:text-red-400 transition-colors disabled:opacity-40 p-0.5"
+                            title="מחק יום זה"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    );
+
                     return (
                       <div
                         key={day}
-                        className={`flex items-center gap-3 px-5 py-2.5 transition-colors ${
-                          dayErrors[day]
-                            ? 'bg-red-50/70'
-                            : isWeekend
-                            ? 'bg-gray-50/60'
-                            : hasData
-                            ? 'bg-primary-light/20'
-                            : ''
+                        className={`transition-colors ${
+                          dayErrors[day] ? 'bg-red-50/70' : isWeekend ? 'bg-gray-50/60' : hasData ? 'bg-primary-light/20' : ''
                         }`}
                       >
-                        {/* Day label */}
-                        <div className="w-14 flex-shrink-0 text-center">
-                          <p className={`text-sm font-bold ${isWeekend ? 'text-gray-400' : 'text-gray-800'}`}>{day}</p>
-                          <p className={`text-[10px] font-medium ${isWeekend ? 'text-orange-400' : 'text-gray-400'}`}>
-                            {DAY_NAMES[dayOfWeek]}
-                          </p>
+                        {/* Mobile layout: stacked */}
+                        <div className="flex sm:hidden items-center gap-2 px-3 pt-2.5 pb-1">
+                          <div className="w-10 flex-shrink-0 text-center">
+                            <p className={`text-sm font-bold leading-none ${isWeekend ? 'text-gray-400' : 'text-gray-800'}`}>{day}</p>
+                            <p className={`text-[9px] font-medium mt-0.5 ${isWeekend ? 'text-orange-400' : 'text-gray-400'}`}>{DAY_NAMES[dayOfWeek]}</p>
+                          </div>
+                          <div className="flex flex-1 items-center gap-1.5 flex-wrap">
+                            <div className="flex items-center gap-1">
+                              <label className="text-[9px] text-gray-400 whitespace-nowrap">משעה</label>
+                              <input type="time" value={draft?.fromHour || ''} onChange={(e) => setDayField(day, 'fromHour', e.target.value)}
+                                disabled={locked}
+                                className="border border-gray-200 rounded-md px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-[90px]" />
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <label className="text-[9px] text-gray-400 whitespace-nowrap">עד</label>
+                              <input type="time" value={draft?.toHour || ''} onChange={(e) => setDayField(day, 'toHour', e.target.value)}
+                                disabled={locked}
+                                className="border border-gray-200 rounded-md px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-[90px]" />
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <label className="text-[9px] text-gray-400 whitespace-nowrap">שעות</label>
+                              <input type="number" step="0.5" min="0" max="24" value={draft?.workedHours || ''} onChange={(e) => setDayField(day, 'workedHours', e.target.value)}
+                                placeholder="0" disabled={locked}
+                                className="border border-gray-200 rounded-md px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-12" />
+                            </div>
+                            <input type="text" value={draft?.comments || ''} onChange={(e) => setDayField(day, 'comments', e.target.value)}
+                              placeholder="הערות..." disabled={locked}
+                              className="flex-1 min-w-[80px] border border-gray-200 rounded-md px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white placeholder-gray-300" />
+                          </div>
+                          <StatusIndicator />
                         </div>
 
-                        {/* Inputs */}
-                        <div className="flex flex-1 items-center gap-2 flex-wrap">
-                          <div className="flex items-center gap-1">
-                            <label className="text-[10px] text-gray-400 whitespace-nowrap font-medium">משעה</label>
-                            <input
-                              type="time"
-                              value={draft?.fromHour || ''}
-                              onChange={(e) => setDayField(day, 'fromHour', e.target.value)}
-                              disabled={locked}
-                              className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-24 bg-white"
-                            />
+                        {/* Desktop layout: single row */}
+                        <div className="hidden sm:flex items-center gap-3 px-5 py-2.5">
+                          <div className="w-14 flex-shrink-0 text-center">
+                            <p className={`text-sm font-bold ${isWeekend ? 'text-gray-400' : 'text-gray-800'}`}>{day}</p>
+                            <p className={`text-[10px] font-medium ${isWeekend ? 'text-orange-400' : 'text-gray-400'}`}>{DAY_NAMES[dayOfWeek]}</p>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <label className="text-[10px] text-gray-400 whitespace-nowrap font-medium">עד שעה</label>
-                            <input
-                              type="time"
-                              value={draft?.toHour || ''}
-                              onChange={(e) => setDayField(day, 'toHour', e.target.value)}
-                              disabled={locked}
-                              className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-24 bg-white"
-                            />
+                          <div className="flex flex-1 items-center gap-2 flex-wrap">
+                            <div className="flex items-center gap-1">
+                              <label className="text-[10px] text-gray-400 whitespace-nowrap font-medium">משעה</label>
+                              <input type="time" value={draft?.fromHour || ''} onChange={(e) => setDayField(day, 'fromHour', e.target.value)}
+                                disabled={locked}
+                                className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-24 bg-white" />
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <label className="text-[10px] text-gray-400 whitespace-nowrap font-medium">עד שעה</label>
+                              <input type="time" value={draft?.toHour || ''} onChange={(e) => setDayField(day, 'toHour', e.target.value)}
+                                disabled={locked}
+                                className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-24 bg-white" />
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <label className="text-[10px] text-gray-400 whitespace-nowrap font-medium">שעות</label>
+                              <input type="number" step="0.5" min="0" max="24" value={draft?.workedHours || ''} onChange={(e) => setDayField(day, 'workedHours', e.target.value)}
+                                placeholder="0" disabled={locked}
+                                className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-16 bg-white" />
+                            </div>
+                            <input type="text" value={draft?.comments || ''} onChange={(e) => setDayField(day, 'comments', e.target.value)}
+                              placeholder="הערות..." disabled={locked}
+                              className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white placeholder-gray-300" />
                           </div>
-                          <div className="flex items-center gap-1">
-                            <label className="text-[10px] text-gray-400 whitespace-nowrap font-medium">שעות</label>
-                            <input
-                              type="number"
-                              step="0.5"
-                              min="0"
-                              max="24"
-                              value={draft?.workedHours || ''}
-                              onChange={(e) => setDayField(day, 'workedHours', e.target.value)}
-                              placeholder="0"
-                              disabled={locked}
-                              className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-16 bg-white"
-                            />
-                          </div>
-                          <input
-                            type="text"
-                            value={draft?.comments || ''}
-                            onChange={(e) => setDayField(day, 'comments', e.target.value)}
-                            placeholder="הערות..."
-                            disabled={locked}
-                            className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white placeholder-gray-300"
-                          />
-                        </div>
-
-                        {/* Status indicator + clear */}
-                        <div className="flex items-center gap-1.5 flex-shrink-0 w-16 justify-end">
-                          {dayErrors[day] && (
-                            <span className="text-[10px] text-red-500 font-semibold whitespace-nowrap" title={dayErrors[day]}>שגיאה</span>
-                          )}
-                          {!dayErrors[day] && isSaved && !isDirty && (
-                            <span className="text-[10px] text-accent font-bold flex items-center gap-0.5">
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                              </svg>
-                              נשמר
-                            </span>
-                          )}
-                          {!dayErrors[day] && isDirty && saving && (
-                            <span className="inline-block w-3 h-3 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
-                          )}
-                          {!dayErrors[day] && isDirty && !saving && (
-                            <span className="text-[10px] text-amber-500 font-semibold">ממתין</span>
-                          )}
-                          {isSaved && !locked && (
-                            <button
-                              type="button"
-                              onClick={() => clearDay(day)}
-                              disabled={busy}
-                              className="text-gray-300 hover:text-red-400 transition-colors disabled:opacity-40 p-0.5"
-                              title="מחק יום זה"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          )}
+                          <StatusIndicator />
                         </div>
                       </div>
                     );

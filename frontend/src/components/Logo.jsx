@@ -1,5 +1,6 @@
 const sizeClass = {
   xs: 'h-8 w-auto',
+  xs2: 'h-10 w-auto',
   sm: 'h-12 w-auto',
   sm2x: 'h-24 w-auto',
   md: 'h-32 w-auto',

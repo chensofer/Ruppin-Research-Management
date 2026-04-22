@@ -414,7 +414,7 @@ export default function ApprovalsPage() {
         )}
 
         {/* Tabs — pill style */}
-        <div className="flex gap-1.5 bg-gray-100/70 p-1.5 rounded-2xl w-fit mb-7">
+        <div className="flex gap-1.5 bg-gray-100/70 p-1.5 rounded-2xl w-full sm:w-fit mb-7">
           {[
             { id: 'payments', label: 'בקשות תשלום', count: requests.length },
             { id: 'hours', label: 'שעות עוזרי מחקר', count: hourRecords.length },
@@ -422,7 +422,7 @@ export default function ApprovalsPage() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl whitespace-nowrap transition-all duration-150 ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl whitespace-nowrap transition-all duration-150 ${
                 tab === t.id ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'
               }`}
             >

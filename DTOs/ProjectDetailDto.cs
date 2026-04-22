@@ -29,6 +29,7 @@ namespace RupResearchAPI.DTOs
         public decimal? ExpectedAmount { get; set; }
         public string? Status { get; set; }
         public string? Notes { get; set; }
+        public string? FilePath { get; set; }
     }
 
     public class ProjectDetailDto

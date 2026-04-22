@@ -199,8 +199,11 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
+        <span className="text-sm font-semibold text-gray-700">
+          ריכוז תנועות ({rows.length})
+        </span>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-400">כולל הוצאות שאושרו ושולמו בלבד</span>
+          <span className="text-xs text-gray-400">כולל הוצאות שאושרו בלבד</span>
           {/* Export button */}
           <button
             type="button"
@@ -216,9 +219,6 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
             ייצוא לאקסל
           </button>
         </div>
-        <span className="text-sm font-semibold text-gray-700">
-          ריכוז תנועות ({rows.length})
-        </span>
       </div>
 
       {/* Date range filter */}

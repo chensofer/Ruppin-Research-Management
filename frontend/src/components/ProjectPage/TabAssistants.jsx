@@ -547,6 +547,7 @@ export default function TabAssistants({ projectId, assistants, onChanged }) {
       {/* Add existing assistant panel */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
         <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-700">הוסף עוזר מחקר קיים</h3>
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
@@ -557,80 +558,92 @@ export default function TabAssistants({ projectId, assistants, onChanged }) {
             </svg>
             צור עוזר מחקר חדש
           </button>
-          <h3 className="text-sm font-semibold text-gray-700">הוסף עוזר מחקר קיים</h3>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); setShowDropdown(true); setStagedUser(null); }}
-            onFocus={() => setShowDropdown(true)}
-            onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-            placeholder={loading ? 'טוען...' : 'חפש עוזר מחקר לפי שם או ת.ז...'}
-            disabled={loading || saving}
-            className={inputCls}
-          />
-          {showDropdown && !loading && (
-            <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-              {displayed.length > 0 ? displayed.map((u) => (
-                <li key={u.userId} onMouseDown={() => stageUser(u)}
-                  className="px-3 py-2.5 cursor-pointer hover:bg-primary-light text-sm flex justify-between items-center">
-                  <span className="font-medium text-gray-800">{u.firstName} {u.lastName}</span>
-                  <span className="text-xs text-gray-400">{u.userId}</span>
-                </li>
-              )) : (
-                <li className="px-3 py-3 text-sm text-gray-400 text-center">לא נמצאו עוזרי מחקר</li>
-              )}
-            </ul>
-          )}
-        </div>
-
-        {/* Staged user — salary + add button */}
-        {stagedUser && (
-          <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl p-3">
-            <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-primary text-sm font-bold flex-shrink-0">
+        {/* Selected user preview */}
+        {stagedUser ? (
+          <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-lg px-3 py-2.5">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
               {(stagedUser.firstName?.[0] ?? '') + (stagedUser.lastName?.[0] ?? '')}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-800">{stagedUser.firstName} {stagedUser.lastName}</p>
-              <p className="text-xs text-gray-400">{stagedUser.userId}</p>
+              <p className="text-sm font-semibold text-primary truncate">{stagedUser.firstName} {stagedUser.lastName}</p>
+              <p className="text-xs text-primary/60">{stagedUser.userId}</p>
             </div>
-            <input
-              type="number"
-              min={0}
-              value={salary}
-              onChange={(e) => { setSalary(e.target.value); setError(''); }}
-              placeholder="שכר לשעה (₪) *"
-              className={`w-32 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary ${error === 'שכר לשעה הוא שדה חובה' ? 'border-red-400' : 'border-gray-200'}`}
-            />
-            <button
-              type="button"
-              onClick={handleAdd}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-dark disabled:opacity-60 transition-colors"
-            >
-              {saving ? (
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              )}
-              הוסף
-            </button>
-            <button
-              type="button"
-              onClick={() => { setStagedUser(null); setQuery(''); }}
-              className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-            >
+            <button type="button" onClick={() => { setStagedUser(null); setQuery(''); setSalary(''); setError(''); }}
+              className="text-primary/40 hover:text-primary transition-colors p-1">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
+        ) : (
+          /* Search */
+          <div className="relative">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setShowDropdown(true); setStagedUser(null); }}
+              onFocus={() => setShowDropdown(true)}
+              onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+              placeholder={loading ? 'טוען...' : 'חפש עוזר מחקר לפי שם או ת.ז'}
+              disabled={loading || saving}
+              className={inputCls}
+            />
+            {showDropdown && !loading && (
+              <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                {filtered.length > 0 ? filtered.map((u) => (
+                  <li key={u.userId} onMouseDown={() => stageUser(u)}
+                    className="px-3 py-2.5 cursor-pointer hover:bg-primary/5 text-sm flex justify-between items-center">
+                    <span className="font-medium text-gray-800">{u.firstName} {u.lastName}</span>
+                    <span className="text-xs text-gray-400">{u.userId}</span>
+                  </li>
+                )) : (
+                  <li className="px-3 py-3 text-sm text-gray-400 text-center">לא נמצאו עוזרי מחקר</li>
+                )}
+              </ul>
+            )}
+          </div>
         )}
+
+        {/* Salary input — shown only after user is selected */}
+        {stagedUser && (
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">שכר לשעה (₪) <span className="text-red-500">*</span></label>
+            <input
+              type="number"
+              min={0}
+              value={salary}
+              onChange={(e) => { setSalary(e.target.value); setError(''); }}
+              placeholder="₪ לשעה"
+              className={`${inputCls} ${error === 'שכר לשעה הוא שדה חובה' ? 'border-red-400' : ''}`}
+            />
+          </div>
+        )}
+
+        <div className="flex items-center justify-end gap-2 pt-1">
+          {stagedUser && (
+            <button type="button" onClick={() => { setStagedUser(null); setQuery(''); setSalary(''); setError(''); }}
+              className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors">
+              ביטול
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={!stagedUser || saving}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {saving ? (
+              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            )}
+            הוסף לצוות
+          </button>
+        </div>
       </div>
 
       {/* Assistants list */}

@@ -1073,6 +1073,28 @@ namespace RupResearchAPI.Services
             ResearchExpenses = p.ResearchExpenses
         };
 
+        public async Task<string?> AppendCommitmentFile(int commitmentId, IFormFile file, string uploadsRoot)
+        {
+            var entry = await _db.ResearchFutureCommitments.FindAsync(commitmentId);
+            if (entry == null) return null;
+
+            var dir = Path.Combine(uploadsRoot, "commitments", commitmentId.ToString());
+            Directory.CreateDirectory(dir);
+
+            var safeName = Path.GetFileName(file.FileName);
+            var filePath = Path.Combine(dir, safeName);
+            using (var stream = new FileStream(filePath, FileMode.Create))
+                await file.CopyToAsync(stream);
+
+            var relPath = $"/uploads/commitments/{commitmentId}/{safeName}";
+            entry.FilePath = string.IsNullOrEmpty(entry.FilePath)
+                ? relPath
+                : entry.FilePath + ";" + relPath;
+
+            await _db.SaveChangesAsync();
+            return entry.FilePath;
+        }
+
         private static FutureCommitmentDto ToCommitmentDto(ResearchFutureCommitment c) => new()
         {
             CommitmentId = c.CommitmentId,
@@ -1082,6 +1104,7 @@ namespace RupResearchAPI.Services
             ExpectedAmount = c.ExpectedAmount,
             Status = c.Status,
             Notes = c.Notes,
+            FilePath = c.FilePath,
         };
     }
 }

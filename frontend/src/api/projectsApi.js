@@ -46,6 +46,13 @@ export const updateCommitment = (projectId, commitmentId, data) =>
   axiosInstance.put(`/projects/${projectId}/commitments/${commitmentId}`, data);
 export const deleteCommitment = (projectId, commitmentId) =>
   axiosInstance.delete(`/projects/${projectId}/commitments/${commitmentId}`);
+export const uploadCommitmentFile = (projectId, commitmentId, file) => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return axiosInstance.post(`/projects/${projectId}/commitments/${commitmentId}/files`, fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
 
 // Budget transfer
 export const getAllProjects = () => axiosInstance.get('/projects/all');

@@ -63,8 +63,7 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden" dir="rtl">
       {/* Header */}
-      <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-        <span className="text-xs text-gray-400">העברת תקציב בין מחקרים</span>
+      <div className="px-5 py-3.5 border-b border-gray-100">
         <span className="text-sm font-semibold text-gray-700">העברת תקציב</span>
       </div>
 
@@ -140,24 +139,22 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
               <h3 className="text-sm font-semibold text-amber-800 mb-2">אישור העברת תקציב</h3>
 
               <div className="flex justify-between text-sm">
-                <span className="font-medium text-gray-800">
-                  {fmt(parsedAmount)}
-                </span>
                 <span className="text-gray-500">סכום להעברה</span>
+                <span className="font-medium text-gray-800 tabular-nums">{fmt(parsedAmount)}</span>
               </div>
 
-              <div className="flex justify-between text-sm">
-                <span className="font-medium text-gray-800 text-left max-w-[55%] truncate">
+              <div className="flex justify-between text-sm gap-3">
+                <span className="text-gray-500 flex-shrink-0">ממחקר</span>
+                <span className="font-medium text-gray-800 text-left truncate">
                   {projectName || `מחקר #${projectId}`}
                 </span>
-                <span className="text-gray-500">ממחקר</span>
               </div>
 
-              <div className="flex justify-between text-sm">
-                <span className="font-medium text-gray-800 text-left max-w-[55%] truncate">
+              <div className="flex justify-between text-sm gap-3">
+                <span className="text-gray-500 flex-shrink-0">למחקר</span>
+                <span className="font-medium text-gray-800 text-left truncate">
                   {selectedProject.projectNameHe || selectedProject.projectNameEn || `מחקר #${selectedProject.projectId}`}
                 </span>
-                <span className="text-gray-500">למחקר</span>
               </div>
 
               <hr className="border-amber-200" />

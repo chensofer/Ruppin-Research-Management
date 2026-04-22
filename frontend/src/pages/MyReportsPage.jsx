@@ -201,14 +201,14 @@ export default function MyReportsPage() {
         </div>
 
         {/* Filters bar */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 mb-4 flex flex-wrap items-center gap-3 justify-between">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 mb-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
           {/* Status filter tabs */}
-          <div className="flex items-center gap-0.5 bg-gray-100 p-1 rounded-lg">
+          <div className="flex items-center gap-0.5 bg-gray-100 p-1 rounded-lg overflow-x-auto">
             {STATUS_FILTERS.map((f) => (
               <button
                 key={f.value}
                 onClick={() => setStatusFilter(f.value)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                className={`flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   statusFilter === f.value
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
@@ -227,7 +227,7 @@ export default function MyReportsPage() {
             <select
               value={projectFilter}
               onChange={(e) => setProjectFilter(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary text-gray-700"
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary text-gray-700 self-start sm:self-auto"
             >
               <option value="all">כל המחקרים</option>
               {projects.map((p) => (

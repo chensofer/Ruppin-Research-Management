@@ -388,5 +388,21 @@ namespace RupResearchAPI.Controllers
             return NoContent();
         }
 
+        // POST /api/projects/{id}/commitments/{commitmentId}/files
+        [HttpPost("{id:int}/commitments/{commitmentId}/files")]
+        public async Task<IActionResult> UploadCommitmentFile(int id, int commitmentId, IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { message = "קובץ לא תקין" });
+
+            var uploadsRoot = Path.Combine(
+                _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"),
+                "uploads");
+
+            var result = await _projectService.AppendCommitmentFile(commitmentId, file, uploadsRoot);
+            if (result == null) return NotFound();
+            return Ok(new { filePath = result });
+        }
+
     }
 }

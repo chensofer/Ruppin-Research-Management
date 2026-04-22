@@ -18,16 +18,16 @@ const isActive = (p) => {
 
 function CustomXTick({ x, y, payload }) {
   const full = payload.value;
-  const display = full.length > 15 ? full.slice(0, 14) + '…' : full;
+  const display = full.length > 22 ? full.slice(0, 21) + '…' : full;
   return (
     <g transform={`translate(${x},${y})`}>
       <title>{full}</title>
       <text
         x={0} y={0} dy={4}
         textAnchor="end"
-        fill="#6b7280"
-        fontSize={11}
-        transform="rotate(-45)"
+        fill="#374151"
+        fontSize={12}
+        transform="rotate(-55)"
       >
         {display}
       </text>
@@ -95,7 +95,8 @@ export default function ComparisonPage() {
         {/* Chart card */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           {/* Toolbar */}
-          <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+          <div className="flex items-center justify-between mb-5 flex-wrap gap-3" dir="rtl">
+            <h2 className="text-sm font-semibold text-gray-700">השוואת תקציב בין מחקרים פעילים</h2>
             <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
               {METRICS.map((m) => (
                 <button
@@ -111,7 +112,6 @@ export default function ComparisonPage() {
                 </button>
               ))}
             </div>
-            <h2 className="text-sm font-semibold text-gray-700">השוואת תקציב בין מחקרים פעילים</h2>
           </div>
 
           {loading ? (
@@ -122,7 +122,7 @@ export default function ComparisonPage() {
             <p className="text-center text-gray-400 py-20 text-sm">אין מחקרים פעילים להצגה</p>
           ) : (
             <ResponsiveContainer width="100%" height={420}>
-              <BarChart data={chartData} margin={{ top: 4, right: 10, left: 10, bottom: 90 }}>
+              <BarChart data={chartData} margin={{ top: 4, right: 10, left: 10, bottom: 120 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis
                   dataKey="name"

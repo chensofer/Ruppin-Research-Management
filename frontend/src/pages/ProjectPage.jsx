@@ -29,7 +29,7 @@ const TABS = [
   { id: 'assistants',   label: 'עוזרי מחקר' },
   { id: 'documents',    label: 'מסמכים' },
   { id: 'future',       label: 'הוצאות עתידיות' },
-  { id: 'transfer',     label: 'העברת תקציב בין מחקרים' },
+  { id: 'transfer',     label: 'העברת תקציב' },
 ];
 
 const fmt = (n) =>
@@ -178,42 +178,42 @@ export default function ProjectPage() {
   return (
     <Layout>
       {/* Back + header */}
-      <div className="mb-6" dir="rtl">
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary mb-5 transition-colors font-medium group"
-        >
-          <svg className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          חזרה לרשימה
-        </button>
-
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          {/* Title — right in RTL */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap mb-1">
-              <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 leading-tight">
-                {detail.projectNameHe || detail.projectNameEn || `מחקר #${detail.projectId}`}
-              </h1>
-              <StatusBadge status={detail.status} />
-            </div>
-            {detail.projectNameEn && detail.projectNameHe && (
-              <p className="text-sm text-gray-400 font-medium">{detail.projectNameEn}</p>
-            )}
-          </div>
-
-          {/* Delete button — left in RTL */}
+      <div className="mb-5 w-full" dir="rtl">
+        <div className="flex items-center justify-between mb-3">
+          {/* חזרה לרשימה — ימין (ראשון ב-RTL) */}
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary transition-colors font-medium group"
+          >
+            חזרה לרשימה
+            <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+          {/* מחק מחקר — שמאל (אחרון ב-RTL) */}
           <button
             onClick={() => setShowDeleteModal(true)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-red-500 border border-red-200 px-3 py-2 rounded-xl hover:bg-red-50 hover:border-red-300 transition-all flex-shrink-0"
+            className="flex items-center gap-1.5 text-xs font-semibold text-red-500 border border-red-200 p-2 sm:px-3 sm:py-2 rounded-xl hover:bg-red-50 hover:border-red-300 transition-all flex-shrink-0"
+            title="מחק מחקר"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
-            מחק מחקר
+            <span className="hidden sm:inline">מחק מחקר</span>
           </button>
+        </div>
+
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <h1 className="text-base sm:text-2xl font-extrabold text-gray-900 leading-tight break-words">
+              {detail.projectNameHe || detail.projectNameEn || `מחקר #${detail.projectId}`}
+            </h1>
+            <StatusBadge status={detail.status} />
+          </div>
+          {detail.projectNameEn && detail.projectNameHe && (
+            <p className="text-xs text-gray-400 font-medium">{detail.projectNameEn}</p>
+          )}
         </div>
       </div>
 
@@ -336,7 +336,7 @@ export default function ProjectPage() {
       })()}
 
       {/* Budget summary — 5 stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4" dir="rtl">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4 w-full" dir="rtl">
         <StatCard
           label="תקציב כולל"
           value={fmt(budget)}
@@ -362,59 +362,63 @@ export default function ProjectPage() {
           sub={`${commitments.length} רשומות`}
           icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
         />
-        <StatCard
-          label="יתרה זמינה"
-          value={fmt(available)}
-          valueClass={available < 0 ? 'text-red-600' : 'text-accent-dark'}
-          sub="לאחר ניכוי עתידיות"
-          bg={available >= 0 ? 'bg-accent-light/50' : 'bg-red-50'}
-          icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-        />
+        <div className="col-span-2 lg:col-span-1">
+          <StatCard
+            label="יתרה זמינה"
+            value={fmt(available)}
+            valueClass={available < 0 ? 'text-red-600' : 'text-accent-dark'}
+            sub="לאחר ניכוי עתידיות"
+            bg={available >= 0 ? 'bg-accent-light/50' : 'bg-red-50'}
+            icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+          />
+        </div>
       </div>
 
       {/* Budget donut chart */}
       {budget > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-card px-5 py-5 mb-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-card px-5 py-5 mb-4 w-full overflow-hidden">
           <h3 className="text-sm font-bold text-gray-700 mb-4 text-right">התפלגות תקציב</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie
-                data={[
-                  { name: 'הוצאות בפועל', value: totalPaid },
-                  { name: 'התחייבויות עתידיות', value: totalFuture },
-                  { name: 'יתרה זמינה', value: Math.max(0, available) },
-                ].filter((d) => d.value > 0)}
-                cx="50%"
-                cy="50%"
-                innerRadius={62}
-                outerRadius={90}
-                dataKey="value"
-                paddingAngle={3}
-                strokeWidth={0}
-              >
-                <Cell fill="#003478" />
-                <Cell fill="#F59E0B" />
-                <Cell fill="#5CB800" />
-              </Pie>
-              <Tooltip
-                formatter={(v) => `₪${new Intl.NumberFormat('he-IL').format(v)}`}
-                contentStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 12 }}
-              />
-              <Legend
-                iconType="circle"
-                iconSize={8}
-                formatter={(value) => <span style={{ fontSize: 12, color: '#6b7280' }}>{value}</span>}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+          <div style={{ width: '100%', height: 200 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'הוצאות בפועל', value: totalPaid },
+                    { name: 'התחייבויות עתידיות', value: totalFuture },
+                    { name: 'יתרה זמינה', value: Math.max(0, available) },
+                  ].filter((d) => d.value > 0)}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={80}
+                  dataKey="value"
+                  paddingAngle={3}
+                  strokeWidth={0}
+                >
+                  <Cell fill="#003478" />
+                  <Cell fill="#F59E0B" />
+                  <Cell fill="#5CB800" />
+                </Pie>
+                <Tooltip
+                  formatter={(v) => `₪${new Intl.NumberFormat('he-IL').format(v)}`}
+                  contentStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 12 }}
+                />
+                <Legend
+                  iconType="circle"
+                  iconSize={8}
+                  formatter={(value) => <span style={{ fontSize: 12, color: '#6b7280' }}>{value}</span>}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
 
       {/* Budget usage bar */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-card px-5 py-4 mb-6" dir="rtl">
-        <div className="flex justify-between items-center text-xs text-gray-500 mb-2.5">
-          <span className="text-gray-400">{fmt(totalPaid)} הוצא</span>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-xs text-gray-500 mb-2.5 gap-0.5">
           <span className="font-semibold text-gray-700">{usagePercent}% ניצול מתוך {fmt(budget)}</span>
+          <span className="text-gray-400">{fmt(totalPaid)} הוצא</span>
         </div>
         <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
           <div
@@ -437,22 +441,44 @@ export default function ProjectPage() {
         )}
       </div>
 
-      {/* Tabs — pill style */}
-      <div className="mb-6 overflow-x-auto pb-1" dir="rtl">
-        <div className="flex gap-1.5 min-w-max bg-gray-100/70 p-1.5 rounded-2xl w-fit">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-sm font-semibold rounded-xl whitespace-nowrap transition-all duration-150 ${
-                activeTab === tab.id
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      {/* Tabs — select on mobile, pill row on desktop */}
+      <div className="mb-6" dir="rtl">
+        {/* Mobile/tablet: grid of tab buttons */}
+        <div className="md:hidden bg-gray-100/70 p-1.5 rounded-2xl">
+          <div className="grid grid-cols-2 gap-1">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-3 py-2.5 text-sm font-semibold rounded-xl text-center transition-all duration-150 ${
+                  activeTab === tab.id
+                    ? 'bg-white text-primary shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop: pill row */}
+        <div className="hidden md:block overflow-x-auto pb-1">
+          <div className="flex gap-1 min-w-max bg-gray-100/70 p-1.5 rounded-2xl">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2.5 text-sm font-semibold rounded-xl whitespace-nowrap transition-all duration-150 ${
+                  activeTab === tab.id
+                    ? 'bg-white text-primary shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -170,19 +170,16 @@ export default function DashboardPage() {
         <div dir="rtl">
 
           {/* ── Page Header ────────────────────────────────────────────── */}
-          <div className="flex items-center justify-between mb-7 flex-wrap gap-4">
+          <div className="flex items-center justify-between mb-7 gap-4">
             {/* Title */}
-            <div>
-              <h1 className="text-2xl font-extrabold text-gray-900 leading-tight">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 leading-tight">
                 רשימת מחקרים
               </h1>
-              <p className="text-sm text-gray-400 mt-0.5 font-medium">
-                {totalActive} מחקרים פעילים · {projects.length} סה״כ
-              </p>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {totalAlerts > 0 && (
                 <button
                   onClick={() => setAlertsOpen(true)}
@@ -205,7 +202,8 @@ export default function DashboardPage() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                 </svg>
-                מחקר חדש
+                <span className="hidden sm:inline">מחקר חדש</span>
+                <span className="sm:hidden">חדש</span>
               </button>
             </div>
           </div>
@@ -239,9 +237,9 @@ export default function DashboardPage() {
           </div>
 
           {/* ── Filter + Sort bar ───────────────────────────────────────── */}
-          <div className="flex items-center justify-between gap-3 mb-7 flex-wrap">
-            {/* Status chips */}
-            <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-7">
+            {/* Status chips + clear */}
+            <div className="flex items-center gap-2">
               <div className="flex items-center gap-1 bg-gray-100/80 p-1 rounded-xl">
                 {[
                   { value: 'all',      label: 'הכל',     count: projects.length },
@@ -251,7 +249,7 @@ export default function DashboardPage() {
                   <button
                     key={opt.value}
                     onClick={() => setStatusFilter(opt.value)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 ${
+                    className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 ${
                       statusFilter === opt.value
                         ? 'bg-white text-gray-900 shadow-sm'
                         : 'text-gray-400 hover:text-gray-600'
@@ -281,7 +279,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Sort */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-start sm:self-auto">
               <span className="text-xs text-gray-400 whitespace-nowrap">מיון:</span>
               <div className="relative">
                 <select

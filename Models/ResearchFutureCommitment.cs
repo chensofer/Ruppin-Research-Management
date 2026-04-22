@@ -34,5 +34,8 @@ namespace RupResearchAPI.Models
         [Column("notes")]
         [StringLength(255)]
         public string? Notes { get; set; }
+
+        [Column("file_path")]
+        public string? FilePath { get; set; }
     }
 }

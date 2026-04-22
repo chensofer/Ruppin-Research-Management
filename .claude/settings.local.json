@@ -4,7 +4,8 @@
       "Bash(xargs grep:*)",
       "Bash(npm run:*)",
       "Bash(taskkill /PID 264 /F)",
-      "Bash(taskkill //PID 264 //F)"
+      "Bash(taskkill //PID 264 //F)",
+      "Bash(dotnet ef *)"
     ]
   }
 }

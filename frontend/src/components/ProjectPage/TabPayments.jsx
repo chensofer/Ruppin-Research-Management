@@ -144,152 +144,165 @@ export default function TabPayments({ projectId, payments, onCreated }) {
     ? payments.length
     : payments.filter((p) => (p.status || 'ממתין') === s).length;
 
+  const closeForm = () => { setShowForm(false); setError(''); setSelectedFiles([]); setShowNewProvider(false); setProviderError(''); };
+
   return (
     <div className="space-y-4">
-      {/* New request form */}
-      {showForm ? (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-3">
-          <h3 className="text-sm font-semibold text-gray-700">בקשת תשלום חדשה</h3>
-          {error && <p className="text-xs text-red-500">{error}</p>}
+      {/* Trigger button */}
+      <button
+        type="button"
+        onClick={() => setShowForm(true)}
+        className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+        בקשה חדשה
+      </button>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">קטגורית הוצאה <span className="text-red-500">*</span></label>
-              <select value={form.categoryName} onChange={set('categoryName')} className={inputCls}>
-                <option value="">— בחר קטגורית הוצאה —</option>
-                {categories.map((c) => (
-                  <option key={c.categoryName} value={c.categoryName}>{c.categoryName}</option>
-                ))}
-              </select>
+      {/* Modal */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/40" onClick={(e) => { if (e.target === e.currentTarget) closeForm(); }}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col" dir="rtl">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
+              <h2 className="text-base font-bold text-gray-900">בקשת תשלום חדשה</h2>
+              <button onClick={closeForm} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">סכום (₪) <span className="text-red-500">*</span></label>
-              <input type="number" min={0} value={form.requestedAmount} onChange={set('requestedAmount')}
-                placeholder="0" className={inputCls} />
-            </div>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+              {error && <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
 
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">כותרת <span className="text-red-500">*</span></label>
-              <input type="text" value={form.requestTitle} onChange={set('requestTitle')}
-                placeholder="כותרת הבקשה" className={inputCls} required />
-            </div>
-
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">תאריך בקשה</label>
-              <HebrewDatePicker
-                value={form.requestDate}
-                onChange={(iso) => setForm((f) => ({ ...f, requestDate: iso }))}
-                maxDate={new Date().toISOString().slice(0, 10)}
-                className={inputCls}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">ספק <span className="text-red-500">*</span></label>
-              {showNewProvider ? (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <input type="text" value={newProvider.providerName}
-                      onChange={(e) => setNewProvider((p) => ({ ...p, providerName: e.target.value }))}
-                      placeholder="שם הספק *" className={inputCls} />
-                    <input type="tel" value={newProvider.phone}
-                      onChange={(e) => setNewProvider((p) => ({ ...p, phone: e.target.value }))}
-                      placeholder="טלפון" className={inputCls} />
-                    <input type="email" value={newProvider.email}
-                      onChange={(e) => setNewProvider((p) => ({ ...p, email: e.target.value }))}
-                      placeholder="אימייל" className={inputCls} />
-                    <input type="text" value={newProvider.notes}
-                      onChange={(e) => setNewProvider((p) => ({ ...p, notes: e.target.value }))}
-                      placeholder="הערות" className={inputCls} />
-                  </div>
-                  {providerError && (
-                    <p className="text-xs text-red-500">{providerError}</p>
-                  )}
-                  <div className="flex gap-2">
-                    <button type="button" onClick={handleAddProvider}
-                      className="px-3 py-1.5 bg-primary text-white text-xs rounded-lg hover:bg-primary-dark">הוסף ספק</button>
-                    <button type="button" onClick={() => { setShowNewProvider(false); setNewProvider({ providerName: '', phone: '', email: '', notes: '' }); setProviderError(''); }}
-                      className="px-3 py-1.5 text-gray-500 border border-gray-200 text-xs rounded-lg hover:bg-gray-50">ביטול</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <select value={form.providerId} onChange={set('providerId')} className={`${inputCls} flex-1`}>
-                    <option value="">— ללא ספק —</option>
-                    {providers.map((p) => (
-                      <option key={p.providerId} value={p.providerId}>{p.providerName}</option>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">קטגורית הוצאה <span className="text-red-500">*</span></label>
+                  <select value={form.categoryName} onChange={set('categoryName')} className={inputCls}>
+                    <option value="">— בחר קטגורית הוצאה —</option>
+                    {categories.map((c) => (
+                      <option key={c.categoryName} value={c.categoryName}>{c.categoryName}</option>
                     ))}
                   </select>
-                  <button type="button" onClick={() => setShowNewProvider(true)}
-                    className="text-xs text-primary hover:text-primary-dark whitespace-nowrap">+ ספק חדש</button>
                 </div>
-              )}
+
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">סכום (₪) <span className="text-red-500">*</span></label>
+                  <input type="number" min={0} value={form.requestedAmount} onChange={set('requestedAmount')}
+                    placeholder="0" className={inputCls} />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">כותרת <span className="text-red-500">*</span></label>
+                  <input type="text" value={form.requestTitle} onChange={set('requestTitle')}
+                    placeholder="כותרת הבקשה" className={inputCls} />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">תאריך בקשה</label>
+                  <HebrewDatePicker
+                    value={form.requestDate}
+                    onChange={(iso) => setForm((f) => ({ ...f, requestDate: iso }))}
+                    maxDate={new Date().toISOString().slice(0, 10)}
+                    className={inputCls}
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs text-gray-500 mb-1">ספק <span className="text-red-500">*</span></label>
+                  {showNewProvider ? (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input type="text" value={newProvider.providerName}
+                          onChange={(e) => setNewProvider((p) => ({ ...p, providerName: e.target.value }))}
+                          placeholder="שם הספק *" className={inputCls} />
+                        <input type="tel" value={newProvider.phone}
+                          onChange={(e) => setNewProvider((p) => ({ ...p, phone: e.target.value }))}
+                          placeholder="טלפון" className={inputCls} />
+                        <input type="email" value={newProvider.email}
+                          onChange={(e) => setNewProvider((p) => ({ ...p, email: e.target.value }))}
+                          placeholder="אימייל" className={inputCls} />
+                        <input type="text" value={newProvider.notes}
+                          onChange={(e) => setNewProvider((p) => ({ ...p, notes: e.target.value }))}
+                          placeholder="הערות" className={inputCls} />
+                      </div>
+                      {providerError && <p className="text-xs text-red-500">{providerError}</p>}
+                      <div className="flex gap-2">
+                        <button type="button" onClick={handleAddProvider}
+                          className="px-3 py-1.5 bg-primary text-white text-xs rounded-lg hover:bg-primary-dark">הוסף ספק</button>
+                        <button type="button" onClick={() => { setShowNewProvider(false); setNewProvider({ providerName: '', phone: '', email: '', notes: '' }); setProviderError(''); }}
+                          className="px-3 py-1.5 text-gray-500 border border-gray-200 text-xs rounded-lg hover:bg-gray-50">ביטול</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <select value={form.providerId} onChange={set('providerId')} className={`${inputCls} flex-1`}>
+                        <option value="">— ללא ספק —</option>
+                        {providers.map((p) => (
+                          <option key={p.providerId} value={p.providerId}>{p.providerName}</option>
+                        ))}
+                      </select>
+                      <button type="button" onClick={() => setShowNewProvider(true)}
+                        className="text-xs text-primary hover:text-primary-dark whitespace-nowrap px-2">+ ספק חדש</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">תיאור</label>
+                <textarea rows={3} value={form.requestDescription} onChange={set('requestDescription')}
+                  placeholder="פרטים נוספים..." className={`${inputCls} resize-none`} />
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">קבצי הצעת מחיר</label>
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                  onChange={(e) => {
+                    const added = Array.from(e.target.files);
+                    setSelectedFiles((prev) => {
+                      const existingNames = new Set(prev.map((f) => f.name));
+                      return [...prev, ...added.filter((f) => !existingNames.has(f.name))];
+                    });
+                    e.target.value = '';
+                  }}
+                  className="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-primary file:text-white hover:file:bg-primary-dark cursor-pointer"
+                />
+                {selectedFiles.length > 0 && (
+                  <ul className="mt-1.5 space-y-1">
+                    {selectedFiles.map((f, i) => (
+                      <li key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded px-2 py-1">
+                        <span className="text-gray-600 truncate">{f.name}</span>
+                        <button type="button" onClick={() => setSelectedFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                          className="text-gray-400 hover:text-red-500 mr-2 flex-shrink-0">✕</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50/60 rounded-b-2xl">
+              <button type="button" onClick={closeForm}
+                className="px-5 py-2 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">
+                ביטול
+              </button>
+              <button type="button" onClick={handleSubmit} disabled={saving}
+                className="px-5 py-2 text-sm bg-primary text-white font-semibold rounded-xl hover:bg-primary-dark disabled:opacity-60 transition-colors flex items-center gap-2">
+                {saving && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                {saving ? 'שולח...' : 'שליחת בקשה'}
+              </button>
             </div>
           </div>
-
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">תיאור</label>
-            <textarea rows={2} value={form.requestDescription} onChange={set('requestDescription')}
-              placeholder="פרטים נוספים..." className={`${inputCls} resize-none`} />
-          </div>
-
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">קבצי הצעת מחיר</label>
-            <input
-              type="file"
-              multiple
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
-              onChange={(e) => {
-                const added = Array.from(e.target.files);
-                setSelectedFiles((prev) => {
-                  const existingNames = new Set(prev.map((f) => f.name));
-                  return [...prev, ...added.filter((f) => !existingNames.has(f.name))];
-                });
-                e.target.value = '';
-              }}
-              className="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-primary file:text-white hover:file:bg-primary-dark cursor-pointer"
-            />
-            {selectedFiles.length > 0 && (
-              <ul className="mt-1.5 space-y-1">
-                {selectedFiles.map((f, i) => (
-                  <li key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded px-2 py-1">
-                    <span className="text-gray-600 truncate">{f.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedFiles((prev) => prev.filter((_, idx) => idx !== i))}
-                      className="text-gray-400 hover:text-red-500 ml-2 flex-shrink-0"
-                    >
-                      ✕
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="flex gap-2 justify-end pt-1">
-            <button type="button" onClick={() => { setShowForm(false); setError(''); setSelectedFiles([]); }}
-              className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
-              ביטול
-            </button>
-            <button type="button" onClick={handleSubmit} disabled={saving}
-              className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-60">
-              {saving ? 'שולח...' : 'שליחת בקשה'}
-            </button>
-          </div>
         </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          בקשה חדשה
-        </button>
       )}
 
       {/* List */}
