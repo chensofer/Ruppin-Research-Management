@@ -64,10 +64,10 @@ namespace RupResearchAPI.Services
             return new AuthResponseDto
             {
                 Token = GenerateJwtToken(user),
-                UserId = user.UserId,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                SystemAuthorization = user.SystemAuthorization
+                UserId = user.UserId.Trim(),
+                FirstName = user.FirstName?.Trim(),
+                LastName = user.LastName?.Trim(),
+                SystemAuthorization = user.SystemAuthorization?.Trim()
             };
         }
 
@@ -78,10 +78,10 @@ namespace RupResearchAPI.Services
 
             var claims = new[]
             {
-                new Claim("user_id", user.UserId),
-                new Claim("first_name", user.FirstName ?? ""),
-                new Claim("last_name", user.LastName ?? ""),
-                new Claim("system_authorization", user.SystemAuthorization ?? ""),
+                new Claim("user_id", user.UserId.Trim()),
+                new Claim("first_name", user.FirstName?.Trim() ?? ""),
+                new Claim("last_name", user.LastName?.Trim() ?? ""),
+                new Claim("system_authorization", user.SystemAuthorization?.Trim() ?? ""),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 

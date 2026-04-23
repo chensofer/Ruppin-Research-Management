@@ -87,7 +87,7 @@ namespace RupResearchAPI.Controllers
         {
             try
             {
-                var deleted = await _projectService.Delete(id);
+                var deleted = await _projectService.Archive(id);
                 if (!deleted) return NotFound();
                 return NoContent();
             }
@@ -95,6 +95,43 @@ namespace RupResearchAPI.Controllers
             {
                 return Conflict(new { message = ex.Message });
             }
+            catch (Exception ex)
+            {
+                var inner = ex.InnerException?.Message ?? ex.Message;
+                return StatusCode(500, new { message = $"שגיאת מסד נתונים: {inner}" });
+            }
+        }
+
+        [HttpPost("{id:int}/archive")]
+        public async Task<IActionResult> Archive(int id)
+        {
+            try
+            {
+                var archived = await _projectService.Archive(id);
+                if (!archived) return NotFound();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                var inner = ex.InnerException?.Message ?? ex.Message;
+                return StatusCode(500, new { message = $"שגיאה בארכיון: {inner}" });
+            }
+        }
+
+        [HttpPost("{id:int}/restore")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var restored = await _projectService.Restore(id);
+            if (!restored) return NotFound();
+            return NoContent();
+        }
+
+        [HttpGet("archived")]
+        public async Task<IActionResult> GetArchived()
+        {
+            var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
+            var projects = await _projectService.GetArchived(userId);
+            return Ok(projects);
         }
 
         // GET /api/projects/{id}/budget-categories

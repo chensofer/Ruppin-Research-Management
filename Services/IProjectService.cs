@@ -12,6 +12,9 @@ namespace RupResearchAPI.Services
         Task<ProjectResponseDto> CreateFull(CreateFullProjectDto dto, string requestedByUserId);
         Task<ProjectResponseDto?> Update(int id, UpdateProjectDto dto);
         Task<bool> Delete(int id);
+        Task<bool> Archive(int id);
+        Task<bool> Restore(int id);
+        Task<List<ProjectResponseDto>> GetArchived(string userId);
         Task<FileRecordDto> SaveFileRecord(int projectId, string fileName, string relativePath, string fileType, string? folderName, string? userId);
 
         // Team

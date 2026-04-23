@@ -4,18 +4,20 @@ import { useNavigate } from 'react-router-dom';
 const TODAY = new Date().toISOString().split('T')[0];
 
 function getIsActive(project) {
-  const rawActive = project.status === 'פעיל' || project.status === 'Active' || project.status === 'active';
-  return rawActive && (!project.endDate || String(project.endDate).slice(0, 10) >= TODAY);
+  if (!project.endDate) return true;
+  return String(project.endDate).slice(0, 10) >= TODAY;
 }
 
 const fmt = (n) =>
   n != null ? `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)}` : '—';
 
 // ── Performance Score Algorithm ───────────────────────────────────────────────
-// Score starts at 100. Only 3 factors can reduce it:
-//   1. Pending payment approvals
-//   2. High spending + commitments relative to remaining time
-//   3. Under-utilization of budget near project end
+// Score starts at 100. Deductions:
+//   1A. Pending payment requests: -3 each, max -15
+//   1B. Pending hour approvals:   -2 each, max -10
+//   Total approvals cap: -25
+//   2.  Time-vs-budget gap: 0 / -10 / -20 / -30
+//   3.  Special end/early-stage conditions: -10 or -15
 
 function getTimeMetrics(project) {
   const startStr = project.startDate ? String(project.startDate).slice(0, 10) : null;
@@ -28,115 +30,127 @@ function getTimeMetrics(project) {
 }
 
 function calcPerformanceScore(project) {
-  const budget  = project.totalBudget || 0;
-  const paid    = project.totalPaid ?? 0;
-  const pending = project.pendingCount ?? 0;
-  const future  = project.totalFuture ?? 0;
-
-  const timeMetrics    = getTimeMetrics(project);
-  const timeElapsedPct = timeMetrics?.raw ?? 0;
-  const budgetUsedPct  = budget > 0 ? Math.min((paid / budget) * 100, 100) : 0;
-
-  // ── Penalty 1a: Pending payment approvals (max −25) ───────────────────────
-  const pendingPenalty = Math.min(pending * 5, 25);
-
-  // ── Penalty 1b: Pending hour approvals (max −20) ──────────────────────────
+  const budget      = project.totalBudget || 0;
+  const paid        = project.totalPaid ?? 0;
+  const pending     = project.pendingCount ?? 0;
   const hourPending = project.pendingHourApprovalsCount ?? 0;
-  const hourPenalty = Math.min(hourPending * 5, 20);
 
-  // ── Penalty 2: High spending + commitments vs remaining time (max −40) ─────
-  // committedPct = (paid + future) / budget — everything already spent or reserved.
-  // If this ratio is far ahead of elapsed time, the project is over-committing.
-  let burnPenalty = 0;
-  if (budget > 0 && timeElapsedPct > 5) {
-    const committedPct = Math.min(((paid + future) / budget) * 100, 100);
-    const burnRate     = committedPct / timeElapsedPct; // >1 = committing faster than time
-    if (burnRate > 1.2) {
-      burnPenalty = Math.min(Math.round((burnRate - 1.2) * 50), 40);
-    }
+  const timeMetrics  = getTimeMetrics(project);
+  const timeProgress = timeMetrics?.raw ?? 0;
+  const budgetUsage  = budget > 0 ? Math.min((paid / budget) * 100, 100) : 0;
+
+  // 1A: Pending payment requests (-3 each, max -15)
+  const paymentDeduction = Math.min(pending * 3, 15);
+
+  // 1B: Pending hour approvals (-2 each, max -10)
+  const hourDeduction = Math.min(hourPending * 2, 10);
+
+  // Total approvals section capped at -25
+  const approvalsDeduction = Math.min(paymentDeduction + hourDeduction, 25);
+
+  // 2: Time-vs-budget gap deduction (max -30)
+  let gapDeduction = 0;
+  if (budget > 0 && timeMetrics) {
+    const gap = Math.abs(timeProgress - budgetUsage);
+    if      (gap > 30) gapDeduction = 30;
+    else if (gap > 20) gapDeduction = 20;
+    else if (gap > 10) gapDeduction = 10;
   }
 
-  // ── Penalty 3: Under-utilization near project end (max −25) ────────────────
-  // Only kicks in when ≥80% of the timeline has passed.
-  let underutilPenalty = 0;
-  if (timeElapsedPct >= 80 && budget > 0) {
-    if (budgetUsedPct < 50)      underutilPenalty = 25;
-    else if (budgetUsedPct < 70) underutilPenalty = 10;
+  // 3: Special conditions
+  let specialDeduction = 0;
+  if (budget > 0 && timeMetrics) {
+    if (timeProgress >= 70 && budgetUsage < 60) specialDeduction += 10;
+    if (timeProgress >= 70 && budgetUsage > 90) specialDeduction += 15;
+    if (timeProgress <= 30 && budgetUsage > 50) specialDeduction += 10;
   }
 
-  const score = 100 - pendingPenalty - hourPenalty - burnPenalty - underutilPenalty;
+  const score = 100 - approvalsDeduction - gapDeduction - specialDeduction;
   return Math.min(Math.max(Math.round(score), 0), 100);
 }
 
 function getPerformanceLabel(score) {
   if (score >= 80) return { label: 'ביצועים מצוינים',  color: '#5CB800', bg: '#f0fae0', ring: '#5CB800' };
-  if (score >= 60) return { label: 'ביצועים תקינים',   color: '#0ea5e9', bg: '#f0f9ff', ring: '#0ea5e9' };
-  if (score >= 40) return { label: 'דורש תשומת לב',    color: '#f59e0b', bg: '#fffbeb', ring: '#f59e0b' };
+  if (score >= 60) return { label: 'דורש תשומת לב',    color: '#f59e0b', bg: '#fffbeb', ring: '#f59e0b' };
   return               { label: 'סיכון תקציבי גבוה',  color: '#ef4444', bg: '#fef2f2', ring: '#ef4444' };
 }
 
 function buildPerformanceExplanation(project) {
-  const budget  = project.totalBudget || 0;
-  const paid    = project.totalPaid ?? 0;
-  const pending = project.pendingCount ?? 0;
-  const future  = project.totalFuture ?? 0;
+  const budget      = project.totalBudget || 0;
+  const paid        = project.totalPaid ?? 0;
+  const pending     = project.pendingCount ?? 0;
+  const hourPending = project.pendingHourApprovalsCount ?? 0;
 
-  const timeMetrics    = getTimeMetrics(project);
-  const timeElapsedPct = timeMetrics?.timeElapsedPct ?? 0;
-  const timeRaw        = timeMetrics?.raw ?? 0;
-  const budgetUsedPct  = budget > 0 ? Math.round((paid / budget) * 100) : 0;
+  const timeMetrics      = getTimeMetrics(project);
+  const timeProgress     = timeMetrics?.raw ?? 0;
+  const timeProgressDisp = timeMetrics?.timeElapsedPct ?? 0;
+  const budgetUsageRaw   = budget > 0 ? Math.min((paid / budget) * 100, 100) : 0;
+  const budgetUsageDisp  = Math.round(budgetUsageRaw);
 
   const reasons      = [];
   const improvements = [];
 
-  const hourPending = project.pendingHourApprovalsCount ?? 0;
-
-  // 1a. Pending payment approvals
+  // 1A: Pending payment requests
+  const paymentDeduction = Math.min(pending * 3, 15);
   if (pending === 0) {
     reasons.push('✅ אין בקשות תשלום ממתינות לאישור');
   } else {
-    const icon = pending > 4 ? '🔴' : '⚠️';
-    reasons.push(`${icon} ${pending} בקשות תשלום ממתינות לאישור`);
-    improvements.push('אשר או דחה את בקשות התשלום הממתינות בהקדם');
+    reasons.push(`⚠️ ${pending} בקשות תשלום ממתינות לאישור: -${paymentDeduction} נקודות`);
+    improvements.push('סקור ואשר את בקשות התשלום הממתינות');
+    improvements.push('עיכוב באישורים עלול לפגוע בפעילות המחקר');
   }
 
-  // 1b. Pending hour approvals
+  // 1B: Pending hour approvals
+  const hourDeduction = Math.min(hourPending * 2, 10);
   if (hourPending === 0) {
     reasons.push('✅ אין דוחות שעות ממתינים לאישור');
   } else {
-    const icon = hourPending > 3 ? '🔴' : '⚠️';
-    reasons.push(`${icon} ${hourPending} דוחות שעות של עוזרי מחקר ממתינים לאישור`);
-    improvements.push('אשר או דחה את דוחות השעות הממתינים בהקדם');
+    reasons.push(`⚠️ ${hourPending} דוחות שעות ממתינים לאישור: -${hourDeduction} נקודות`);
+    improvements.push('סקור את דוחות שעות עוזרי המחקר הממתינים לאישור');
+    improvements.push('עיכוב באישורים עלול לעכב את עיבוד המשכורות');
   }
 
-  // 2. Spending + commitments vs remaining time
-  if (budget > 0 && timeRaw > 5) {
-    const committedPct = Math.min(Math.round(((paid + future) / budget) * 100), 100);
-    const burnRate     = committedPct / timeRaw;
-    if (burnRate <= 1.2) {
-      reasons.push(`✅ קצב ניצול תקציב תקין — ${committedPct}% מהתקציב נוצל או מתוכנן, ${timeElapsedPct}% מהזמן עבר`);
-    } else if (burnRate <= 1.6) {
-      reasons.push(`⚠️ קצב הוצאות גבוה — ${committedPct}% מהתקציב כבר נוצל/הוקצה, אך רק ${timeElapsedPct}% מהזמן עבר`);
-      improvements.push('שקול דחיית חלק מההתחייבויות העתידיות');
+  // 2 & 3: Timeline vs budget (only when budget and dates are available)
+  if (budget > 0 && timeMetrics) {
+    const gap     = Math.abs(timeProgress - budgetUsageRaw);
+    const gapDisp = Math.round(gap);
+    let gapDeduction = 0;
+    if      (gap > 30) gapDeduction = 30;
+    else if (gap > 20) gapDeduction = 20;
+    else if (gap > 10) gapDeduction = 10;
+
+    if (gapDeduction === 0) {
+      reasons.push(`✅ קצב ניצול תקציב תקין — ${budgetUsageDisp}% נוצל, ${timeProgressDisp}% מהזמן עבר`);
     } else {
-      reasons.push(`🔴 קצב הוצאות גבוה מאוד — ${committedPct}% מהתקציב כבר נוצל/הוקצה, אך רק ${timeElapsedPct}% מהזמן עבר`);
-      improvements.push('הגש בקשה לתוספת תקציב או צמצם הוצאות עתידיות בהקדם');
+      reasons.push(`⚠️ פער בין התקדמות הזמן לניצול התקציב (${timeProgressDisp}% זמן, ${budgetUsageDisp}% תקציב, פער ${gapDisp}%): -${gapDeduction} נקודות`);
     }
-  } else if (budget > 0) {
-    reasons.push(budgetUsedPct > 0 ? `ℹ️ ${budgetUsedPct}% מהתקציב נוצל` : '✅ טרם נרשמו הוצאות');
-  }
 
-  // 3. Under-utilization near end
-  if (timeRaw >= 80 && budget > 0) {
-    const timeLeft = 100 - timeElapsedPct;
-    if (budgetUsedPct < 50) {
-      reasons.push(`🔴 ניצול תקציב נמוך (${budgetUsedPct}%) — נותרו כ-${timeLeft}% מזמן המחקר`);
-      improvements.push('שקול העברת תקציב למחקר אחר הזקוק לו');
-      improvements.push('בחן הגדלת הוצאות אם יש צורך בכך עד תום המחקר');
-    } else if (budgetUsedPct < 70) {
-      reasons.push(`⚠️ ניצול תקציב מתון (${budgetUsedPct}%) עם כ-${timeLeft}% מהזמן שנותר`);
-      improvements.push('בחן אם יש הוצאות מתוכננות שטרם בוצעו');
+    // Special case 1: near end, too much budget unused
+    if (timeProgress >= 70 && budgetUsageRaw < 60) {
+      reasons.push(`🔴 הפרויקט קרוב לסיומו אך חלק גדול מהתקציב טרם נוצל: -10 נקודות`);
+      improvements.push('בחן את הצרכים הנותרים ואת תכנית ההוצאות עד סיום המחקר');
+      improvements.push('אם רלוונטי ומותר — שקול העברת תקציב למחקר אחר');
+      improvements.push('בדוק האם הוצאות מתוכננות עוכבו או נשמטו');
     }
+
+    // Special case 2: near end, budget nearly exhausted
+    if (timeProgress >= 70 && budgetUsageRaw > 90) {
+      reasons.push(`🔴 הפרויקט קרוב לסיומו וכמעט כל התקציב מוצה: -15 נקודות`);
+      improvements.push('בחן בזהירות את ההוצאות הצפויות הנותרות');
+      improvements.push('הימנע מאישור תשלומים שאינם הכרחיים');
+      improvements.push('שקול בקשת התאמת תקציב אם רלוונטי');
+    }
+
+    // Special case 3: early stage, spending too fast
+    if (timeProgress <= 30 && budgetUsageRaw > 50) {
+      reasons.push(`🔴 ניצול תקציב גבוה בשלב מוקדם של הפרויקט: -10 נקודות`);
+      improvements.push('בחן את ההוצאות האחרונות והצפויות לשאר הפרויקט');
+      improvements.push('ודא שקצב ההוצאות ברי-קיימא עד סיום המחקר');
+    }
+  } else if (!timeMetrics) {
+    reasons.push('ℹ️ לא הוגדרו תאריכי התחלה/סיום — לא ניתן לחשב קצב ניצול תקציב');
+  } else {
+    reasons.push('ℹ️ לא הוגדר תקציב — לא ניתן לחשב קצב ניצול');
   }
 
   return { reasons, improvements };

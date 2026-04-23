@@ -27,6 +27,9 @@ namespace RupResearchAPI.DTOs
         public decimal SalaryBudgetPlanned { get; set; }
         public decimal SalaryActualPaid { get; set; }
         public decimal SalaryFutureCommitted { get; set; }
+
+        public bool IsArchived { get; set; }
+        public DateTime? ArchivedAt { get; set; }
     }
 
     public class CreateProjectDto

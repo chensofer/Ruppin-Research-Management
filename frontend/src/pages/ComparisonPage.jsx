@@ -15,8 +15,6 @@ const TODAY_MS = Date.now();
 const fmt  = (v) => `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(v ?? 0)}`;
 const fmtK = (v) => {
   if (v == null || v === 0) return '₪0';
-  if (Math.abs(v) >= 1_000_000) return `₪${(v / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(v) >= 1_000)     return `₪${(v / 1000).toFixed(0)}k`;
   return fmt(v);
 };
 
@@ -77,7 +75,7 @@ function buildMetrics(selectedProjects, compareData) {
       values: selectedProjects.map(p => ({ raw: p.totalBudget ?? 0, display: fmtK(p.totalBudget) })),
     },
     {
-      label: 'סה״כ שולם', icon: '💸',
+      label: 'סה״כ הוצאות בפועל', icon: '💸',
       values: selectedProjects.map(p => ({ raw: p.totalPaid ?? 0, display: fmtK(p.totalPaid) })),
     },
     {
@@ -162,11 +160,26 @@ function buildMetrics(selectedProjects, compareData) {
 
 function CustomXTick({ x, y, payload }) {
   const full = payload.value;
-  const display = full.length > 22 ? full.slice(0,21)+'…' : full;
+  const words = full.split(' ');
+  const lines = [];
+  let current = '';
+  for (const word of words) {
+    if ((current + ' ' + word).trim().length > 10) {
+      if (current) lines.push(current);
+      current = word;
+    } else {
+      current = (current + ' ' + word).trim();
+    }
+  }
+  if (current) lines.push(current);
   return (
     <g transform={`translate(${x},${y})`}>
       <title>{full}</title>
-      <text x={0} y={0} dy={4} textAnchor="end" fill="#374151" fontSize={12} transform="rotate(-55)">{display}</text>
+      {lines.map((line, i) => (
+        <text key={i} x={0} y={0} dy={14 + i * 14} textAnchor="middle" fill="#374151" fontSize={11}>
+          {line}
+        </text>
+      ))}
     </g>
   );
 }
@@ -230,14 +243,14 @@ export default function ComparisonPage() {
   const chartData = projects.map((p) => ({
     name: p.projectNameHe || p.projectNameEn || `#${p.projectId}`,
     'תקציב כולל': p.totalBudget      ?? 0,
-    'שולם':        p.totalPaid        ?? 0,
+    'הוצאות בפועל': p.totalPaid        ?? 0,
     'יתרה זמינה': p.availableBalance ?? 0,
   }));
 
   const METRICS = [
     { key: 'all',       label: 'הכל' },
     { key: 'budget',    label: 'תקציב כולל' },
-    { key: 'paid',      label: 'שולם' },
+    { key: 'paid',      label: 'הוצאות בפועל' },
     { key: 'available', label: 'יתרה זמינה' },
   ];
 
@@ -313,14 +326,14 @@ export default function ComparisonPage() {
                 <p className="text-center text-gray-400 py-20 text-sm">אין מחקרים פעילים להצגה</p>
               ) : (
                 <ResponsiveContainer width="100%" height={420}>
-                  <BarChart data={chartData} margin={{ top: 4, right: 10, left: 10, bottom: 120 }}>
+                  <BarChart data={chartData} margin={{ top: 4, right: 10, left: 10, bottom: 60 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="name" tick={<CustomXTick />} interval={0} />
                     <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} tickFormatter={(v) => `₪${(v/1000).toFixed(0)}k`} />
                     <Tooltip content={<ChartTooltip />} />
                     <Legend wrapperStyle={{ fontSize: 12, paddingTop: '16px' }} />
                     {(metric==='all'||metric==='budget')    && <Bar dataKey="תקציב כולל" fill="#93c5fd" radius={[4,4,0,0]} />}
-                    {(metric==='all'||metric==='paid')      && <Bar dataKey="שולם"        fill="#f87171" radius={[4,4,0,0]} />}
+                    {(metric==='all'||metric==='paid')      && <Bar dataKey="הוצאות בפועל"        fill="#f87171" radius={[4,4,0,0]} />}
                     {(metric==='all'||metric==='available') && <Bar dataKey="יתרה זמינה"  fill="#4ade80" radius={[4,4,0,0]} />}
                   </BarChart>
                 </ResponsiveContainer>
@@ -337,7 +350,7 @@ export default function ComparisonPage() {
                       <tr>
                         <th className="px-5 py-3 text-right font-semibold">שם המחקר</th>
                         <th className="px-4 py-3 text-left font-semibold">תקציב כולל</th>
-                        <th className="px-4 py-3 text-left font-semibold">שולם</th>
+                        <th className="px-4 py-3 text-left font-semibold">הוצאות בפועל</th>
                         <th className="px-4 py-3 text-left font-semibold">יתרה זמינה</th>
                         <th className="px-4 py-3 text-left font-semibold">% ניצול</th>
                       </tr>
@@ -483,12 +496,6 @@ export default function ComparisonPage() {
                                       )}
                                     </div>
                                     {v.sub && <p className="text-[11px] text-gray-400 mt-0.5">{v.sub}</p>}
-                                    {max > 0 && (
-                                      <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                        <div className="h-full rounded-full transition-all duration-700"
-                                          style={{ width: `${Math.min(pct,100)}%`, backgroundColor: color }} />
-                                      </div>
-                                    )}
                                   </td>
                                 );
                               })}

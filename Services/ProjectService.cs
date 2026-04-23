@@ -41,7 +41,7 @@ namespace RupResearchAPI.Services
                 .ToHashSet();
 
             var userProjects = allProjects
-                .Where(p => userProjectIds.Contains(p.ProjectId))
+                .Where(p => userProjectIds.Contains(p.ProjectId) && !p.IsArchived)
                 .ToList();
 
             // Load budget data in memory for all user projects
@@ -302,17 +302,93 @@ namespace RupResearchAPI.Services
             var project = await _db.ResearchProjects.FindAsync(id);
             if (project == null) return false;
 
-            bool hasPayments = await _db.ResearchPaymentRequests.AnyAsync(r => r.ProjectId == id);
-            bool hasHourReports = await _db.ResearchHourReports.AnyAsync(r => r.ProjectId == id);
-            bool hasApprovals = await _db.ResearchMonthlyWorkApprovals.AnyAsync(r => r.ProjectId == id);
+            // Load related records in memory (avoids char(10) comparison issues)
+            var payments  = await _db.ResearchPaymentRequests.Where(r => r.ProjectId == id).ToListAsync();
+            var approvals = await _db.ResearchMonthlyWorkApprovals.Where(r => r.ProjectId == id).ToListAsync();
 
-            if (hasPayments || hasHourReports || hasApprovals)
+            int pendingPayments  = payments.Count(r => r.Status?.Trim() == "ממתין");
+            int pendingApprovals = approvals.Count(r => r.ApprovalStatus?.Trim() == "ממתין");
+
+            var blockReasons = new List<string>();
+            if (pendingPayments > 0)
+                blockReasons.Add($"{pendingPayments} בקשות תשלום ממתינות לאישור");
+            if (pendingApprovals > 0)
+                blockReasons.Add($"{pendingApprovals} אישורי שעות עוזרי מחקר ממתינים");
+
+            if (blockReasons.Count > 0)
                 throw new InvalidOperationException(
-                    "לא ניתן למחוק מחקר שיש לו בקשות תשלום, דוחות שעות או אישורים חודשיים.");
+                    "לא ניתן למחוק את המחקר. יש פריטים ממתינים: " + string.Join(" | ", blockReasons));
+
+            // Cascade-delete all related records
+            var hourReports  = await _db.ResearchHourReports.Where(r => r.ProjectId == id).ToListAsync();
+            var teamMembers  = await _db.ResearchUsersProjects.Where(u => u.ProjectId == id).ToListAsync();
+            var assistants   = await _db.ResearchAssistants.Where(a => a.ProjectId == id).ToListAsync();
+            var commitments  = await _db.ResearchFutureCommitments.Where(c => c.ProjectId == id).ToListAsync();
+            var budgetCats   = await _db.ResearchBudgetCategories.Where(b => b.ProjectId == id).ToListAsync();
+            var budgetPlans  = await _db.ResearchBudgetPlans.Where(b => b.ProjectId == id).ToListAsync();
+            var files        = await _db.ResearchFiles.Where(f => f.ProjectId == id).ToListAsync();
+
+            _db.ResearchPaymentRequests.RemoveRange(payments);
+            _db.ResearchMonthlyWorkApprovals.RemoveRange(approvals);
+            _db.ResearchHourReports.RemoveRange(hourReports);
+            _db.ResearchUsersProjects.RemoveRange(teamMembers);
+            _db.ResearchAssistants.RemoveRange(assistants);
+            _db.ResearchFutureCommitments.RemoveRange(commitments);
+            _db.ResearchBudgetCategories.RemoveRange(budgetCats);
+            _db.ResearchBudgetPlans.RemoveRange(budgetPlans);
+            _db.ResearchFiles.RemoveRange(files);
 
             _db.ResearchProjects.Remove(project);
             await _db.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<bool> Archive(int id)
+        {
+            var project = await _db.ResearchProjects.FindAsync(id);
+            if (project == null) return false;
+
+            project.IsArchived = true;
+            project.ArchivedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> Restore(int id)
+        {
+            var project = await _db.ResearchProjects.FindAsync(id);
+            if (project == null) return false;
+
+            project.IsArchived = false;
+            project.ArchivedAt = null;
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<List<ProjectResponseDto>> GetArchived(string userId)
+        {
+            var allProjects = await _db.ResearchProjects.Where(p => p.IsArchived).ToListAsync();
+
+            var asPrincipal = allProjects
+                .Where(p => p.PrincipalResearcherId?.Trim() == userId.Trim())
+                .Select(p => p.ProjectId).ToHashSet();
+
+            var asTeamMember = (await _db.ResearchUsersProjects
+                .Where(u => u.UserId == userId)
+                .Select(u => u.ProjectId)
+                .ToListAsync()).ToHashSet();
+
+            var allAssistants = await _db.ResearchAssistants.ToListAsync();
+            var asAssistant = allAssistants
+                .Where(a => a.AssistantUserId?.Trim() == userId.Trim())
+                .Select(a => a.ProjectId).ToHashSet();
+
+            var userProjectIds = asPrincipal.Union(asTeamMember).Union(asAssistant).ToHashSet();
+
+            return allProjects
+                .Where(p => userProjectIds.Contains(p.ProjectId))
+                .Select(ToDto)
+                .ToList();
         }
 
         public async Task<ProjectResponseDto> CreateFull(CreateFullProjectDto dto, string requestedByUserId)
@@ -1070,7 +1146,9 @@ namespace RupResearchAPI.Services
             StartDate = p.StartDate,
             EndDate = p.EndDate,
             Status = p.Status,
-            ResearchExpenses = p.ResearchExpenses
+            ResearchExpenses = p.ResearchExpenses,
+            IsArchived = p.IsArchived,
+            ArchivedAt = p.ArchivedAt
         };
 
         public async Task<string?> AppendCommitmentFile(int commitmentId, IFormFile file, string uploadsRoot)

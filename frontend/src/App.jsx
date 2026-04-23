@@ -12,6 +12,7 @@ import AttendancePage from './pages/AttendancePage';
 import MyReportsPage from './pages/MyReportsPage';
 import ProfilePage from './pages/ProfilePage';
 import ComparisonPage from './pages/ComparisonPage';
+import ArchivePage from './pages/ArchivePage';
 
 // Redirects research assistants to their attendance page
 function RoleAwareRoute({ children }) {
@@ -41,6 +42,9 @@ export default function App() {
           } />
           <Route path="/comparison" element={
             <RoleAwareRoute><ComparisonPage /></RoleAwareRoute>
+          } />
+          <Route path="/archive" element={
+            <RoleAwareRoute><ArchivePage /></RoleAwareRoute>
           } />
           <Route path="/approvals" element={
             <RoleAwareRoute><ApprovalsPage /></RoleAwareRoute>

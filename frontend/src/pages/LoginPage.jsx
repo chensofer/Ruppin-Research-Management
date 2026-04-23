@@ -32,9 +32,9 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center p-4"
+      className="min-h-screen flex flex-col items-center justify-start px-4 pb-4"
       dir="rtl"
-      style={{ background: 'linear-gradient(145deg, #003478 0%, #001E50 55%, #001030 100%)' }}
+      style={{ background: 'linear-gradient(145deg, #003478 0%, #001E50 55%, #001030 100%)', paddingTop: '40px' }}
     >
       {/* Decorative blobs */}
       <div className="fixed top-[-120px] right-[-120px] w-[400px] h-[400px] rounded-full pointer-events-none"
@@ -45,8 +45,8 @@ export default function LoginPage() {
       {/* ── Logo & title ── */}
       <div className="flex flex-col items-center text-center mb-8 select-none">
         <Logo size="lg" />
-        <h1 className="text-white text-xl font-bold mt-5 tracking-wide">מערכת ניהול מחקרים</h1>
-        <p className="text-white/40 text-sm mt-1">רופין — המכללה האקדמית</p>
+        <h1 className="text-white text-xl font-bold tracking-wide" style={{ marginTop: '10px' }}>מערכת ניהול מחקרים</h1>
+        <p className="text-white/40 text-sm mt-1">המכללה האקדמית רופין</p>
       </div>
 
       {/* ── Form card ── */}

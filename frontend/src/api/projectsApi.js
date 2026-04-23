@@ -6,7 +6,10 @@ export const getProjectDetail = (id) => axiosInstance.get(`/projects/${id}/detai
 export const createProject = (data) => axiosInstance.post('/projects', data);
 export const createFullProject = (data) => axiosInstance.post('/projects/full', data);
 export const updateProject = (id, data) => axiosInstance.put(`/projects/${id}`, data);
-export const deleteProject = (id) => axiosInstance.delete(`/projects/${id}`);
+export const deleteProject   = (id) => axiosInstance.delete(`/projects/${id}`);
+export const archiveProject  = (id) => axiosInstance.post(`/projects/${id}/archive`);
+export const restoreProject  = (id) => axiosInstance.post(`/projects/${id}/restore`);
+export const getArchivedProjects = () => axiosInstance.get('/projects/archived');
 
 // Files
 export const uploadProjectFile = (projectId, formData) =>

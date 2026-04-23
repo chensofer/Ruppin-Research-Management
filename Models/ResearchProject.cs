@@ -55,5 +55,11 @@ namespace RupResearchAPI.Models
         [Column("funding_source")]
         [StringLength(255)]
         public string? FundingSource { get; set; }
+
+        [Column("is_archived")]
+        public bool IsArchived { get; set; } = false;
+
+        [Column("archived_at")]
+        public DateTime? ArchivedAt { get; set; }
     }
 }

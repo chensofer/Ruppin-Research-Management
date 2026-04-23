@@ -83,6 +83,25 @@ namespace RupResearchAPI
 
             var app = builder.Build();
 
+            // Apply any pending schema changes that are not covered by EF Core migrations
+            using (var scope = app.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                db.Database.ExecuteSqlRaw(@"
+                    IF NOT EXISTS (
+                        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                        WHERE TABLE_NAME = 'research_projects' AND COLUMN_NAME = 'is_archived'
+                    )
+                        ALTER TABLE research_projects ADD is_archived BIT NOT NULL DEFAULT 0;
+
+                    IF NOT EXISTS (
+                        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                        WHERE TABLE_NAME = 'research_projects' AND COLUMN_NAME = 'archived_at'
+                    )
+                        ALTER TABLE research_projects ADD archived_at DATETIME NULL;
+                ");
+            }
+
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();

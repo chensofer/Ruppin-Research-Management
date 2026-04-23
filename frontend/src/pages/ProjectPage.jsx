@@ -6,7 +6,7 @@ import {
   getProjectDetail,
   getProjectFiles,
   getCommitments,
-  deleteProject,
+  archiveProject,
 } from '../api/projectsApi';
 import { getPaymentRequestsByProject } from '../api/paymentRequestsApi';
 import { getPendingHourApprovals } from '../api/hourReportsApi';
@@ -136,11 +136,11 @@ export default function ProjectPage() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await deleteProject(id);
-      toast.success('המחקר נמחק בהצלחה');
+      await archiveProject(id);
+      toast.success('המחקר הועבר לארכיון בהצלחה');
       navigate('/dashboard');
     } catch (err) {
-      const msg = err?.response?.data?.message ?? 'שגיאה במחיקת המחקר';
+      const msg = err?.response?.data?.message ?? 'שגיאה בהעברת המחקר לארכיון';
       toast.error(msg);
       setShowDeleteModal(false);
     } finally {
@@ -194,13 +194,13 @@ export default function ProjectPage() {
           <button
             onClick={() => setShowDeleteModal(true)}
             className="flex items-center gap-1.5 text-xs font-semibold text-red-500 border border-red-200 p-2 sm:px-3 sm:py-2 rounded-xl hover:bg-red-50 hover:border-red-300 transition-all flex-shrink-0"
-            title="מחק מחקר"
+            title="העבר לארכיון"
           >
             <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
             </svg>
-            <span className="hidden sm:inline">מחק מחקר</span>
+            <span className="hidden sm:inline">העבר לארכיון</span>
           </button>
         </div>
 
@@ -227,15 +227,15 @@ export default function ProjectPage() {
                   d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">מחיקת מחקר</h3>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">העברה לארכיון</h3>
             <p className="text-sm text-gray-500 text-center mb-1">
-              האם אתה בטוח שברצונך למחוק את המחקר:
+              האם להעביר לארכיון את המחקר:
             </p>
-            <p className="text-sm font-semibold text-gray-800 text-center mb-5">
+            <p className="text-sm font-semibold text-gray-800 text-center mb-3">
               "{detail.projectNameHe}"?
             </p>
-            <p className="text-xs text-red-500 text-center mb-5">
-              פעולה זו בלתי הפיכה. כל נתוני המחקר יימחקו לצמיתות.
+            <p className="text-xs text-gray-400 text-center mb-5">
+              המחקר יועבר לארכיון ויוסר מרשימת המחקרים הראשית. ניתן לשחזר אותו בכל עת דרך עמוד הארכיון.
             </p>
             <div className="flex gap-3">
               <button
@@ -248,11 +248,11 @@ export default function ProjectPage() {
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg disabled:opacity-60 transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg disabled:opacity-60 transition-colors"
               >
                 {deleting ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : 'מחק לצמיתות'}
+                ) : 'העבר לארכיון'}
               </button>
             </div>
           </div>

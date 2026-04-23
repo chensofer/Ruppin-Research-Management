@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Logo from './Logo';
 import {
   HiSquares2X2, HiCheckCircle, HiCalendarDays, HiDocumentChartBar,
-  HiArrowRightOnRectangle, HiBars3, HiChartBar,
+  HiArrowRightOnRectangle, HiBars3, HiChartBar, HiArchiveBox,
 } from 'react-icons/hi2';
 import { getPendingPaymentRequests } from '../api/paymentRequestsApi';
 import { getPendingHourApprovals } from '../api/hourReportsApi';
@@ -23,9 +23,10 @@ export default function Layout({ children }) {
   const isResearcher = user?.systemAuthorization !== 'עוזר מחקר';
 
   const RESEARCHER_NAV = [
-    { to: '/dashboard',   label: 'רשימת מחקרים',        icon: <HiSquares2X2 className="w-5 h-5 flex-shrink-0" /> },
-    { to: '/comparison',  label: 'השוואות בין מחקרים',   icon: <HiChartBar   className="w-5 h-5 flex-shrink-0" /> },
+    { to: '/dashboard',   label: 'רשימת מחקרים',        icon: <HiSquares2X2  className="w-5 h-5 flex-shrink-0" /> },
+    { to: '/comparison',  label: 'השוואות בין מחקרים',   icon: <HiChartBar    className="w-5 h-5 flex-shrink-0" /> },
     { to: '/approvals',   label: 'אישורים ממתינים',      icon: <HiCheckCircle className="w-5 h-5 flex-shrink-0" />, badge: pendingCount },
+    { to: '/archive',     label: 'ארכיון מחקרים',        icon: <HiArchiveBox  className="w-5 h-5 flex-shrink-0" /> },
   ];
 
   const navItems = isResearcher ? RESEARCHER_NAV : ASSISTANT_NAV;
