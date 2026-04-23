@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { getUsers } from '../../api/usersApi';
 import { getCenters } from '../../api/centersApi';
 import { updateProject } from '../../api/projectsApi';
+import UserAvatar from '../UserAvatar';
 
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
@@ -72,9 +73,7 @@ function PIPicker({ value, name: displayName, onChange, error, allUsers, loading
   if (value) {
     return (
       <div className={`flex items-center gap-3 bg-primary/5 border rounded-lg px-3 py-2 ${error ? 'border-red-400' : 'border-primary/20'}`}>
-        <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-          {displayName?.[0] ?? '?'}
-        </div>
+        <UserAvatar userId={value} firstName={displayName} size="sm" className="bg-primary text-white" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-primary truncate">{displayName}</p>
           <p className="text-xs text-primary/60">{value}</p>
@@ -511,9 +510,7 @@ function ResearchersCard({ detail }) {
                 }`}
               >
                 {/* Avatar */}
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${isCreator ? 'bg-primary' : 'bg-gray-400'}`}>
-                  {(m.firstName?.[0] ?? '') + (m.lastName?.[0] ?? '')}
-                </div>
+                <UserAvatar userId={m.userId} firstName={m.firstName} lastName={m.lastName} size="lg" className={isCreator ? 'bg-primary text-white' : 'bg-gray-400 text-white'} />
 
                 {/* Name + ID */}
                 <div className="flex-1 min-w-0">
@@ -567,9 +564,7 @@ function AssistantsCard({ detail }) {
         <div className="space-y-3">
           {detail.assistants.map((a) => (
             <div key={a.assistantUserId} className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center text-primary text-xs font-bold flex-shrink-0">
-                {(a.firstName?.[0] ?? '') + (a.lastName?.[0] ?? '')}
-              </div>
+              <UserAvatar userId={a.assistantUserId} firstName={a.firstName} lastName={a.lastName} size="lg" className="bg-blue-50 text-primary" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-800">{a.firstName} {a.lastName}</p>
                 <p className="text-xs text-gray-400">{a.assistantUserId}</p>

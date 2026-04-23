@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import HebrewDatePicker from '../HebrewDatePicker';
 import { getUsers } from '../../api/usersApi';
 import { getCenters } from '../../api/centersApi';
+import UserAvatar from '../UserAvatar';
 
 
 function Field({ label, required, children, error }) {
@@ -94,9 +95,7 @@ export default function StepDetails({ data, onChange, errors }) {
       <Field label="חוקר ראשי" required error={errors.principalResearcherId}>
         {data.principalResearcherId ? (
           <div className={`flex items-center gap-3 bg-primary-light border rounded-lg px-3 py-2.5 ${errors.principalResearcherId ? 'border-red-400' : 'border-primary/20'}`}>
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              {data.principalResearcherName?.[0] ?? '?'}
-            </div>
+            <UserAvatar userId={data.principalResearcherId} firstName={data.principalResearcherName} size="md" className="bg-primary text-white" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-primary truncate">{data.principalResearcherName}</p>
               <p className="text-xs text-primary/60">ת"ז - {data.principalResearcherId}</p>

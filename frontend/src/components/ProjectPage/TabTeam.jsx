@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getUsers } from '../../api/usersApi';
 import { addTeamMember, removeTeamMember } from '../../api/projectsApi';
+import UserAvatar from '../UserAvatar';
 
 const RESEARCH_ASSISTANT_ROLE = 'עוזר מחקר';
 
@@ -110,9 +111,7 @@ export default function TabTeam({ projectId, teamMembers, principalResearcherId,
         {/* Selected user preview */}
         {selectedUser ? (
           <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-lg px-3 py-2.5">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              {(selectedUser.firstName?.[0] ?? '') + (selectedUser.lastName?.[0] ?? '')}
-            </div>
+            <UserAvatar userId={selectedUser.userId} firstName={selectedUser.firstName} lastName={selectedUser.lastName} size="md" className="bg-primary text-white" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-primary truncate">{selectedUser.firstName} {selectedUser.lastName}</p>
               <p className="text-xs text-primary/60">{selectedUser.userId} · {selectedUser.systemAuthorization}</p>
@@ -214,9 +213,7 @@ export default function TabTeam({ projectId, teamMembers, principalResearcherId,
             <div className="divide-y divide-gray-100">
               {members.map((m) => (
                 <div key={m.userId} className={`flex items-center gap-3 px-5 py-3.5 ${m.isPI ? 'bg-amber-50/40' : ''}`}>
-                  <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                    {(m.firstName?.[0] ?? '') + (m.lastName?.[0] ?? '')}
-                  </div>
+                  <UserAvatar userId={m.userId} firstName={m.firstName} lastName={m.lastName} size="lg" className="bg-primary text-white" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800">{m.firstName} {m.lastName}</p>
                     <p className="text-xs text-gray-400">

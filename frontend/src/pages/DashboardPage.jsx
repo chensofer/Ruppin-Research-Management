@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { triggerSuccessFeedback } from '../utils/successFeedback';
+import { celebrate } from '../utils/celebrate';
 import { useAuth } from '../context/AuthContext';
 import { getProjects } from '../api/projectsApi';
 import Layout from '../components/Layout';
@@ -138,6 +139,7 @@ export default function DashboardPage() {
 
   const handleCreated = (newProject) => {
     setShowModal(false);
+    celebrate('project_created');
     triggerSuccessFeedback(`המחקר "${newProject.projectNameHe}" נוצר בהצלחה!`);
     sessionStorage.setItem(SESSION_KEY, new Date().toISOString());
     loadProjects();

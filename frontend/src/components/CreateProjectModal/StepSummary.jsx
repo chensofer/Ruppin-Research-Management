@@ -1,3 +1,5 @@
+import UserAvatar from '../UserAvatar';
+
 function Section({ title, children }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -81,9 +83,7 @@ export default function StepSummary({ details, budgetCategories, teamMembers, as
             {teamMembers.map((m) => (
               <div key={m.userId} className="flex items-center justify-between text-sm py-1 border-b border-gray-50 last:border-0">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                    {(m.firstName?.[0] ?? '') + (m.lastName?.[0] ?? '')}
-                  </div>
+                  <UserAvatar userId={m.userId} firstName={m.firstName} lastName={m.lastName} size="sm" className="bg-primary text-white" />
                   <div>
                     <p className="font-medium text-gray-800">{m.firstName} {m.lastName}</p>
                     <p className="text-xs text-gray-400">ת"ז - {m.userId}</p>
@@ -103,9 +103,7 @@ export default function StepSummary({ details, budgetCategories, teamMembers, as
             {assistants.map((a, i) => (
               <div key={a.assistantUserId ?? i} className="flex items-center justify-between text-sm py-1 border-b border-gray-50 last:border-0">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-primary text-xs font-bold flex-shrink-0">
-                    {(a.firstName?.[0] ?? '') + (a.lastName?.[0] ?? '')}
-                  </div>
+                  <UserAvatar userId={a.assistantUserId} firstName={a.firstName} lastName={a.lastName} size="sm" className="bg-blue-100 text-primary" />
                   <div>
                     <div className="flex items-center gap-1.5">
                       <p className="font-medium text-gray-800">{a.firstName} {a.lastName}</p>

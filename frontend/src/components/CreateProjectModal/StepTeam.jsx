@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getUsers } from '../../api/usersApi';
+import UserAvatar from '../UserAvatar';
 
 const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400';
 
@@ -116,9 +117,7 @@ export default function StepTeam({ data, onChange, excludeIds = [] }) {
         <div className="space-y-2">
           {data.map((m) => (
             <div key={m.userId} className="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
-              <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                {(m.firstName?.[0] ?? '') + (m.lastName?.[0] ?? '')}
-              </div>
+              <UserAvatar userId={m.userId} firstName={m.firstName} lastName={m.lastName} size="lg" className="bg-primary text-white" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-800">{m.firstName} {m.lastName}</p>
                 <p className="text-xs text-gray-400">ת"ז - {m.userId}</p>

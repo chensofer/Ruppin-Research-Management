@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   getAssistantProjects,
@@ -46,7 +45,6 @@ function calcWorkedHours(from, to) {
 
 export default function AttendancePage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const now = new Date();
 
   const [projects, setProjects] = useState([]);
@@ -284,27 +282,15 @@ export default function AttendancePage() {
       <div className="max-w-4xl mx-auto" dir="rtl">
 
         {/* Header */}
-        <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">דיווח נוכחות</h1>
-            <p className="text-gray-500 text-sm mt-1">
-              {user?.firstName} {user?.lastName} — מלא את שעות העבודה שלך לחודש הנבחר
-            </p>
-          </div>
-          <button
-            onClick={() => navigate('/my-reports')}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 hover:border-primary hover:text-primary shadow-sm transition-all"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            הדוחות שלי
-          </button>
+        <div className="mb-6">
+          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">דיווח נוכחות</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {user?.firstName} {user?.lastName} — מלא את שעות העבודה שלך לחודש הנבחר
+          </p>
         </div>
 
         {/* Selectors */}
-        <div className="card p-5 mb-5">
+        <div className="card p-5 mb-5 sticky top-16 md:top-0 z-20 shadow-md bg-white">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1.5 font-semibold">מחקר</label>

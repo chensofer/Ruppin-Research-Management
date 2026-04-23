@@ -269,31 +269,31 @@ export default function MyReportsPage() {
                     onClick={() => toggleExpand(s.monthlyApprovalId)}
                     className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50/60 transition-colors text-right"
                   >
-                    <div className="flex items-center gap-3">
-                      {/* Expand chevron */}
-                      <svg
-                        className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                      <StatusBadge status={s.approvalStatus} />
-                      {s.totalWorkedHours != null && (
-                        <span className="text-xs text-gray-400 font-medium">
-                          {Number(s.totalWorkedHours).toFixed(1)} שעות
-                        </span>
-                      )}
-                    </div>
-
+                    {/* RIGHT: month + year + project */}
                     <div className="text-right">
                       <p className="text-sm font-semibold text-gray-800">
                         {MONTH_NAMES[(s.month ?? 1) - 1]} {s.year}
                       </p>
-                      {projects.length > 1 && (
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {s.projectNameHe || `מחקר ${s.projectId}`}
-                        </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {s.projectNameHe || `מחקר ${s.projectId}`}
+                      </p>
+                    </div>
+
+                    {/* LEFT: status + hours + chevron */}
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <StatusBadge status={s.approvalStatus} />
+                      {s.totalWorkedHours != null && (
+                        <span className="text-sm font-bold text-gray-700 tabular-nums">
+                          {Number(s.totalWorkedHours).toFixed(1)}
+                          <span className="text-xs font-normal text-gray-400 mr-0.5">שעות</span>
+                        </span>
                       )}
+                      <svg
+                        className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : '-rotate-90'}`}
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </div>
                   </button>
 

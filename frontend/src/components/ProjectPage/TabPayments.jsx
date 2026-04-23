@@ -4,6 +4,7 @@ import HebrewDatePicker from '../HebrewDatePicker';
 import { getProviders, createProvider } from '../../api/providersApi';
 import { createPaymentRequest, uploadQuotationFile } from '../../api/paymentRequestsApi';
 import { triggerSuccessFeedback } from '../../utils/successFeedback';
+import { celebrate } from '../../utils/celebrate';
 import { useEffect } from 'react';
 
 const fmt = (n) =>
@@ -111,6 +112,7 @@ export default function TabPayments({ projectId, payments, onCreated }) {
       setForm(EMPTY_FORM);
       setSelectedFiles([]);
       setShowForm(false);
+      celebrate('payment_submitted');
       triggerSuccessFeedback('בקשת התשלום נשלחה בהצלחה!');
       onCreated();
 

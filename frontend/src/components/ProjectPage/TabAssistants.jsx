@@ -7,6 +7,7 @@ import {
   updateAssistant,
   getAssistantTracking,
 } from '../../api/projectsApi';
+import UserAvatar from '../UserAvatar';
 
 const inputCls =
   'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400';
@@ -563,9 +564,7 @@ export default function TabAssistants({ projectId, assistants, onChanged }) {
         {/* Selected user preview */}
         {stagedUser ? (
           <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-lg px-3 py-2.5">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              {(stagedUser.firstName?.[0] ?? '') + (stagedUser.lastName?.[0] ?? '')}
-            </div>
+            <UserAvatar userId={stagedUser.userId} firstName={stagedUser.firstName} lastName={stagedUser.lastName} size="md" className="bg-primary text-white" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-primary truncate">{stagedUser.firstName} {stagedUser.lastName}</p>
               <p className="text-xs text-primary/60">{stagedUser.userId}</p>
@@ -657,9 +656,7 @@ export default function TabAssistants({ projectId, assistants, onChanged }) {
           <div className="divide-y divide-gray-100">
             {assistants.map((a) => (
               <div key={a.assistantUserId} className="flex items-center gap-3 px-5 py-3.5">
-                <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-primary text-sm font-bold flex-shrink-0">
-                  {(a.firstName?.[0] ?? '') + (a.lastName?.[0] ?? '')}
-                </div>
+                <UserAvatar userId={a.assistantUserId} firstName={a.firstName} lastName={a.lastName} size="lg" className="bg-blue-100 text-primary" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-800">{a.firstName} {a.lastName}</p>
                   <p className="text-xs text-gray-400">{a.assistantUserId} · {a.role}</p>

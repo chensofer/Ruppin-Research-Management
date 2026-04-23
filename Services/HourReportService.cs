@@ -113,11 +113,11 @@ namespace RupResearchAPI.Services
 
         public async Task<MonthlyApprovalDto?> GetMonthlyApproval(string userId, int projectId, int month, int year)
         {
-            var trimmedId = userId.Trim();
+            var normalizedId = NormalizeId(userId);
             var all = await _db.ResearchMonthlyWorkApprovals
                 .Where(a => a.ProjectId == projectId && a.Month == month && a.Year == year)
                 .ToListAsync();
-            var record = all.FirstOrDefault(a => a.UserId?.Trim() == trimmedId);
+            var record = all.FirstOrDefault(a => NormalizeId(a.UserId) == normalizedId);
 
             if (record == null) return null;
 
@@ -130,10 +130,12 @@ namespace RupResearchAPI.Services
 
         public async Task<MonthlyApprovalDto> SubmitMonthly(SubmitMonthlyApprovalDto dto)
         {
-            var existing = await _db.ResearchMonthlyWorkApprovals
-                .FirstOrDefaultAsync(a =>
-                    a.UserId == dto.UserId && a.ProjectId == dto.ProjectId &&
-                    a.Month == dto.Month && a.Year == dto.Year);
+            // Load in memory to handle leading-zero padding inconsistency in user_id column
+            var normalizedUserId = NormalizeId(dto.UserId);
+            var allForProject = await _db.ResearchMonthlyWorkApprovals
+                .Where(a => a.ProjectId == dto.ProjectId && a.Month == dto.Month && a.Year == dto.Year)
+                .ToListAsync();
+            var existing = allForProject.FirstOrDefault(a => NormalizeId(a.UserId) == normalizedUserId);
 
             if (existing != null)
             {
@@ -148,7 +150,7 @@ namespace RupResearchAPI.Services
 
             var record = new ResearchMonthlyWorkApproval
             {
-                UserId = dto.UserId,
+                UserId = dto.UserId?.Trim(),
                 ProjectId = dto.ProjectId,
                 Month = dto.Month,
                 Year = dto.Year,
@@ -368,14 +370,21 @@ namespace RupResearchAPI.Services
             return budget - totalPaid - totalPending - totalFuture;
         }
 
+        // Normalize an ID: trim whitespace and leading zeros so "000000002" == "0000000002" == "2"
+        private static string NormalizeId(string? id)
+        {
+            if (id == null) return "";
+            var t = id.Trim().TrimStart('0');
+            return t.Length == 0 ? "0" : t;
+        }
+
         public async Task<List<MonthlyApprovalDto>> GetPendingForResearcher(string researcherId)
         {
-            // principal_researcher_id is char(10) in DB — load in memory and Trim to avoid
-            // char vs nvarchar trailing-space mismatch that causes SQL comparison to return zero rows.
-            var trimmedId = researcherId.Trim();
+            // Normalize the researcher's ID to handle inconsistent leading-zero padding in DB
+            var normalizedResearcherId = NormalizeId(researcherId);
             var allProjects = await _db.ResearchProjects.ToListAsync();
             var projectIds = allProjects
-                .Where(p => p.PrincipalResearcherId?.Trim() == trimmedId)
+                .Where(p => NormalizeId(p.PrincipalResearcherId) == normalizedResearcherId)
                 .Select(p => p.ProjectId)
                 .ToHashSet();
 
@@ -392,19 +401,23 @@ namespace RupResearchAPI.Services
             var projectDict = allProjects.ToDictionary(p => p.ProjectId);
 
             var allUsers = await _db.ResearchUsers.ToListAsync();
-            var userDict = allUsers.ToDictionary(u => u.UserId.Trim());
+            // Index by normalized ID to handle leading-zero inconsistencies
+            var userDict = allUsers
+                .GroupBy(u => NormalizeId(u.UserId))
+                .ToDictionary(g => g.Key, g => g.First());
 
             var allAssistants = await _db.ResearchAssistants.ToListAsync();
 
             return relevant.Select(a =>
             {
                 projectDict.TryGetValue(a.ProjectId ?? 0, out var project);
-                var uid = a.UserId?.Trim() ?? "";
-                userDict.TryGetValue(uid, out var user);
+                var uid        = a.UserId?.Trim() ?? "";
+                var normalUid  = NormalizeId(uid);
+                userDict.TryGetValue(normalUid, out var user);
                 string? userName = user != null ? $"{user.FirstName} {user.LastName}".Trim() : null;
 
                 var assistantRecord = allAssistants.FirstOrDefault(ast =>
-                    ast.AssistantUserId?.Trim() == uid && ast.ProjectId == (a.ProjectId ?? 0));
+                    NormalizeId(ast.AssistantUserId) == normalUid && ast.ProjectId == (a.ProjectId ?? 0));
                 var salaryPerHour = assistantRecord?.SalaryPerHour;
                 var totalPayment = salaryPerHour.HasValue && a.TotalWorkedHours.HasValue
                     ? salaryPerHour.Value * a.TotalWorkedHours.Value

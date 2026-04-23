@@ -152,7 +152,7 @@ export default function Layout({ children }) {
       </div>
 
       {/* Main content */}
-      <main className="flex-1 md:mr-64 p-4 md:p-8 min-h-screen pt-16 md:pt-8 overflow-x-hidden">
+      <main className="flex-1 md:mr-64 p-4 md:p-8 min-h-screen pt-16 md:pt-8 overflow-x-clip">
         {children}
       </main>
     </div>

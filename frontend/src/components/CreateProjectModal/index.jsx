@@ -205,6 +205,7 @@ export default function CreateProjectModal({ onClose, onCreated }) {
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-1">
+          <h2 className="text-lg font-bold text-gray-900">יצירת מחקר חדש</h2>
           <button
             onClick={onClose}
             className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
@@ -213,7 +214,6 @@ export default function CreateProjectModal({ onClose, onCreated }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
-          <h2 className="text-lg font-bold text-gray-900">יצירת מחקר חדש</h2>
         </div>
 
         <Stepper currentStep={step} />

@@ -6,6 +6,7 @@ import { getPendingHourApprovals, decideMonthlyApproval } from '../api/hourRepor
 import Layout from '../components/Layout';
 import { requestNotificationPermission, sendNotification } from '../utils/notifications';
 import { triggerSuccessFeedback } from '../utils/successFeedback';
+import { celebrate } from '../utils/celebrate';
 
 const MONTH_NAMES = [
   '', 'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
@@ -319,6 +320,7 @@ export default function ApprovalsPage() {
     try {
       await updatePaymentRequestStatus(id, { status: 'אושר', approvedByUserId: user?.userId });
       setRequests((prev) => prev.filter((r) => r.paymentRequestId !== id));
+      celebrate('payment_approved');
       triggerSuccessFeedback('הבקשה אושרה בהצלחה!');
     } catch { showToast('שגיאה באישור הבקשה'); }
   };
@@ -335,6 +337,7 @@ export default function ApprovalsPage() {
     try {
       await decideMonthlyApproval(id, { approvalStatus: status, approvedByUserId: user?.userId, comments: comments || null });
       setHourRecords((prev) => prev.filter((r) => r.monthlyApprovalId !== id));
+      if (status === 'אושר') celebrate('hours_approved');
       showToast(status === 'אושר' ? 'שעות אושרו ✓' : 'שעות נדחו');
       return null;
     } catch (err) {

@@ -5,7 +5,9 @@
       "Bash(npm run:*)",
       "Bash(taskkill /PID 264 /F)",
       "Bash(taskkill //PID 264 //F)",
-      "Bash(dotnet ef *)"
+      "Bash(dotnet ef *)",
+      "Bash(python3)",
+      "Bash(node -e \"const fs=require\\('fs'\\); fs.writeFileSync\\('C:/Users/shach/Desktop/Ruppin-Research-Management/frontend/src/pages/ComparisonPage.jsx', 'placeholder2\\\\n', 'utf8'\\); console.log\\('ok'\\);\")"
     ]
   }
 }
