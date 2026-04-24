@@ -235,6 +235,7 @@ namespace RupResearchAPI.Services
                 StartDate = project.StartDate,
                 EndDate = project.EndDate,
                 Status = project.Status,
+                IsArchived = project.IsArchived,
                 TotalPaid = totalPaid,
                 TotalFuture = totalFuture,
                 RemainingBalance = budget - totalPaid,

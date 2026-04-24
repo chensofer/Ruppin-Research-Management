@@ -66,9 +66,9 @@ export default function RegisterPage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-start px-4 pb-10"
+      className="min-h-screen flex flex-col items-center justify-start px-4 py-8"
       dir="rtl"
-      style={{ background: 'linear-gradient(145deg, #003478 0%, #001E50 55%, #001030 100%)', paddingTop: '40px' }}
+      style={{ background: 'linear-gradient(145deg, #003478 0%, #001E50 55%, #001030 100%)' }}
     >
       {/* Decorative blobs */}
       <div className="fixed top-[-120px] right-[-120px] w-[400px] h-[400px] rounded-full pointer-events-none"
@@ -77,10 +77,10 @@ export default function RegisterPage() {
         style={{ background: 'radial-gradient(circle, rgba(92,184,0,0.12) 0%, transparent 70%)' }} />
 
       {/* ── Logo & title ── */}
-      <div className="flex flex-col items-center text-center mb-8 select-none">
-        <Logo size="lg" />
-        <h1 className="text-white text-xl font-bold tracking-wide" style={{ marginTop: '10px' }}>מערכת ניהול מחקרים</h1>
-        <p className="text-white/40 text-sm mt-1">המכללה האקדמית רופין</p>
+      <div className="flex flex-col items-center text-center mb-5 select-none">
+        <Logo size="sm2x" />
+        <h1 className="text-white text-lg font-bold tracking-wide mt-3">מערכת ניהול מחקרים</h1>
+        <p className="text-white/40 text-sm mt-0.5">המכללה האקדמית רופין</p>
       </div>
 
       {/* ── Form card ── */}

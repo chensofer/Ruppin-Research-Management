@@ -39,7 +39,7 @@ const EMPTY_FORM = {
   comments: '',
 };
 
-export default function TabPayments({ projectId, payments, onCreated }) {
+export default function TabPayments({ projectId, payments, onCreated, readOnly = false }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [categories, setCategories] = useState([]);
@@ -151,16 +151,18 @@ export default function TabPayments({ projectId, payments, onCreated }) {
   return (
     <div className="space-y-4">
       {/* Trigger button */}
-      <button
-        type="button"
-        onClick={() => setShowForm(true)}
-        className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
-        בקשה חדשה
-      </button>
+      {!readOnly && (
+        <button
+          type="button"
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          בקשה חדשה
+        </button>
+      )}
 
       {/* Modal */}
       {showForm && (

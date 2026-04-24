@@ -50,7 +50,7 @@ function fmtDate(d) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function TabDocuments({ projectId, files, onChanged }) {
+export default function TabDocuments({ projectId, files, onChanged, readOnly = false }) {
   // Build unified folder list: fixed default + localStorage + folders from existing files
   const [extraFolders, setExtraFolders] = useState(() => loadSavedFolders(projectId));
   const [newFolderInput, setNewFolderInput] = useState('');
@@ -135,8 +135,8 @@ export default function TabDocuments({ projectId, files, onChanged }) {
   return (
     <div className="space-y-4">
 
-      {/* ── Upload & folder panel ── */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
+      {/* ── Upload & folder panel — hidden in readOnly ── */}
+      {!readOnly && <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-700">העלאת קובץ</h3>
           <button
@@ -244,7 +244,7 @@ export default function TabDocuments({ projectId, files, onChanged }) {
             </button>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* ── Folder list ── */}
       {displayFolders.length === 0 && files.length === 0 ? (

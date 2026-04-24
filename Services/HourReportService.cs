@@ -464,7 +464,7 @@ namespace RupResearchAPI.Services
 
             var projects = await _db.ResearchProjects.ToListAsync();
             return projects
-                .Where(p => projectIds.Contains(p.ProjectId))
+                .Where(p => projectIds.Contains(p.ProjectId) && !p.IsArchived)
                 .Select(p => new AssistantProjectDto
                 {
                     ProjectId = p.ProjectId,

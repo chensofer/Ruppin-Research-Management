@@ -145,7 +145,9 @@ export default function Layout({ children }) {
         <button onClick={() => setMobileOpen(true)} className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all" title="תפריט">
           <HiBars3 className="w-6 h-6" />
         </button>
-        <Logo size="xs" />
+        <button onClick={() => navigate('/dashboard')} className="flex items-center">
+          <Logo size="xs" />
+        </button>
         {/* Logout — left side (last child in RTL) */}
         <button onClick={handleLogout} className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-all" title="התנתקות">
           <HiArrowRightOnRectangle className="w-5 h-5" />

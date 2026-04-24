@@ -5,7 +5,7 @@ import { getAllProjects, transferBudget } from '../../api/projectsApi';
 const fmt = (n) =>
   n != null ? `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)}` : '—';
 
-export default function TabBudgetTransfer({ projectId, projectName, availableBalance, onTransferred }) {
+export default function TabBudgetTransfer({ projectId, projectName, availableBalance, onTransferred, readOnly = false }) {
   const [allProjects, setAllProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [form, setForm] = useState({ targetProjectId: '', amount: '' });
@@ -68,6 +68,13 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
       </div>
 
       <div className="p-6 max-w-lg mx-auto">
+        {readOnly && (
+          <div className="text-center py-8 text-sm text-gray-400">
+            <p>מחקר בארכיון — לא ניתן לבצע העברת תקציב.</p>
+            <p className="mt-1">שחזר את המחקר כדי לאפשר פעולות.</p>
+          </div>
+        )}
+        {!readOnly && <>
         {/* Available balance info */}
         <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-6 text-right">
           <p className="text-xs text-blue-500 mb-0.5">יתרה זמינה במחקר הנוכחי</p>
@@ -184,6 +191,7 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
             </div>
           </div>
         )}
+        </>}
       </div>
     </div>
   );

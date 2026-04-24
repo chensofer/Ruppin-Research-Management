@@ -7,6 +7,7 @@ import {
   getProjectFiles,
   getCommitments,
   archiveProject,
+  restoreProject,
 } from '../api/projectsApi';
 import { getPaymentRequestsByProject } from '../api/paymentRequestsApi';
 import { getPendingHourApprovals } from '../api/hourReportsApi';
@@ -77,6 +78,7 @@ export default function ProjectPage() {
   const [error, setError] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [showPendingPopup, setShowPendingPopup] = useState(false);
   const popupShownRef = useRef(false);
 
@@ -148,6 +150,19 @@ export default function ProjectPage() {
     }
   };
 
+  const handleRestore = async () => {
+    setRestoring(true);
+    try {
+      await restoreProject(id);
+      toast.success('המחקר שוחזר בהצלחה');
+      loadAll();
+    } catch {
+      toast.error('שגיאה בשחזור המחקר');
+    } finally {
+      setRestoring(false);
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -168,6 +183,7 @@ export default function ProjectPage() {
     );
   }
 
+  const isArchived = detail.isArchived === true;
   const budget = detail.totalBudget || 0;
   const totalPaid = detail.totalPaid || 0;
   const totalFuture = detail.totalFuture || 0;
@@ -190,18 +206,36 @@ export default function ProjectPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
-          {/* מחק מחקר — שמאל (אחרון ב-RTL) */}
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-red-500 border border-red-200 p-2 sm:px-3 sm:py-2 rounded-xl hover:bg-red-50 hover:border-red-300 transition-all flex-shrink-0"
-            title="העבר לארכיון"
-          >
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-            </svg>
-            <span className="hidden sm:inline">העבר לארכיון</span>
-          </button>
+          {/* Archive / Restore — שמאל (אחרון ב-RTL) */}
+          {isArchived ? (
+            <button
+              onClick={handleRestore}
+              disabled={restoring}
+              className="flex items-center gap-1.5 text-xs font-semibold text-green-600 border border-green-200 p-2 sm:px-3 sm:py-2 rounded-xl hover:bg-green-50 hover:border-green-300 transition-all flex-shrink-0 disabled:opacity-50"
+              title="שחזר מחקר"
+            >
+              {restoring ? (
+                <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              )}
+              <span className="hidden sm:inline">{restoring ? 'משחזר...' : 'שחזר מחקר'}</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="flex items-center gap-1.5 text-xs font-semibold text-red-500 border border-red-200 p-2 sm:px-3 sm:py-2 rounded-xl hover:bg-red-50 hover:border-red-300 transition-all flex-shrink-0"
+              title="העבר לארכיון"
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
+              <span className="hidden sm:inline">העבר לארכיון</span>
+            </button>
+          )}
         </div>
 
         <div className="min-w-0">
@@ -216,6 +250,20 @@ export default function ProjectPage() {
           )}
         </div>
       </div>
+
+      {/* Archive notice — text only, no button */}
+      {isArchived && (
+        <div className="flex items-center gap-2 px-4 py-2.5 mb-4 bg-amber-50 border border-amber-200 rounded-2xl text-right" dir="rtl">
+          <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+          </svg>
+          <p className="text-sm text-amber-700">
+            <span className="font-bold">מחקר זה נמצא בארכיון.</span>
+            {' '}הצפייה בנתונים מותרת. כדי לבצע פעולות יש לשחזר את המחקר תחילה.
+          </p>
+        </div>
+      )}
 
       {/* Delete confirmation modal */}
       {showDeleteModal && (
@@ -484,13 +532,14 @@ export default function ProjectPage() {
 
       {/* Tab content */}
       {activeTab === 'overview' && (
-        <TabOverview detail={detail} onChanged={reloadDetail} />
+        <TabOverview detail={detail} onChanged={reloadDetail} readOnly={isArchived} />
       )}
       {activeTab === 'payments' && (
         <TabPayments
           projectId={id}
           payments={payments}
           onCreated={() => { reloadPayments(); reloadDetail(); }}
+          readOnly={isArchived}
         />
       )}
       {activeTab === 'team' && (
@@ -500,6 +549,7 @@ export default function ProjectPage() {
           principalResearcherId={detail.principalResearcherId?.trim()}
           principalResearcherName={detail.principalResearcherName}
           onChanged={reloadDetail}
+          readOnly={isArchived}
         />
       )}
       {activeTab === 'assistants' && (
@@ -507,6 +557,7 @@ export default function ProjectPage() {
           projectId={id}
           assistants={detail.assistants}
           onChanged={reloadDetail}
+          readOnly={isArchived}
         />
       )}
       {activeTab === 'transactions' && (
@@ -521,6 +572,7 @@ export default function ProjectPage() {
           projectId={id}
           files={files}
           onChanged={reloadFiles}
+          readOnly={isArchived}
         />
       )}
       {activeTab === 'future' && (
@@ -529,6 +581,7 @@ export default function ProjectPage() {
           commitments={commitments}
           availableBalance={available}
           onChanged={() => { reloadCommitments(); reloadDetail(); }}
+          readOnly={isArchived}
         />
       )}
       {activeTab === 'transfer' && (
@@ -537,6 +590,7 @@ export default function ProjectPage() {
           projectName={detail.projectNameHe || detail.projectNameEn}
           availableBalance={available}
           onTransferred={() => { reloadPayments(); reloadDetail(); }}
+          readOnly={isArchived}
         />
       )}
     </Layout>

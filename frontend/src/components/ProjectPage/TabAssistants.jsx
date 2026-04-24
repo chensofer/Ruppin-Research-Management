@@ -461,7 +461,7 @@ function StatCard({ label, value, color = 'text-gray-900', sub }) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
-export default function TabAssistants({ projectId, assistants, onChanged }) {
+export default function TabAssistants({ projectId, assistants, onChanged, readOnly = false }) {
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -545,7 +545,8 @@ export default function TabAssistants({ projectId, assistants, onChanged }) {
     <div className="space-y-4">
       {error && <p className="text-sm text-red-500">{error}</p>}
 
-      {/* Add existing assistant panel */}
+      {/* Add existing assistant panel — hidden in readOnly */}
+      {readOnly ? null : <>
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-700">הוסף עוזר מחקר קיים</h3>
@@ -644,6 +645,8 @@ export default function TabAssistants({ projectId, assistants, onChanged }) {
           </button>
         </div>
       </div>
+
+      </>}
 
       {/* Assistants list */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">

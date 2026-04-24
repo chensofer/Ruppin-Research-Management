@@ -21,7 +21,7 @@ const PI_BADGE = (
   </span>
 );
 
-export default function TabTeam({ projectId, teamMembers, principalResearcherId, principalResearcherName, onChanged }) {
+export default function TabTeam({ projectId, teamMembers, principalResearcherId, principalResearcherName, onChanged, readOnly = false }) {
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -105,7 +105,7 @@ export default function TabTeam({ projectId, teamMembers, principalResearcherId,
       {error && <p className="text-sm text-red-500">{error}</p>}
 
       {/* Add member panel */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
+      {!readOnly && <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-3">
         <h3 className="text-sm font-semibold text-gray-700">הוסף חבר צוות</h3>
 
         {/* Selected user preview */}
@@ -173,7 +173,7 @@ export default function TabTeam({ projectId, teamMembers, principalResearcherId,
             הוסף לצוות
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* Team list */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">

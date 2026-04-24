@@ -131,7 +131,7 @@ function validateForm(f) {
 }
 
 // ── Main component ──────────────────────────────────────────────────────────────
-export default function TabOverview({ detail, onChanged }) {
+export default function TabOverview({ detail, onChanged, readOnly = false }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm]       = useState({});
   const [errors, setErrors]   = useState({});
@@ -368,17 +368,19 @@ export default function TabOverview({ detail, onChanged }) {
         {/* Card header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/60">
           <h2 className="text-sm font-bold text-gray-800 tracking-wide">פרטי המחקר</h2>
-          <button
-            type="button"
-            onClick={enterEdit}
-            className="flex items-center gap-1.5 text-xs font-semibold text-primary border border-primary/30 bg-primary/5 px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            עריכה
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={enterEdit}
+              className="flex items-center gap-1.5 text-xs font-semibold text-primary border border-primary/30 bg-primary/5 px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              עריכה
+            </button>
+          )}
         </div>
 
         <div className="p-6 space-y-6">

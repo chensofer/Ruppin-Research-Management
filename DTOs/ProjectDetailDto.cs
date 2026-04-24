@@ -49,6 +49,7 @@ namespace RupResearchAPI.DTOs
         public DateOnly? StartDate { get; set; }
         public DateOnly? EndDate { get; set; }
         public string? Status { get; set; }
+        public bool IsArchived { get; set; }
 
         // Budget stats
         public decimal TotalPaid { get; set; }
