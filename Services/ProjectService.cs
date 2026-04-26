@@ -1081,6 +1081,12 @@ namespace RupResearchAPI.Services
             var target = await _db.ResearchProjects.FindAsync(targetId)
                 ?? throw new KeyNotFoundException("מחקר יעד לא נמצא");
 
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            bool targetStatusInactive = target.Status != "פעיל" && target.Status != "Active" && target.Status != "active";
+            bool targetExpired = target.EndDate.HasValue && target.EndDate.Value < today;
+            if (target.IsArchived || targetStatusInactive || targetExpired)
+                throw new InvalidOperationException("לא ניתן להעביר כספים למחקר שאינו פעיל או למחקר בארכיון");
+
             // Calculate available balance for source (budget - paid/approved - future commitments)
             var sourcePayments = await _db.ResearchPaymentRequests
                 .Where(r => r.ProjectId == sourceId)
@@ -1100,7 +1106,6 @@ namespace RupResearchAPI.Services
             if (availableBalance < amount)
                 throw new InvalidOperationException("יתרה זמינה לא מספיקה לביצוע ההעברה");
 
-            var today = DateOnly.FromDateTime(DateTime.Today);
             var approvedBy = userId.Length > 10 ? userId[..10] : userId;
             var sourceName = source.ProjectNameHe ?? source.ProjectNameEn ?? $"מחקר #{sourceId}";
             var targetName = target.ProjectNameHe ?? target.ProjectNameEn ?? $"מחקר #{targetId}";
