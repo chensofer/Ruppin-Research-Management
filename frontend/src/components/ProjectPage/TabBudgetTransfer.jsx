@@ -14,10 +14,18 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
     getAllProjects()
       .then((r) => {
-        // Exclude current project from the list
-        setAllProjects((r.data || []).filter((p) => p.projectId !== Number(projectId)));
+        setAllProjects(
+          (r.data || []).filter(
+            (p) =>
+              p.projectId !== Number(projectId) &&
+              !p.isArchived &&
+              (p.status === 'פעיל' || p.status === 'Active' || p.status === 'active') &&
+              (!p.endDate || String(p.endDate).slice(0, 10) >= today)
+          )
+        );
       })
       .catch(() => toast.error('שגיאה בטעינת רשימת המחקרים'))
       .finally(() => setLoadingProjects(false));
@@ -26,8 +34,22 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
   const selectedProject = allProjects.find((p) => p.projectId === Number(form.targetProjectId));
   const parsedAmount = parseFloat(form.amount);
 
+  const isProjectActive = (p) => {
+    if (!p) return false;
+    if (p.isArchived) return false;
+    if (p.status !== 'פעיל' && p.status !== 'Active' && p.status !== 'active') return false;
+    if (p.endDate) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (String(p.endDate).slice(0, 10) < today) return false;
+    }
+    return true;
+  };
+
   const validate = () => {
     if (!form.targetProjectId) return 'יש לבחור מחקר יעד';
+    const target = allProjects.find((p) => p.projectId === Number(form.targetProjectId));
+    if (target && !isProjectActive(target))
+      return 'לא ניתן להעביר כספים למחקר שאינו פעיל או למחקר בארכיון';
     if (!form.amount || isNaN(parsedAmount) || parsedAmount <= 0) return 'יש להזין סכום תקין';
     if (parsedAmount > availableBalance) return 'יתרה זמינה לא מספיקה לביצוע ההעברה';
     return '';
