@@ -120,3 +120,72 @@
     @apply text-sm font-semibold text-gray-700;
   }
 }
+
+/* ── Dark Mode ──────────────────────────────────────────────────────────────── */
+
+@layer base {
+  .dark body                            { background-color: #0D1B2A; color: #E8EEF7; }
+  .dark h1, .dark h2                    { color: #E8EEF7; }
+  .dark h3                              { color: #C8DAF0; }
+  .dark h4                              { color: #B0C8E4; }
+  .dark ::-webkit-scrollbar-thumb       { background: #2A3F58; }
+  .dark ::-webkit-scrollbar-thumb:hover { background: #3D5A78; }
+}
+
+@layer components {
+  .dark .card                           { background-color: #132338; border-color: #2A3F58; }
+  .dark .btn-ghost                      { color: #8DA4BE; }
+  .dark .btn-ghost:hover                { background-color: #1A2D42; color: #E8EEF7; }
+  .dark .input-field                    { background-color: #1A2D42; border-color: #2A3F58; color: #E8EEF7; }
+  .dark .input-field:hover:not(:focus)  { border-color: #3D5A78; }
+  .dark .input-field::placeholder       { color: #5A7A9A; }
+  .dark .field-label                    { color: #8DA4BE; }
+  .dark .section-header                 { color: #B0C4DE; }
+  .dark .badge-green  { background-color: rgba(92,184,0,0.15);  color: #73D400; }
+  .dark .badge-blue   { background-color: rgba(0,52,120,0.35);  color: #7BA8E8; }
+  .dark .badge-yellow { background-color: rgba(180,135,0,0.2);  color: #F0C040; }
+  .dark .badge-red    { background-color: rgba(220,38,38,0.2);  color: #F87171; }
+}
+
+@layer utilities {
+  /* Backgrounds */
+  .dark .bg-white                                                   { background-color: #132338; }
+  .dark .bg-gray-50                                                  { background-color: #1A2D42; }
+  .dark .bg-gray-100                                                 { background-color: #1E3450; }
+  .dark .bg-gray-200                                                 { background-color: #243C58; }
+  .dark .bg-page-bg                                                  { background-color: #0D1B2A; }
+
+  /* Text */
+  .dark .text-gray-900 { color: #E8EEF7; }
+  .dark .text-gray-800 { color: #D0DCF0; }
+  .dark .text-gray-700 { color: #B0C8E4; }
+  .dark .text-gray-600 { color: #8DA4BE; }
+  .dark .text-gray-500 { color: #7090B0; }
+  .dark .text-gray-400 { color: #5A7A9A; }
+
+  /* Borders */
+  .dark .border-gray-100 { border-color: #2A3F58; }
+  .dark .border-gray-200 { border-color: #2A3F58; }
+  .dark .border-gray-300 { border-color: #3D5A78; }
+
+  /* Dividers */
+  .dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: #2A3F58; }
+  .dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #2A3F58; }
+
+  /* Hover states */
+  .dark .hover\:bg-gray-50:hover  { background-color: #1A2D42; }
+  .dark .hover\:bg-gray-100:hover { background-color: #1E3450; }
+
+  /* Opacity/special variants */
+  .dark .bg-gray-50\/60                 { background-color: rgba(26,45,66,0.7); }
+  .dark .bg-blue-50\/30                 { background-color: rgba(26,45,66,0.6); }
+  .dark .bg-primary\/5                  { background-color: rgba(0,52,120,0.25); }
+  .dark .bg-primary\/10                 { background-color: rgba(0,52,120,0.3); }
+  .dark .bg-primary\/20                 { background-color: rgba(0,52,120,0.45); }
+  .dark .bg-white\/80                   { background-color: rgba(13,27,42,0.92); }
+
+  /* Native select options */
+  .dark select option { background-color: #1A2D42; color: #E8EEF7; }
+
+  /* Modal / overlay backdrop stays dark — no override needed for bg-black/50 */
+}

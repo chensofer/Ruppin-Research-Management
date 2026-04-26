@@ -145,8 +145,8 @@ export default function MyReportsPage() {
     return matchStatus && matchProject;
   });
 
-  // Count badges
-  const counts = submissions.reduce((acc, s) => {
+  // Count badges — reflect the current project filter
+  const counts = filtered.reduce((acc, s) => {
     acc[s.approvalStatus] = (acc[s.approvalStatus] ?? 0) + 1;
     return acc;
   }, {});

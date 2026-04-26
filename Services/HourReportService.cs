@@ -380,13 +380,33 @@ namespace RupResearchAPI.Services
 
         public async Task<List<MonthlyApprovalDto>> GetPendingForResearcher(string researcherId)
         {
-            // Normalize the researcher's ID to handle inconsistent leading-zero padding in DB
-            var normalizedResearcherId = NormalizeId(researcherId);
-            var allProjects = await _db.ResearchProjects.ToListAsync();
-            var projectIds = allProjects
-                .Where(p => NormalizeId(p.PrincipalResearcherId) == normalizedResearcherId)
+            // Mirror the exact same three-path logic that ProjectService.GetAll uses to find a user's projects,
+            // so that if a project is visible in the dashboard it is also visible in pending approvals.
+            var trimmedId          = researcherId.Trim();
+            var normalizedId       = NormalizeId(researcherId);
+            var allProjects        = await _db.ResearchProjects.ToListAsync();
+
+            // 1. Principal researcher
+            var asPrincipal = allProjects
+                .Where(p => p.PrincipalResearcherId?.Trim() == trimmedId
+                         || NormalizeId(p.PrincipalResearcherId) == normalizedId)
                 .Select(p => p.ProjectId)
                 .ToHashSet();
+
+            // 2. Team member (run as SQL query — same as ProjectService, avoids char-padding issues)
+            var asTeamMember = (await _db.ResearchUsersProjects
+                .Where(u => u.UserId == researcherId)
+                .Select(u => u.ProjectId)
+                .ToListAsync()).ToHashSet();
+
+            // 3. Listed in ResearchAssistants (edge case: researcher also has an assistant record)
+            var allAssistants      = await _db.ResearchAssistants.ToListAsync();
+            var asAssistant        = allAssistants
+                .Where(a => a.AssistantUserId?.Trim() == trimmedId)
+                .Select(a => a.ProjectId)
+                .ToHashSet();
+
+            var projectIds = asPrincipal.Union(asTeamMember).Union(asAssistant).ToHashSet();
 
             if (projectIds.Count == 0) return [];
 
@@ -406,8 +426,7 @@ namespace RupResearchAPI.Services
                 .GroupBy(u => NormalizeId(u.UserId))
                 .ToDictionary(g => g.Key, g => g.First());
 
-            var allAssistants = await _db.ResearchAssistants.ToListAsync();
-
+            // allAssistants already loaded above for project-path lookup — reuse it
             return relevant.Select(a =>
             {
                 projectDict.TryGetValue(a.ProjectId ?? 0, out var project);
@@ -462,14 +481,18 @@ namespace RupResearchAPI.Services
 
             if (projectIds.Count == 0) return [];
 
+            var today = DateOnly.FromDateTime(DateTime.Today);
             var projects = await _db.ResearchProjects.ToListAsync();
             return projects
-                .Where(p => projectIds.Contains(p.ProjectId) && !p.IsArchived)
+                .Where(p => projectIds.Contains(p.ProjectId)
+                         && !p.IsArchived
+                         && (!p.EndDate.HasValue || p.EndDate.Value >= today))
                 .Select(p => new AssistantProjectDto
                 {
                     ProjectId = p.ProjectId,
                     ProjectNameHe = p.ProjectNameHe,
                     ProjectNameEn = p.ProjectNameEn,
+                    Status = p.Status,
                 })
                 .ToList();
         }

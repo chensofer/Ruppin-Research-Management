@@ -111,9 +111,9 @@ export default function DashboardPage() {
   const [alertsOpen, setAlertsOpen]     = useState(false);
   const [budgetAlerts, setBudgetAlerts] = useState([]);
   const [timeAlerts, setTimeAlerts]     = useState([]);
+  const [alertsSeen, setAlertsSeen]     = useState(false);
 
   const handleDismissAlerts = () => {
-    sessionStorage.setItem(SESSION_KEY, new Date().toISOString());
     setAlertsOpen(false);
   };
 
@@ -127,8 +127,7 @@ export default function DashboardPage() {
           const { budgetAlerts: ba, timeAlerts: ta } = buildAlerts(data);
           setBudgetAlerts(ba);
           setTimeAlerts(ta);
-          const dismissed = sessionStorage.getItem(SESSION_KEY);
-          if (!dismissed && (ba.length > 0 || ta.length > 0)) setAlertsOpen(true);
+          if (ba.length > 0 || ta.length > 0) setAlertsOpen(true);
         } catch (e) { console.error('buildAlerts error:', e); }
       })
       .catch(() => toast.error('שגיאה בטעינת המחקרים'))
@@ -141,7 +140,6 @@ export default function DashboardPage() {
     setShowModal(false);
     celebrate('project_created');
     triggerSuccessFeedback(`המחקר "${newProject.projectNameHe}" נוצר בהצלחה!`);
-    sessionStorage.setItem(SESSION_KEY, new Date().toISOString());
     loadProjects();
   };
 
@@ -182,21 +180,21 @@ export default function DashboardPage() {
 
             {/* Actions */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              {totalAlerts > 0 && (
-                <button
-                  onClick={() => setAlertsOpen(true)}
-                  title="הצג התראות"
-                  className="relative p-2.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-500 rounded-xl transition-all duration-150 hover:scale-105"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
+              <button
+                onClick={() => { setAlertsOpen(true); setAlertsSeen(true); }}
+                title="הצג התראות"
+                className="relative p-2.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-500 rounded-xl transition-all duration-150 hover:scale-105"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {totalAlerts > 0 && !alertsSeen && (
                   <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
                     {totalAlerts}
                   </span>
-                </button>
-              )}
+                )}
+              </button>
               <button
                 onClick={() => setShowModal(true)}
                 className="btn-accent flex items-center gap-2 text-sm"

@@ -1110,28 +1110,34 @@ namespace RupResearchAPI.Services
             var sourceName = source.ProjectNameHe ?? source.ProjectNameEn ?? $"מחקר #{sourceId}";
             var targetName = target.ProjectNameHe ?? target.ProjectNameEn ?? $"מחקר #{targetId}";
 
-            // Outgoing from source: expense record (reduces available balance)
+            // Reallocate budgets directly — this is the single source of truth for the balance change.
+            // The payment records below are for the transactions log only (status "העברה" is
+            // intentionally excluded from all expense / available-balance calculations).
+            source.TotalBudget = budget - amount;
+            target.TotalBudget = (target.TotalBudget ?? 0) + amount;
+
+            // Outgoing record for source transactions log
             _db.ResearchPaymentRequests.Add(new ResearchPaymentRequest
             {
                 ProjectId = sourceId,
-                CategoryName = null,
-                RequestTitle = $"העברת תקציב למחקר {targetName}",
-                RequestedAmount = amount,
+                CategoryName = "העברת תקציב",
+                RequestTitle = $"העברת תקציב ← {targetName}",
+                RequestedAmount = amount,       // positive → shown as outgoing (-)
                 RequestDate = today,
-                Status = "שולם",
+                Status = "העברה",
                 ApprovedByUserId = approvedBy,
                 DecisionDate = today,
             });
 
-            // Incoming to target: negative expense = income (increases available balance)
+            // Incoming record for target transactions log
             _db.ResearchPaymentRequests.Add(new ResearchPaymentRequest
             {
                 ProjectId = targetId,
-                CategoryName = null,
-                RequestTitle = $"העברת תקציב ממחקר {sourceName}",
-                RequestedAmount = -amount,
+                CategoryName = "העברת תקציב",
+                RequestTitle = $"העברת תקציב ← {sourceName}",
+                RequestedAmount = -amount,      // negative → shown as incoming (+)
                 RequestDate = today,
-                Status = "שולם",
+                Status = "העברה",
                 ApprovedByUserId = approvedBy,
                 DecisionDate = today,
             });

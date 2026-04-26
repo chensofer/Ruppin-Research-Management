@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import CelebrationBanner from './components/CelebrationBanner';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
@@ -24,6 +25,7 @@ function RoleAwareRoute({ children }) {
 
 export default function App() {
   return (
+    <ThemeProvider>
     <BrowserRouter>
       <CelebrationBanner />
       <Toaster position="top-center" toastOptions={{ duration: 4000 }} />
@@ -68,5 +70,6 @@ export default function App() {
         </Routes>
       </AuthProvider>
     </BrowserRouter>
+    </ThemeProvider>
   );
 }
