@@ -18,7 +18,7 @@ namespace RupResearchAPI
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("FrontendDev", policy =>
-                    policy.WithOrigins("http://localhost:5173")
+                    policy.AllowAnyOrigin()
                           .AllowAnyHeader()
                           .AllowAnyMethod());
             });
@@ -83,26 +83,23 @@ namespace RupResearchAPI
 
             var app = builder.Build();
 
-            // Apply any pending schema changes that are not covered by EF Core migrations
-            using (var scope = app.Services.CreateScope())
+            // Apply any pending schema changes — wrapped in try/catch so startup never fails
+            try
             {
+                using var scope = app.Services.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 db.Database.ExecuteSqlRaw(@"
-                    IF NOT EXISTS (
-                        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-                        WHERE TABLE_NAME = 'research_projects' AND COLUMN_NAME = 'is_archived'
-                    )
+                    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='research_projects' AND COLUMN_NAME='is_archived')
                         ALTER TABLE research_projects ADD is_archived BIT NOT NULL DEFAULT 0;
-
-                    IF NOT EXISTS (
-                        SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-                        WHERE TABLE_NAME = 'research_projects' AND COLUMN_NAME = 'archived_at'
-                    )
+                    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='research_projects' AND COLUMN_NAME='archived_at')
                         ALTER TABLE research_projects ADD archived_at DATETIME NULL;
+                    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='research_future_commitments' AND COLUMN_NAME='file_path')
+                        ALTER TABLE research_future_commitments ADD file_path NVARCHAR(MAX) NULL;
                 ");
             }
+            catch { }
 
-            if (app.Environment.IsDevelopment())
+            if (true)
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
@@ -114,12 +111,12 @@ namespace RupResearchAPI
                 ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads");
             Directory.CreateDirectory(uploadsPath);
 
-            app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseCors("FrontendDev");
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();
+            app.MapFallbackToFile("index.html");
             app.Run();
         }
     }
