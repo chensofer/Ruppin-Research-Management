@@ -86,25 +86,37 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
-  // Filter only approved / paid transactions
-  const approved = payments.filter(
-    (p) => p.status === 'אושר' || p.status === 'שולם'
-  );
+  // Financial transactions — affect the running balance
+  const approved = payments.filter(p => p.status === 'אושר' || p.status === 'שולם');
 
-  // Compute running balance on chronological (oldest-first) order
+  // Budget transfer records — informational only, TotalBudget is adjusted directly on the project
+  const transferRecords = payments.filter(p => p.status === 'העברה');
+
+  // Running balance: chronological order, starting from total budget
   const oldestFirst = [...approved].sort((a, b) => a.paymentRequestId - b.paymentRequestId);
   let running = totalBudget || 0;
-  const withBalance = oldestFirst.map((p) => {
+  const withBalance = oldestFirst.map(p => {
     const amount = p.requestedAmount || 0;
     running -= amount;
     return { ...p, amount, balance: running };
   });
 
-  // Display newest first
-  const allRows = [...withBalance].reverse();
+  // Transfer rows carry no running balance (budget change already baked into TotalBudget)
+  const transfersForDisplay = transferRecords.map(t => ({
+    ...t,
+    amount: t.requestedAmount || 0,
+    balance: null,
+    isTransfer: true,
+  }));
+
+  // Combine newest-first
+  const allRows = [
+    ...withBalance.reverse(),
+    ...transfersForDisplay,
+  ].sort((a, b) => b.paymentRequestId - a.paymentRequestId);
 
   // Apply date range filter
-  const rows = allRows.filter((r) => {
+  const rows = allRows.filter(r => {
     if (!r.requestDate) return true;
     const d = String(r.requestDate).slice(0, 10);
     if (fromDate && d < fromDate) return false;
@@ -203,7 +215,7 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
           ריכוז תנועות ({rows.length})
         </span>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-400">כולל הוצאות שאושרו בלבד</span>
+          <span className="text-xs text-gray-400">הוצאות שאושרו + העברות תקציב</span>
           {/* Export button */}
           <button
             type="button"
@@ -290,15 +302,19 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
                       {r.requestTitle || `בקשה #${r.paymentRequestId}`}
                     </td>
                     <td className="px-5 py-3.5 text-gray-500">{r.categoryName || '—'}</td>
-                    <td className={`px-5 py-3.5 font-medium ${r.amount < 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <td className={`px-5 py-3.5 font-medium ${
+                      r.isTransfer
+                        ? r.amount < 0 ? 'text-blue-600' : 'text-blue-500'
+                        : r.amount < 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
                       {r.amount > 0
-                        ? `−${fmt(r.amount)}`
+                        ? (r.isTransfer ? `−${fmt(r.amount)}` : `−${fmt(r.amount)}`)
                         : r.amount < 0
                           ? `+${fmt(-r.amount)}`
                           : '—'}
                     </td>
-                    <td className={`px-5 py-3.5 font-semibold ${r.balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {fmt(r.balance)}
+                    <td className={`px-5 py-3.5 font-semibold ${r.balance == null ? 'text-gray-400' : r.balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {r.balance == null ? '—' : fmt(r.balance)}
                     </td>
                   </tr>
                   {expandedRow === r.paymentRequestId && (

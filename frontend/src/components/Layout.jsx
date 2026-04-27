@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import Logo from './Logo';
 import {
   HiSquares2X2, HiCheckCircle, HiCalendarDays, HiDocumentChartBar,
   HiArrowRightOnRectangle, HiBars3, HiChartBar, HiArchiveBox,
+  HiSun, HiMoon,
 } from 'react-icons/hi2';
 import { getPendingPaymentRequests } from '../api/paymentRequestsApi';
 import { getPendingHourApprovals } from '../api/hourReportsApi';
@@ -16,7 +18,9 @@ const ASSISTANT_NAV = [
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
+  const { dark, toggle } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen]       = useState(false);
   const [pendingCount, setPendingCount]   = useState(0);
 
@@ -38,6 +42,11 @@ export default function Layout({ children }) {
   const initials =
     ((user?.firstName?.[0] ?? '') + (user?.lastName?.[0] ?? '')).toUpperCase() ||
     (user?.userId?.[0] ?? '?').toUpperCase();
+
+  // Clear badge when the user opens the approvals page
+  useEffect(() => {
+    if (location.pathname === '/approvals') setPendingCount(0);
+  }, [location.pathname]);
 
   // Fetch pending approvals count on mount (researchers only)
   useEffect(() => {
@@ -114,6 +123,15 @@ export default function Layout({ children }) {
             <p className="text-xs text-white/45 truncate mt-0.5">{user?.userId}</p>
           </button>
 
+          {/* Theme toggle */}
+          <button
+            onClick={toggle}
+            className="flex-shrink-0 p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
+            title={dark ? 'מצב יום' : 'מצב לילה'}
+          >
+            {dark ? <HiSun className="w-4 h-4" /> : <HiMoon className="w-4 h-4" />}
+          </button>
+
           {/* Logout */}
           <button
             onClick={handleLogout}
@@ -155,7 +173,7 @@ export default function Layout({ children }) {
       </div>
 
       {/* Main content */}
-      <main className="flex-1 md:mr-64 p-4 md:p-8 min-h-screen pt-16 md:pt-8 overflow-x-clip">
+      <main className="flex-1 md:mr-64 p-4 md:p-8 min-h-screen pt-16 md:pt-8 overflow-x-hidden">
         {children}
       </main>
     </div>

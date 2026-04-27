@@ -56,6 +56,7 @@ namespace RupResearchAPI.DTOs
         public int ProjectId { get; set; }
         public string? ProjectNameHe { get; set; }
         public string? ProjectNameEn { get; set; }
+        public string? Status { get; set; }
     }
 
     public class DecideMonthlyApprovalDto

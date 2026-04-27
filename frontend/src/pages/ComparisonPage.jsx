@@ -206,6 +206,7 @@ export default function ComparisonPage() {
   const [compareData, setCompareData] = useState({});
   const [loadingCmp,  setLoadingCmp]  = useState(false);
   const [period,      setPeriod]      = useState('monthly');
+  const [search,      setSearch]      = useState('');
 
   const load = useCallback(() => {
     setLoading(true);
@@ -261,6 +262,16 @@ export default function ComparisonPage() {
   ];
 
   const selectedProjects = selectedIds.map(id => projects.find(p => p.projectId === id)).filter(Boolean);
+
+  // Projects shown in the picker (active only, filtered by search query)
+  const filteredForDisplay = projects.filter((p) => {
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return (
+      (p.projectNameHe || '').toLowerCase().includes(q) ||
+      (p.projectNameEn || '').toLowerCase().includes(q)
+    );
+  });
   const metrics          = buildMetrics(selectedProjects, compareData);
 
   const trendData = (() => {
@@ -386,9 +397,32 @@ export default function ComparisonPage() {
         {mode === 'compare' && (
           <>
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
-              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              {/* Header row */}
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
                 <h2 className="text-sm font-semibold text-gray-700">בחר מחקרים להשוואה</h2>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Search */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="חיפוש מחקר..."
+                      className="border border-gray-200 rounded-xl pr-3 pl-7 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-white w-44"
+                    />
+                    {search ? (
+                      <button
+                        onClick={() => setSearch('')}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 leading-none text-base"
+                      >×</button>
+                    ) : (
+                      <svg className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-300 pointer-events-none"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+                      </svg>
+                    )}
+                  </div>
                   <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full font-medium">
                     {selectedIds.length} נבחרו
                   </span>
@@ -400,19 +434,30 @@ export default function ComparisonPage() {
                   )}
                 </div>
               </div>
+
+              {/* Result count when searching */}
+              {search.trim() && (
+                <p className="text-xs text-gray-400 mb-2">
+                  מציג {filteredForDisplay.length} מתוך {projects.length} מחקרים פעילים
+                </p>
+              )}
+
               {loading ? (
                 <div className="flex justify-center py-8">
                   <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 </div>
+              ) : filteredForDisplay.length === 0 ? (
+                <p className="text-sm text-gray-400 py-4 text-center">לא נמצאו מחקרים תואמים</p>
               ) : (
-                <div className="flex flex-wrap gap-2">
-                  {projects.map((p) => {
+                /* Scrollable pill container — max 3 rows before scroll */
+                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pb-1">
+                  {filteredForDisplay.map((p) => {
                     const idx = selectedIds.indexOf(p.projectId);
                     const selected = idx !== -1;
                     const color = COLORS[idx % COLORS.length];
                     return (
                       <button key={p.projectId} onClick={() => toggleSelect(p.projectId)}
-                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium border transition-all ${
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium border transition-all flex-shrink-0 ${
                           selected
                             ? 'text-white border-transparent shadow-sm'
                             : 'text-gray-600 border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
@@ -444,10 +489,9 @@ export default function ComparisonPage() {
               </div>
             ) : (
               <>
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-5">
-                  <div className="overflow-x-auto">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto mb-5">
                     <table className="text-sm" dir="rtl"
-                      style={{ minWidth: `${180 + selectedProjects.length * 160}px`, width: '100%' }}>
+                      style={{ minWidth: `${180 + selectedProjects.length * 160}px` }}>
                       <thead>
                         <tr className="border-b border-gray-100 bg-gray-50/70">
                           <th className="px-5 py-4 text-right sticky right-0 z-10 bg-gray-50 w-44 border-l border-gray-100">
@@ -504,7 +548,6 @@ export default function ComparisonPage() {
                         })}
                       </tbody>
                     </table>
-                  </div>
                 </div>
 
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">

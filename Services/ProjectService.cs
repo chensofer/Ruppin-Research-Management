@@ -1081,6 +1081,12 @@ namespace RupResearchAPI.Services
             var target = await _db.ResearchProjects.FindAsync(targetId)
                 ?? throw new KeyNotFoundException("מחקר יעד לא נמצא");
 
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            bool targetStatusInactive = target.Status != "פעיל" && target.Status != "Active" && target.Status != "active";
+            bool targetExpired = target.EndDate.HasValue && target.EndDate.Value < today;
+            if (target.IsArchived || targetStatusInactive || targetExpired)
+                throw new InvalidOperationException("לא ניתן להעביר כספים למחקר שאינו פעיל או למחקר בארכיון");
+
             // Calculate available balance for source (budget - paid/approved - future commitments)
             var sourcePayments = await _db.ResearchPaymentRequests
                 .Where(r => r.ProjectId == sourceId)
@@ -1100,33 +1106,38 @@ namespace RupResearchAPI.Services
             if (availableBalance < amount)
                 throw new InvalidOperationException("יתרה זמינה לא מספיקה לביצוע ההעברה");
 
-            var today = DateOnly.FromDateTime(DateTime.Today);
             var approvedBy = userId.Length > 10 ? userId[..10] : userId;
             var sourceName = source.ProjectNameHe ?? source.ProjectNameEn ?? $"מחקר #{sourceId}";
             var targetName = target.ProjectNameHe ?? target.ProjectNameEn ?? $"מחקר #{targetId}";
 
-            // Outgoing from source: expense record (reduces available balance)
+            // Reallocate budgets directly — this is the single source of truth for the balance change.
+            // The payment records below are for the transactions log only (status "העברה" is
+            // intentionally excluded from all expense / available-balance calculations).
+            source.TotalBudget = budget - amount;
+            target.TotalBudget = (target.TotalBudget ?? 0) + amount;
+
+            // Outgoing record for source transactions log
             _db.ResearchPaymentRequests.Add(new ResearchPaymentRequest
             {
                 ProjectId = sourceId,
-                CategoryName = null,
-                RequestTitle = $"העברת תקציב למחקר {targetName}",
-                RequestedAmount = amount,
+                CategoryName = "העברת תקציב",
+                RequestTitle = $"העברת תקציב ← {targetName}",
+                RequestedAmount = amount,       // positive → shown as outgoing (-)
                 RequestDate = today,
-                Status = "שולם",
+                Status = "העברה",
                 ApprovedByUserId = approvedBy,
                 DecisionDate = today,
             });
 
-            // Incoming to target: negative expense = income (increases available balance)
+            // Incoming record for target transactions log
             _db.ResearchPaymentRequests.Add(new ResearchPaymentRequest
             {
                 ProjectId = targetId,
-                CategoryName = null,
-                RequestTitle = $"העברת תקציב ממחקר {sourceName}",
-                RequestedAmount = -amount,
+                CategoryName = "העברת תקציב",
+                RequestTitle = $"העברת תקציב ← {sourceName}",
+                RequestedAmount = -amount,      // negative → shown as incoming (+)
                 RequestDate = today,
-                Status = "שולם",
+                Status = "העברה",
                 ApprovedByUserId = approvedBy,
                 DecisionDate = today,
             });

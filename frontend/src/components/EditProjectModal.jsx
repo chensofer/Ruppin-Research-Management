@@ -153,6 +153,7 @@ function DetailsTab({ form, setForm, errors, allUsers, usersLoading, centers }) 
             value={form.startDate}
             onChange={(iso) => setForm((f) => ({ ...f, startDate: iso }))}
             placeholder="בחר תאריך התחלה"
+            maxDate={form.endDate}
             className={`${inputCls} ${errors.startDate ? errorCls : ''}`}
           />
         </Field>
