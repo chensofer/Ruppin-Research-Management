@@ -201,6 +201,7 @@ export default function StepDetails({ data, onChange, errors }) {
             value={data.startDate}
             onChange={(iso) => onChange({ ...data, startDate: iso })}
             placeholder="בחר תאריך התחלה"
+            maxDate={data.endDate}
             className={`${inputCls} ${errors.startDate ? errorCls : ''}`}
           />
         </Field>
