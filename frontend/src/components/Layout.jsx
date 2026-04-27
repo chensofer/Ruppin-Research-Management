@@ -85,7 +85,7 @@ export default function Layout({ children }) {
             <span className="flex-1">{item.label}</span>
             {/* Pending badge */}
             {item.badge > 0 && (
-              <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center leading-none">
+              <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
                 {item.badge > 99 ? '99+' : item.badge}
               </span>
             )}

@@ -128,7 +128,7 @@ export default function AlertsModal({ budgetAlerts, timeAlerts, onClose }) {
                               style={{ width: `${a.elapsedPct}%` }}
                             />
                           </div>
-                          <p className="text-[11px] text-orange-400 mt-1">{a.elapsedPct}% מהתקופה חלף</p>
+                          <p className="text-xs text-orange-400 mt-1">{a.elapsedPct}% מהתקופה חלף</p>
                         </div>
                       ))}
                     </div>

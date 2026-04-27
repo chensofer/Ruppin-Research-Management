@@ -5,7 +5,6 @@ import { getPendingPaymentRequests, updatePaymentRequestStatus } from '../api/pa
 import { getPendingHourApprovals, decideMonthlyApproval } from '../api/hourReportsApi';
 import Layout from '../components/Layout';
 import { requestNotificationPermission, sendNotification } from '../utils/notifications';
-import { triggerSuccessFeedback } from '../utils/successFeedback';
 import { celebrate } from '../utils/celebrate';
 
 const MONTH_NAMES = [
@@ -107,7 +106,7 @@ function RequestCard({ request, onApprove, onReject }) {
               {request.requestTitle || 'בקשה ללא כותרת'}
             </h4>
             {request.categoryName && (
-              <span className="inline-block mt-1.5 text-[11px] font-semibold bg-primary-light text-primary px-2.5 py-0.5 rounded-full">
+              <span className="inline-block mt-1.5 text-xs font-semibold bg-primary-light text-primary px-2.5 py-0.5 rounded-full">
                 {request.categoryName}
               </span>
             )}
@@ -174,7 +173,7 @@ function RequestCard({ request, onApprove, onReject }) {
                 <div className="flex flex-wrap gap-1.5">
                   {quotationFiles.map((path, i) => (
                     <a key={i} href={`http://localhost:5269${path}`} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary bg-primary-light hover:bg-primary/20 px-2.5 py-1 rounded-lg transition-colors text-[11px] font-medium">
+                      className="inline-flex items-center gap-1 text-primary bg-primary-light hover:bg-primary/20 px-2.5 py-1 rounded-lg transition-colors text-xs font-medium">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                       </svg>
@@ -232,7 +231,7 @@ function HourApprovalCard({ record, onDecide }) {
               <p className="text-sm font-bold text-accent-dark tabular-nums">{fmtCurrency(paymentAmount)}</p>
             )}
             {record.salaryPerHour != null && (
-              <p className="text-[11px] text-gray-400">{fmtCurrency(record.salaryPerHour)}/שע׳</p>
+              <p className="text-xs text-gray-400">{fmtCurrency(record.salaryPerHour)}/שע׳</p>
             )}
           </div>
         </div>
@@ -321,7 +320,6 @@ export default function ApprovalsPage() {
       await updatePaymentRequestStatus(id, { status: 'אושר', approvedByUserId: user?.userId });
       setRequests((prev) => prev.filter((r) => r.paymentRequestId !== id));
       celebrate('payment_approved');
-      triggerSuccessFeedback('הבקשה אושרה בהצלחה!');
     } catch { showToast('שגיאה באישור הבקשה'); }
   };
 
@@ -338,7 +336,7 @@ export default function ApprovalsPage() {
       await decideMonthlyApproval(id, { approvalStatus: status, approvedByUserId: user?.userId, comments: comments || null });
       setHourRecords((prev) => prev.filter((r) => r.monthlyApprovalId !== id));
       if (status === 'אושר') celebrate('hours_approved');
-      showToast(status === 'אושר' ? 'שעות אושרו ✓' : 'שעות נדחו');
+      else showToast('שעות נדחו');
       return null;
     } catch (err) {
       const msg = err.response?.data?.message || 'שגיאה בעדכון';
@@ -431,7 +429,7 @@ export default function ApprovalsPage() {
             >
               {t.label}
               {t.count > 0 && (
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                   tab === t.id ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-200 text-gray-500'
                 }`}>
                   {t.count}

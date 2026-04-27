@@ -166,10 +166,10 @@ function UsageBar({ percent }) {
   return (
     <div>
       <div className="flex justify-between items-center mb-1.5">
-        <span className="text-[11px] font-semibold tabular-nums" style={{ color }}>
+        <span className="text-xs font-semibold tabular-nums" style={{ color }}>
           {percent}%
         </span>
-        <span className="text-[11px] text-gray-400">ניצול תקציב</span>
+        <span className="text-xs text-gray-400">ניצול תקציב</span>
       </div>
       <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
         <div
@@ -209,14 +209,14 @@ function PerformanceBadge({ score, project }) {
               style={{ transition: 'stroke-dasharray 0.6s ease' }}
             />
           </svg>
-          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold" style={{ color }}>
+          <span className="absolute inset-0 flex items-center justify-center text-xs font-extrabold" style={{ color }}>
             {score}
           </span>
         </div>
 
         {/* Label */}
         <div className="text-right flex-1 min-w-0">
-          <p className="text-[10px] text-gray-400 leading-none mb-0.5">מדד ביצועים</p>
+          <p className="text-xs text-gray-400 leading-none mb-0.5">מדד ביצועים</p>
           <p className="text-xs font-bold leading-none" style={{ color }}>{label}</p>
         </div>
 
@@ -240,16 +240,16 @@ function PerformanceBadge({ score, project }) {
           {/* Reasons */}
           <div className="pt-2 space-y-1">
             {reasons.map((r, i) => (
-              <p key={i} className="text-[11px] text-gray-600 leading-snug">{r}</p>
+              <p key={i} className="text-xs text-gray-600 leading-snug">{r}</p>
             ))}
           </div>
 
           {/* Improvements */}
           {improvements.length > 0 && (
             <div className="pt-1 border-t" style={{ borderColor: ring + '30' }}>
-              <p className="text-[10px] font-bold text-gray-500 mb-1">💡 המלצות לשיפור:</p>
+              <p className="text-xs font-bold text-gray-500 mb-1">💡 המלצות לשיפור:</p>
               {improvements.map((tip, i) => (
-                <p key={i} className="text-[11px] text-gray-600 leading-snug">{tip}</p>
+                <p key={i} className="text-xs text-gray-600 leading-snug">{tip}</p>
               ))}
             </div>
           )}
@@ -326,7 +326,7 @@ export default function ProjectCard({ project }) {
         <div className="bg-gray-50/80 rounded-xl p-3.5 border border-gray-100 space-y-3 mt-auto">
           <div className="flex justify-between items-end" dir="rtl">
             <div className="text-right">
-              <p className="text-[11px] text-gray-400 font-medium mb-0.5">יתרה זמינה</p>
+              <p className="text-xs text-gray-400 font-medium mb-0.5">יתרה זמינה</p>
               <p className={`text-xl font-extrabold tabular-nums leading-none ${
                 balanceNegative ? 'text-red-600' : 'text-accent-dark'
               }`}>
@@ -334,13 +334,13 @@ export default function ProjectCard({ project }) {
               </p>
             </div>
             <div className="text-left">
-              <p className="text-[11px] text-gray-400 font-medium mb-0.5">תקציב</p>
+              <p className="text-xs text-gray-400 font-medium mb-0.5">תקציב</p>
               <p className="text-sm font-bold text-gray-600 tabular-nums">{fmt(budget)}</p>
             </div>
           </div>
 
           {project.totalFuture > 0 && (
-            <div className="flex justify-between text-[11px] border-t border-gray-200 pt-2.5" dir="rtl">
+            <div className="flex justify-between text-xs border-t border-gray-200 pt-2.5" dir="rtl">
               <span className="text-gray-400">זמין לאחר התחייבויות</span>
               <span className="font-semibold text-amber-600 tabular-nums">{fmt(available)}</span>
             </div>

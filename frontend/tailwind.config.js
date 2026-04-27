@@ -23,14 +23,14 @@ export default {
         hebrew: ['Assistant', 'sans-serif'],
       },
       fontSize: {
-        '2xs': ['0.6875rem', { lineHeight: '1.4' }],   // 11px
-        xs:    ['0.75rem',   { lineHeight: '1.5' }],   // 12px
-        sm:    ['0.875rem',  { lineHeight: '1.6' }],   // 14px
-        base:  ['1rem',      { lineHeight: '1.7' }],   // 16px
-        lg:    ['1.0625rem', { lineHeight: '1.65' }],  // 17px
-        xl:    ['1.125rem',  { lineHeight: '1.6' }],   // 18px
-        '2xl': ['1.375rem',  { lineHeight: '1.4' }],   // 22px
-        '3xl': ['1.625rem',  { lineHeight: '1.3' }],   // 26px
+        '2xs': ['0.75rem',     { lineHeight: '1.4' }],   // 12px
+        xs:    ['0.78125rem',  { lineHeight: '1.5' }],   // 12.5px
+        sm:    ['0.84375rem',  { lineHeight: '1.6' }],   // 13.5px
+        base:  ['0.9375rem',   { lineHeight: '1.7' }],   // 15px
+        lg:    ['1rem',        { lineHeight: '1.65' }],  // 16px
+        xl:    ['1.0625rem',   { lineHeight: '1.6' }],   // 17px
+        '2xl': ['1.3125rem',   { lineHeight: '1.4' }],   // 21px
+        '3xl': ['1.5rem',      { lineHeight: '1.3' }],   // 24px
       },
       boxShadow: {
         card:        '0 1px 3px rgba(0,52,120,0.06), 0 4px 20px rgba(0,52,120,0.07)',

@@ -3,7 +3,6 @@ import { getCategories } from '../../api/categoriesApi';
 import HebrewDatePicker from '../HebrewDatePicker';
 import { getProviders, createProvider } from '../../api/providersApi';
 import { createPaymentRequest, uploadQuotationFile } from '../../api/paymentRequestsApi';
-import { triggerSuccessFeedback } from '../../utils/successFeedback';
 import { celebrate } from '../../utils/celebrate';
 import { useEffect } from 'react';
 
@@ -113,7 +112,6 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
       setSelectedFiles([]);
       setShowForm(false);
       celebrate('payment_submitted');
-      triggerSuccessFeedback('בקשת התשלום נשלחה בהצלחה!');
       onCreated();
 
       // Upload files sequentially; refresh again when done

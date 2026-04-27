@@ -11,23 +11,21 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
-const STATUS_FILTERS = [
-  { value: 'all',   label: 'הכל' },
-  { value: 'ממתין', label: 'ממתין לאישור' },
-  { value: 'אושר',  label: 'אושר' },
-  { value: 'נדחה',  label: 'נדחה' },
-];
 
 const STATUS_STYLES = {
-  'אושר':  { badge: 'bg-green-100 text-green-700',  row: 'border-r-4 border-green-400' },
-  'נדחה':  { badge: 'bg-red-100 text-red-700',    row: 'border-r-4 border-red-400' },
-  'ממתין': { badge: 'bg-yellow-100 text-yellow-700', row: 'border-r-4 border-yellow-400' },
+  'אושר':  { badge: 'bg-green-100 text-green-700 ring-1 ring-green-200',   row: 'border-r-4 border-green-400' },
+  'נדחה':  { badge: 'bg-red-100 text-red-700 ring-1 ring-red-200',         row: 'border-r-4 border-red-400' },
+  'ממתין': { badge: 'bg-yellow-100 text-yellow-700 ring-1 ring-yellow-200', row: 'border-r-4 border-yellow-400' },
 };
+
+const STATUS_ICONS = { 'אושר': '✅', 'נדחה': '❌', 'ממתין': '⏳' };
 
 function StatusBadge({ status }) {
   const style = STATUS_STYLES[status]?.badge ?? 'bg-gray-100 text-gray-600';
+  const icon = STATUS_ICONS[status] ?? '';
   return (
-    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${style}`}>
+    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 ${style}`}>
+      <span>{icon}</span>
       {status}
     </span>
   );
@@ -158,76 +156,68 @@ export default function MyReportsPage() {
       <div className="max-w-4xl mx-auto" dir="rtl">
 
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">הדוחות שלי</h1>
-            <p className="text-gray-500 text-sm mt-1">
-              {user?.firstName} {user?.lastName} — כל הדוחות החודשיים שנשלחו לאישור
-            </p>
-          </div>
-          <button
-            onClick={() => navigate('/attendance')}
-            className="flex items-center gap-2 text-sm text-primary hover:text-primary-dark font-medium transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            חזרה לדיווח נוכחות
-          </button>
-        </div>
-
-        {/* Summary cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-          {[
-            { label: 'ממתין לאישור', status: 'ממתין', color: 'yellow' },
-            { label: 'אושרו',        status: 'אושר',  color: 'green' },
-            { label: 'נדחו',         status: 'נדחה',  color: 'red' },
-          ].map(({ label, status, color }) => (
+        <div className="mb-5 rounded-xl px-5 py-3.5 text-white relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #1B4080 0%, #003478 60%, #7C3AED 100%)' }}>
+          <div className="absolute top-0 left-0 w-32 h-32 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
+          <div className="relative z-10 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-lg flex-shrink-0">📊</div>
+              <div>
+                <h1 className="text-lg font-extrabold tracking-tight leading-tight">הדוחות שלי</h1>
+                <p className="text-blue-200 text-xs mt-0.5">
+                  {user?.firstName} {user?.lastName} — כל הדוחות החודשיים שנשלחו לאישור
+                </p>
+              </div>
+            </div>
             <button
-              key={status}
-              onClick={() => setStatusFilter((prev) => prev === status ? 'all' : status)}
-              className={`bg-white rounded-xl border shadow-sm p-4 text-right transition-all ${
-                statusFilter === status
-                  ? `border-${color}-300 ring-2 ring-${color}-200`
-                  : 'border-gray-100 hover:border-gray-200'
-              }`}
+              onClick={() => navigate('/attendance')}
+              className="flex items-center gap-2 text-xs text-blue-200 hover:text-white font-medium transition-colors bg-white/10 hover:bg-white/20 rounded-lg px-3 py-1.5 flex-shrink-0"
             >
-              <p className={`text-2xl font-bold text-${color}-600`}>
-                {counts[status] ?? 0}
-              </p>
-              <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              דיווח נוכחות
             </button>
-          ))}
+          </div>
         </div>
 
-        {/* Filters bar */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 mb-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
-          {/* Status filter tabs */}
-          <div className="flex items-center gap-0.5 bg-gray-100 p-1 rounded-lg overflow-x-auto">
-            {STATUS_FILTERS.map((f) => (
+        {/* Summary cards — also serve as status filter */}
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <button
+            onClick={() => setStatusFilter('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+              statusFilter === 'all'
+                ? 'bg-gray-800 text-white border-gray-800 shadow-sm'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            הכל ({submissions.length})
+          </button>
+          {[
+            { label: 'ממתין לאישור', status: 'ממתין', icon: '⏳', bg: 'linear-gradient(135deg, #FEF9C3 0%, #FEF08A 100%)', border: 'border-yellow-200', ring: 'ring-yellow-300', num: 'text-yellow-700' },
+            { label: 'אושרו',        status: 'אושר',  icon: '✅', bg: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', border: 'border-green-200',  ring: 'ring-green-300',  num: 'text-green-700' },
+            { label: 'נדחו',         status: 'נדחה',  icon: '❌', bg: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)', border: 'border-red-200',    ring: 'ring-red-300',    num: 'text-red-700' },
+          ].map(({ label, status, icon, bg, border, ring, num }) => {
+            const active = statusFilter === status;
+            return (
               <button
-                key={f.value}
-                onClick={() => setStatusFilter(f.value)}
-                className={`flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  statusFilter === f.value
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
+                key={status}
+                onClick={() => setStatusFilter((prev) => prev === status ? 'all' : status)}
+                style={{ background: bg }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${border} ${active ? `ring-2 ${ring} shadow-sm` : 'hover:shadow-sm'}`}
               >
-                {f.label}
-                {f.value !== 'all' && counts[f.value] > 0 && (
-                  <span className="mr-1.5 text-gray-400">({counts[f.value]})</span>
-                )}
+                <span>{icon}</span>
+                <span className={num}>{counts[status] ?? 0}</span>
+                <span className="text-gray-600">{label}</span>
               </button>
-            ))}
-          </div>
+            );
+          })}
 
           {/* Project filter — only when user has multiple projects */}
           {projects.length > 1 && (
             <select
               value={projectFilter}
               onChange={(e) => setProjectFilter(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary text-gray-700 self-start sm:self-auto"
+              className="mr-auto border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary text-gray-700"
             >
               <option value="all">כל המחקרים</option>
               {projects.map((p) => (

@@ -8,7 +8,10 @@
       "Bash(dotnet ef *)",
       "Bash(python3)",
       "Bash(node -e \"const fs=require\\('fs'\\); fs.writeFileSync\\('C:/Users/shach/Desktop/Ruppin-Research-Management/frontend/src/pages/ComparisonPage.jsx', 'placeholder2\\\\n', 'utf8'\\); console.log\\('ok'\\);\")",
-      "Bash(sqlcmd -S media.ruppin.ac.il -d bgroup11_test2 -U bgroup11 -P \"bgroup11_79466\" -Q \"SELECT DISTINCT RTRIM\\(status\\) as status FROM research_projects\")"
+      "Bash(sqlcmd -S media.ruppin.ac.il -d bgroup11_test2 -U bgroup11 -P \"bgroup11_79466\" -Q \"SELECT DISTINCT RTRIM\\(status\\) as status FROM research_projects\")",
+      "Bash(netstat -ano)",
+      "Bash(npm install *)",
+      "Bash(node -e \"const pkg = require\\('./node_modules/exceljs/package.json'\\); console.log\\('main:', pkg.main\\); console.log\\('browser:', JSON.stringify\\(pkg.browser\\)\\); console.log\\('exports keys:', Object.keys\\(pkg.exports||{}\\).slice\\(0,5\\)\\)\")"
     ]
   }
 }
