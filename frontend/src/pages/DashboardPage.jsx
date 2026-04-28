@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react';
-import { triggerSuccessFeedback } from '../utils/successFeedback';
 import { celebrate } from '../utils/celebrate';
 import { useAuth } from '../context/AuthContext';
 import { getProjects } from '../api/projectsApi';
@@ -7,10 +6,10 @@ import Layout from '../components/Layout';
 import ProjectCard from '../components/ProjectCard';
 import CreateProjectModal from '../components/CreateProjectModal';
 import AlertsModal from '../components/AlertsModal';
+import toast from 'react-hot-toast';
 
 const BUDGET_ALERT_PCT = 20;
 const TIME_ALERT_PCT   = 70;
-const SESSION_KEY = 'projectAlertsDismissedAt';
 
 function daysBetween(a, b) {
   return Math.round((new Date(b) - new Date(a)) / 86400000);
@@ -127,19 +126,24 @@ export default function DashboardPage() {
           const { budgetAlerts: ba, timeAlerts: ta } = buildAlerts(data);
           setBudgetAlerts(ba);
           setTimeAlerts(ta);
-          if (ba.length > 0 || ta.length > 0) setAlertsOpen(true);
+          if (ba.length > 0 || ta.length > 0) {
+            if (!sessionStorage.getItem('alerts_shown')) {
+              sessionStorage.setItem('alerts_shown', '1');
+              setAlertsOpen(true);
+              setAlertsSeen(true);
+            }
+          }
         } catch (e) { console.error('buildAlerts error:', e); }
       })
       .catch(() => toast.error('שגיאה בטעינת המחקרים'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [user]);
 
   useEffect(() => { loadProjects(); }, [loadProjects]);
 
   const handleCreated = (newProject) => {
     setShowModal(false);
-    celebrate('project_created');
-    triggerSuccessFeedback(`המחקר "${newProject.projectNameHe}" נוצר בהצלחה!`);
+    celebrate('project_created', `המחקר "${newProject.projectNameHe}" נוצר בהצלחה!`);
     loadProjects();
   };
 
@@ -190,7 +194,7 @@ export default function DashboardPage() {
                     d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
                 {totalAlerts > 0 && !alertsSeen && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
                     {totalAlerts}
                   </span>
                 )}
@@ -256,7 +260,7 @@ export default function DashboardPage() {
                     }`}
                   >
                     {opt.label}
-                    <span className={`text-[10px] tabular-nums ${
+                    <span className={`text-xs tabular-nums ${
                       statusFilter === opt.value ? 'text-gray-500' : 'text-gray-300'
                     }`}>
                       {opt.count}

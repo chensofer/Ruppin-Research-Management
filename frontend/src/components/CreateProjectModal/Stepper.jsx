@@ -60,7 +60,7 @@ export default function Stepper({ currentStep }) {
                     </svg>
                   )}
                 </div>
-                <span className={`text-center leading-tight whitespace-nowrap text-[10px] font-medium ${
+                <span className={`text-center leading-tight whitespace-nowrap text-xs font-medium ${
                   isCompleted ? 'text-green-600' :
                   isActive    ? 'text-primary'   : 'text-gray-400'
                 }`}>

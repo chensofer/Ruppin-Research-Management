@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import HebrewDatePicker from '../HebrewDatePicker';
 
 const fmt = (n) =>
@@ -125,86 +125,127 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
   });
 
   // ── Excel export ────────────────────────────────────────────────────────────
-  const exportToExcel = () => {
-    const today = new Date();
+  const exportToExcel = async () => {
+    const today    = new Date();
     const todayStr = today.toLocaleDateString('he-IL');
     const todayISO = today.toISOString().slice(0, 10);
 
-    // ── Metadata rows ──────────────────────────────────────────────────────────
-    const metaRows = [
-      [`ריכוז תנועות — ${projectName || 'מחקר'}`],
-      [`יוצא בתאריך: ${todayStr}`],
+    const wb = new ExcelJS.Workbook();
+    wb.creator  = 'מערכת ניהול מחקר';
+    wb.created  = today;
+
+    const ws = wb.addWorksheet('ריכוז תנועות', {
+      views: [{ rightToLeft: true }],   // ← RTL sheet direction
+    });
+
+    // Column definitions (width in characters)
+    ws.columns = [
+      { width: 13 }, // תאריך
+      { width: 36 }, // כותרת
+      { width: 22 }, // קטגוריה
+      { width: 26 }, // ספק / מבצע
+      { width: 34 }, // פירוט
+      { width: 16 }, // סכום
+      { width: 16 }, // יתרה
     ];
+
+    // Shared alignment for all RTL text cells
+    const rtl  = { horizontal: 'right', readingOrder: 2, wrapText: false };
+    const rtlW = { ...rtl, wrapText: true };
+
+    const applyRtl = (row, overrides = []) => {
+      row.eachCell({ includeEmpty: true }, (cell, col) => {
+        cell.alignment = overrides[col - 1] ?? rtl;
+      });
+    };
+
+    // ── Metadata ──────────────────────────────────────────────────────────────
+    const titleRow = ws.addRow([`ריכוז תנועות — ${projectName || 'מחקר'}`]);
+    ws.mergeCells(titleRow.number, 1, titleRow.number, 7);
+    titleRow.getCell(1).alignment = rtl;
+    titleRow.getCell(1).font = { bold: true, size: 14 };
+
+    const dateRow = ws.addRow([`יוצא בתאריך: ${todayStr}`]);
+    ws.mergeCells(dateRow.number, 1, dateRow.number, 7);
+    dateRow.getCell(1).alignment = rtl;
+    dateRow.getCell(1).font = { size: 11, color: { argb: 'FF6B7280' } };
 
     if (fromDate || toDate) {
-      const range = [fromDate ? `מ-${fromDate}` : '', toDate ? `עד ${toDate}` : ''].filter(Boolean).join('  ');
-      metaRows.push([`טווח תאריכים: ${range}`]);
+      const range = [fromDate ? `מ-${fromDate}` : '', toDate ? `עד ${toDate}` : '']
+        .filter(Boolean).join('  ');
+      const rangeRow = ws.addRow([`טווח תאריכים: ${range}`]);
+      ws.mergeCells(rangeRow.number, 1, rangeRow.number, 7);
+      rangeRow.getCell(1).alignment = rtl;
+      rangeRow.getCell(1).font = { size: 11, color: { argb: 'FF6B7280' } };
     }
 
-    metaRows.push([]); // blank separator
+    ws.addRow([]); // blank separator
 
     // ── Column headers ─────────────────────────────────────────────────────────
-    const headers = [
-      'תאריך',
-      'כותרת',
-      'קטגוריה',
-      'ספק / מבצע',
-      'פירוט',
-      'סכום (₪)',
-      'יתרה (₪)',
-    ];
+    const headerRow = ws.addRow(['תאריך', 'כותרת', 'קטגוריה', 'ספק / מבצע', 'פירוט', 'סכום (₪)', 'יתרה (₪)']);
+    applyRtl(headerRow);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, size: 12 };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE6EBF5' } };
+      cell.border = { bottom: { style: 'medium', color: { argb: 'FF003478' } } };
+    });
+    headerRow.height = 22;
 
     // ── Data rows ──────────────────────────────────────────────────────────────
-    const dataRows = rows.map((r) => [
-      r.requestDate ? String(r.requestDate).slice(0, 10) : '',
-      r.requestTitle || `בקשה #${r.paymentRequestId}`,
-      r.categoryName || '',
-      // Wage rows: show assistant name. Regular rows: show provider name.
-      r.categoryName === WAGE_CATEGORY
-        ? (r.requestedByUserName || r.requestedByUserId || '')
-        : (r.providerName || ''),
-      r.requestDescription || '',
-      r.amount || 0,    // numeric — Excel can sort/sum
-      r.balance || 0,   // numeric
-    ]);
+    rows.forEach((r) => {
+      const dataRow = ws.addRow([
+        r.requestDate ? String(r.requestDate).slice(0, 10) : '',
+        r.requestTitle || `בקשה #${r.paymentRequestId}`,
+        r.categoryName || '',
+        r.categoryName === WAGE_CATEGORY
+          ? (r.requestedByUserName || r.requestedByUserId || '')
+          : (r.providerName || ''),
+        r.requestDescription || '',
+        r.amount   ?? 0,
+        r.balance  ?? 0,
+      ]);
+      // Per-column alignment: title (col2) and description (col5) wrap
+      applyRtl(dataRow, [rtl, rtlW, rtl, rtl, rtlW, rtl, rtl]);
+      // Numeric format for amount + balance
+      dataRow.getCell(6).numFmt = '#,##0.00';
+      dataRow.getCell(7).numFmt = '#,##0.00';
+    });
 
     // ── Summary rows ───────────────────────────────────────────────────────────
     const totalAmount = rows.reduce((sum, r) => sum + (r.amount || 0), 0);
-    const summaryRows = [
-      [],
-      ['', '', '', '', 'סה"כ עסקאות:', rows.length, ''],
-      ['', '', '', '', 'סה"כ הוצאות (₪):', totalAmount, ''],
-      ['', '', '', '', 'תקציב כולל (₪):', totalBudget || 0, ''],
-    ];
+    ws.addRow([]);
 
-    // ── Assemble sheet ─────────────────────────────────────────────────────────
-    const aoa = [...metaRows, headers, ...dataRows, ...summaryRows];
-    const ws  = XLSX.utils.aoa_to_sheet(aoa);
+    [
+      [`סה"כ עסקאות:`,    rows.length,         ''],
+      [`סה"כ הוצאות (₪):`, totalAmount,         ''],
+      [`תקציב כולל (₪):`,  totalBudget || 0,    ''],
+    ].forEach(([label, value]) => {
+      const sumRow = ws.addRow(['', '', '', '', label, value, '']);
+      sumRow.getCell(5).alignment = rtl;
+      sumRow.getCell(5).font      = { bold: true };
+      sumRow.getCell(6).alignment = { horizontal: 'right', readingOrder: 2 };
+      sumRow.getCell(6).numFmt    = '#,##0.00';
+      sumRow.getCell(7).alignment = rtl;
+    });
 
-    // Column widths (characters)
-    ws['!cols'] = [
-      { wch: 13 }, // date
-      { wch: 34 }, // title
-      { wch: 22 }, // category
-      { wch: 24 }, // provider/executor
-      { wch: 32 }, // description
-      { wch: 15 }, // amount
-      { wch: 15 }, // balance
-    ];
-
-    // Mark amount and balance columns as numbers with comma formatting
-    // (the cells already contain JS numbers, xlsx infers type automatically)
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'ריכוז תנועות');
-
-    // Safe filename (strip chars illegal in filenames)
+    // ── Export ─────────────────────────────────────────────────────────────────
     const safeName = (projectName || '').replace(/[\\/:*?"<>|]/g, '_').trim();
     const filename  = safeName
       ? `ריכוז_תנועות_${safeName}_${todayISO}.xlsx`
       : `ריכוז_תנועות_${todayISO}.xlsx`;
 
-    XLSX.writeFile(wb, filename);
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob   = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href     = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────

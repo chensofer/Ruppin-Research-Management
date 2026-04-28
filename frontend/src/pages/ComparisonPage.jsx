@@ -176,7 +176,7 @@ function CustomXTick({ x, y, payload }) {
     <g transform={`translate(${x},${y})`}>
       <title>{full}</title>
       {lines.map((line, i) => (
-        <text key={i} x={0} y={0} dy={14 + i * 14} textAnchor="middle" fill="#374151" fontSize={11}>
+        <text key={i} x={0} y={0} dy={14 + i * 14} textAnchor="middle" fill="#374151" fontSize={12}>
           {line}
         </text>
       ))}
@@ -243,9 +243,10 @@ export default function ComparisonPage() {
 
   const chartData = projects.map((p) => ({
     name: p.projectNameHe || p.projectNameEn || `#${p.projectId}`,
-    'תקציב כולל': p.totalBudget      ?? 0,
-    'הוצאות בפועל': p.totalPaid        ?? 0,
-    'יתרה זמינה': p.availableBalance ?? 0,
+    'תקציב כולל':  p.totalBudget ?? 0,
+    'הוצאות בפועל': p.totalPaid   ?? 0,
+    // Clamp to 0 — negative balance is shown elsewhere; no negative bars in the chart
+    'יתרה זמינה':  Math.max(p.availableBalance ?? 0, 0),
   }));
 
   const METRICS = [
@@ -336,18 +337,35 @@ export default function ComparisonPage() {
               ) : projects.length === 0 ? (
                 <p className="text-center text-gray-400 py-20 text-sm">אין מחקרים פעילים להצגה</p>
               ) : (
-                <ResponsiveContainer width="100%" height={420}>
-                  <BarChart data={chartData} margin={{ top: 4, right: 10, left: 10, bottom: 60 }}>
+                <div dir="ltr">
+                <ResponsiveContainer width="100%" height={460}>
+                  <BarChart data={chartData} margin={{ top: 55, right: 10, left: 10, bottom: 80 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="name" tick={<CustomXTick />} interval={0} />
-                    <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} tickFormatter={(v) => `₪${(v/1000).toFixed(0)}k`} />
+                    <YAxis
+                      domain={[() => 0, (dataMax) => Math.ceil(dataMax * 1.05) || 100]}
+                      allowDataOverflow={false}
+                      orientation="left"
+                      width={70}
+                      tick={{ fontSize: 12, fill: '#6b7280' }}
+                      tickFormatter={(v) => {
+                        if (v === 0) return '₪0';
+                        if (v >= 1000000) return `₪${Math.round(v / 1000000)}M`;
+                        if (v >= 1000) return `₪${Math.round(v / 1000)}K`;
+                        return `₪${v}`;
+                      }}
+                    />
                     <Tooltip content={<ChartTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 12, paddingTop: '16px' }} />
-                    {(metric==='all'||metric==='budget')    && <Bar dataKey="תקציב כולל" fill="#93c5fd" radius={[4,4,0,0]} />}
-                    {(metric==='all'||metric==='paid')      && <Bar dataKey="הוצאות בפועל"        fill="#f87171" radius={[4,4,0,0]} />}
+                    <Legend
+                      verticalAlign="top"
+                      wrapperStyle={{ fontSize: 13, paddingBottom: '12px', top: 0 }}
+                    />
+                    {(metric==='all'||metric==='budget')    && <Bar dataKey="תקציב כולל"  fill="#93c5fd" radius={[4,4,0,0]} />}
+                    {(metric==='all'||metric==='paid')      && <Bar dataKey="הוצאות בפועל" fill="#f87171" radius={[4,4,0,0]} />}
                     {(metric==='all'||metric==='available') && <Bar dataKey="יתרה זמינה"  fill="#4ade80" radius={[4,4,0,0]} />}
                   </BarChart>
                 </ResponsiveContainer>
+                </div>
               )}
             </div>
             {!loading && projects.length > 0 && (
@@ -450,25 +468,25 @@ export default function ComparisonPage() {
                 <p className="text-sm text-gray-400 py-4 text-center">לא נמצאו מחקרים תואמים</p>
               ) : (
                 /* Scrollable pill container — max 3 rows before scroll */
-                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pb-1">
+                <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pb-1">
                   {filteredForDisplay.map((p) => {
                     const idx = selectedIds.indexOf(p.projectId);
                     const selected = idx !== -1;
                     const color = COLORS[idx % COLORS.length];
                     return (
                       <button key={p.projectId} onClick={() => toggleSelect(p.projectId)}
-                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium border transition-all flex-shrink-0 ${
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all flex-shrink-0 ${
                           selected
                             ? 'text-white border-transparent shadow-sm'
                             : 'text-gray-600 border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
                         }`}
                         style={selected ? { backgroundColor: color, borderColor: color } : {}}>
                         {selected && (
-                          <span className="w-4 h-4 rounded-full bg-white/25 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                          <span className="w-3.5 h-3.5 rounded-full bg-white/25 flex items-center justify-center text-xs font-bold flex-shrink-0">
                             {idx + 1}
                           </span>
                         )}
-                        <span className="truncate max-w-[180px]">
+                        <span className="truncate max-w-[160px]">
                           {p.projectNameHe || p.projectNameEn || `#${p.projectId}`}
                         </span>
                       </button>
@@ -507,7 +525,7 @@ export default function ComparisonPage() {
                                   {p.projectNameHe || p.projectNameEn || `#${p.projectId}`}
                                 </span>
                               </div>
-                              <p className="text-[11px] text-primary font-medium mt-0.5 mr-5">פתח מחקר ←</p>
+                              <p className="text-xs text-primary font-medium mt-0.5 mr-5">פתח מחקר ←</p>
                             </th>
                           ))}
                         </tr>
@@ -534,12 +552,12 @@ export default function ComparisonPage() {
                                         {v.display}
                                       </p>
                                       {v.badge && (
-                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${v.badge.cls}`}>
+                                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${v.badge.cls}`}>
                                           {v.badge.text}
                                         </span>
                                       )}
                                     </div>
-                                    {v.sub && <p className="text-[11px] text-gray-400 mt-0.5">{v.sub}</p>}
+                                    {v.sub && <p className="text-xs text-gray-400 mt-0.5">{v.sub}</p>}
                                   </td>
                                 );
                               })}
@@ -570,8 +588,8 @@ export default function ComparisonPage() {
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart data={trendData} margin={{ top: 4, right: 10, left: 10, bottom: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis dataKey="period" tick={{ fontSize: 11, fill: '#6b7280' }} />
-                        <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} tickFormatter={(v) => `₪${(v/1000).toFixed(0)}k`} />
+                        <XAxis dataKey="period" tick={{ fontSize: 12, fill: '#6b7280' }} />
+                        <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} tickFormatter={(v) => `₪${(v/1000).toFixed(0)}k`} />
                         <Tooltip formatter={(v, name) => [fmt(v), name]}
                           contentStyle={{ direction: 'rtl', borderRadius: '12px', fontSize: '12px' }} />
                         <Legend wrapperStyle={{ fontSize: 12, paddingTop: '12px' }} />

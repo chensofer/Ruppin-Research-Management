@@ -3,7 +3,7 @@ export default function UserAvatar({ userId, firstName, lastName, size = 'md', c
   const initials = ((firstName?.[0] ?? '') + (lastName?.[0] ?? '')).toUpperCase() || '?';
 
   const sizeClass = {
-    xs:   'w-6 h-6 text-[10px]',
+    xs:   'w-6 h-6 text-xs',
     sm:   'w-7 h-7 text-xs',
     md:   'w-8 h-8 text-xs',
     lg:   'w-9 h-9 text-sm',

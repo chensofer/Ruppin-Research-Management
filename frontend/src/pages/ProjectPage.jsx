@@ -43,10 +43,10 @@ function StatCard({ label, value, valueClass = 'text-gray-900', sub, icon, bg = 
         <div className="w-8 h-8 rounded-xl bg-gray-100/80 flex items-center justify-center text-gray-400 flex-shrink-0">
           {icon}
         </div>
-        <p className="text-[11px] text-gray-400 font-semibold text-right leading-tight">{label}</p>
+        <p className="text-xs text-gray-400 font-semibold text-right leading-tight">{label}</p>
       </div>
       <p className={`text-2xl font-extrabold tabular-nums text-right leading-none ${valueClass}`}>{value}</p>
-      {sub && <p className="text-[11px] text-gray-400 text-right">{sub}</p>}
+      {sub && <p className="text-xs text-gray-400 text-right">{sub}</p>}
     </div>
   );
 }

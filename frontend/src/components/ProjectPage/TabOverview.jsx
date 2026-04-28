@@ -388,7 +388,7 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
           {/* Section: name + ID */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-6">
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1">שם המחקר</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">שם המחקר</p>
               <p className="text-base font-bold text-gray-900 leading-snug">
                 {detail.projectNameHe || detail.projectNameEn || '—'}
               </p>
@@ -397,7 +397,7 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
               )}
             </div>
             <div className="flex-shrink-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1">מזהה</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">מזהה</p>
               <span className="inline-block bg-primary/8 text-primary font-bold text-sm px-3 py-1 rounded-lg">
                 #{detail.projectId}
               </span>
@@ -407,7 +407,7 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
           {/* Description */}
           {detail.projectDescription && (
             <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">תיאור</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">תיאור</p>
               <p className="text-sm text-gray-700 leading-relaxed">{detail.projectDescription}</p>
             </div>
           )}
@@ -469,7 +469,7 @@ function InfoChip({ icon, label, value, accent }) {
     <div className={`flex items-start gap-3 rounded-xl p-3.5 border ${accent ? 'bg-primary/5 border-primary/15' : 'bg-gray-50 border-gray-100'}`}>
       <div className={`mt-0.5 flex-shrink-0 ${accent ? 'text-primary' : 'text-gray-400'}`}>{icon}</div>
       <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-0.5">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">{label}</p>
         <p className={`text-sm font-semibold truncate ${accent ? 'text-primary' : 'text-gray-800'}`}>
           {value || '—'}
         </p>
@@ -485,7 +485,7 @@ function DateChip({ label, value, highlight }) {
     'text-gray-800';
   return (
     <div className="text-center">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">{label}</p>
       <p className={`text-sm font-bold tabular-nums ${colors}`}>{value || '—'}</p>
     </div>
   );
@@ -524,7 +524,7 @@ function ResearchersCard({ detail }) {
                 <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
                   {/* Always show the project role */}
                   {m.projectRole && (
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                       isCreator
                         ? 'bg-primary text-white'
                         : 'bg-gray-100 text-gray-600'
@@ -534,13 +534,13 @@ function ResearchersCard({ detail }) {
                   )}
                   {/* PI badge shown in addition when the member is also PI */}
                   {isPI && (
-                    <span className="text-[11px] bg-accent-light text-accent-dark px-2 py-0.5 rounded-full font-semibold">
+                    <span className="text-xs bg-accent-light text-accent-dark px-2 py-0.5 rounded-full font-semibold">
                       חוקר ראשי
                     </span>
                   )}
                   {/* Creator indicator (small crown icon) */}
                   {isCreator && (
-                    <span className="text-[10px] text-primary/60 font-medium">יוצר המחקר</span>
+                    <span className="text-xs text-primary/60 font-medium">יוצר המחקר</span>
                   )}
                 </div>
               </div>

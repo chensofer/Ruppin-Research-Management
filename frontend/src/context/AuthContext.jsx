@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   });
 
   const login = (authResponse) => {
+    sessionStorage.removeItem('alerts_shown');
     localStorage.setItem('token', authResponse.token);
     localStorage.setItem('user', JSON.stringify({
       userId: authResponse.userId,

@@ -9,6 +9,7 @@ import {
   submitMonthlyApproval,
 } from '../api/hourReportsApi';
 import Layout from '../components/Layout';
+import { celebrate } from '../utils/celebrate';
 
 const MONTH_NAMES = [
   'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
@@ -266,7 +267,7 @@ export default function AttendancePage() {
         comments: null,
       });
       setApproval(res.data);
-      showToast('הדוח נשלח לאישור החוקר');
+      celebrate('hours_submitted');
     } catch {
       showToast('שגיאה בשליחת הדוח');
     } finally {
@@ -282,11 +283,17 @@ export default function AttendancePage() {
       <div className="max-w-4xl mx-auto" dir="rtl">
 
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">דיווח נוכחות</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {user?.firstName} {user?.lastName} — מלא את שעות העבודה שלך לחודש הנבחר
-          </p>
+        <div className="mb-5 rounded-xl px-5 py-3.5 text-white relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #003478 0%, #1B4080 60%, #0369A1 100%)' }}>
+          <div className="absolute top-0 left-0 w-32 h-32 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
+          <div className="relative z-10 flex items-center gap-3">
+            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-lg flex-shrink-0">📋</div>
+            <div>
+              <h1 className="text-lg font-extrabold tracking-tight leading-tight">דיווח נוכחות</h1>
+              <p className="text-blue-200 text-xs mt-0.5">
+                {user?.firstName} {user?.lastName} — מלא את שעות העבודה שלך לחודש הנבחר
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Selectors */}
@@ -398,8 +405,9 @@ export default function AttendancePage() {
             ) : (
               <div className="card overflow-hidden mb-5">
                 {/* Grid header */}
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                  <span className="text-sm font-bold text-gray-800">
+                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%)' }}>
+                  <span className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                    <span className="text-base">📅</span>
                     {MONTH_NAMES[month - 1]} {year}
                   </span>
                   <div className="flex items-center gap-2">
@@ -409,11 +417,8 @@ export default function AttendancePage() {
                         שומר...
                       </span>
                     )}
-                    <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full font-medium">
-                      סה"כ:{' '}
-                      <span className="text-gray-700 font-bold">
-                        {totalHoursFromDrafts.toFixed(1)} שע'
-                      </span>
+                    <span className="text-xs bg-primary text-white px-3 py-1.5 rounded-full font-bold shadow-sm">
+                      ⏱ סה"כ: {totalHoursFromDrafts.toFixed(1)} שע'
                     </span>
                   </div>
                 </div>
@@ -430,10 +435,10 @@ export default function AttendancePage() {
                     const StatusIndicator = () => (
                       <div className="flex items-center gap-1 flex-shrink-0">
                         {dayErrors[day] && (
-                          <span className="text-[10px] text-red-500 font-semibold whitespace-nowrap" title={dayErrors[day]}>שגיאה</span>
+                          <span className="text-xs text-red-500 font-semibold whitespace-nowrap" title={dayErrors[day]}>שגיאה</span>
                         )}
                         {!dayErrors[day] && isSaved && !isDirty && (
-                          <span className="text-[10px] text-accent font-bold flex items-center gap-0.5">
+                          <span className="text-xs text-accent font-bold flex items-center gap-0.5">
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                             </svg>
@@ -444,7 +449,7 @@ export default function AttendancePage() {
                           <span className="inline-block w-3 h-3 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
                         )}
                         {!dayErrors[day] && isDirty && !saving && (
-                          <span className="text-[10px] text-amber-500 font-semibold">ממתין</span>
+                          <span className="text-xs text-amber-500 font-semibold">ממתין</span>
                         )}
                         {isSaved && !locked && (
                           <button
@@ -473,23 +478,23 @@ export default function AttendancePage() {
                         <div className="flex sm:hidden items-center gap-2 px-3 pt-2.5 pb-1">
                           <div className="w-10 flex-shrink-0 text-center">
                             <p className={`text-sm font-bold leading-none ${isWeekend ? 'text-gray-400' : 'text-gray-800'}`}>{day}</p>
-                            <p className={`text-[9px] font-medium mt-0.5 ${isWeekend ? 'text-orange-400' : 'text-gray-400'}`}>{DAY_NAMES[dayOfWeek]}</p>
+                            <p className={`text-xs font-medium mt-0.5 ${isWeekend ? 'text-orange-400' : 'text-gray-400'}`}>{DAY_NAMES[dayOfWeek]}</p>
                           </div>
                           <div className="flex flex-1 items-center gap-1.5 flex-wrap">
                             <div className="flex items-center gap-1">
-                              <label className="text-[9px] text-gray-400 whitespace-nowrap">משעה</label>
+                              <label className="text-xs text-gray-400 whitespace-nowrap">משעה</label>
                               <input type="time" value={draft?.fromHour || ''} onChange={(e) => setDayField(day, 'fromHour', e.target.value)}
                                 disabled={locked}
                                 className="border border-gray-200 rounded-md px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-[90px]" />
                             </div>
                             <div className="flex items-center gap-1">
-                              <label className="text-[9px] text-gray-400 whitespace-nowrap">עד</label>
+                              <label className="text-xs text-gray-400 whitespace-nowrap">עד</label>
                               <input type="time" value={draft?.toHour || ''} onChange={(e) => setDayField(day, 'toHour', e.target.value)}
                                 disabled={locked}
                                 className="border border-gray-200 rounded-md px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-[90px]" />
                             </div>
                             <div className="flex items-center gap-1">
-                              <label className="text-[9px] text-gray-400 whitespace-nowrap">שעות</label>
+                              <label className="text-xs text-gray-400 whitespace-nowrap">שעות</label>
                               <input type="number" step="0.5" min="0" max="24" value={draft?.workedHours || ''} onChange={(e) => setDayField(day, 'workedHours', e.target.value)}
                                 placeholder="0" disabled={locked}
                                 className="border border-gray-200 rounded-md px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-12" />
@@ -505,23 +510,23 @@ export default function AttendancePage() {
                         <div className="hidden sm:flex items-center gap-3 px-5 py-2.5">
                           <div className="w-14 flex-shrink-0 text-center">
                             <p className={`text-sm font-bold ${isWeekend ? 'text-gray-400' : 'text-gray-800'}`}>{day}</p>
-                            <p className={`text-[10px] font-medium ${isWeekend ? 'text-orange-400' : 'text-gray-400'}`}>{DAY_NAMES[dayOfWeek]}</p>
+                            <p className={`text-xs font-medium ${isWeekend ? 'text-orange-400' : 'text-gray-400'}`}>{DAY_NAMES[dayOfWeek]}</p>
                           </div>
                           <div className="flex flex-1 items-center gap-2 flex-wrap">
                             <div className="flex items-center gap-1">
-                              <label className="text-[10px] text-gray-400 whitespace-nowrap font-medium">משעה</label>
+                              <label className="text-xs text-gray-400 whitespace-nowrap font-medium">משעה</label>
                               <input type="time" value={draft?.fromHour || ''} onChange={(e) => setDayField(day, 'fromHour', e.target.value)}
                                 disabled={locked}
                                 className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-24 bg-white" />
                             </div>
                             <div className="flex items-center gap-1">
-                              <label className="text-[10px] text-gray-400 whitespace-nowrap font-medium">עד שעה</label>
+                              <label className="text-xs text-gray-400 whitespace-nowrap font-medium">עד שעה</label>
                               <input type="time" value={draft?.toHour || ''} onChange={(e) => setDayField(day, 'toHour', e.target.value)}
                                 disabled={locked}
                                 className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-24 bg-white" />
                             </div>
                             <div className="flex items-center gap-1">
-                              <label className="text-[10px] text-gray-400 whitespace-nowrap font-medium">שעות</label>
+                              <label className="text-xs text-gray-400 whitespace-nowrap font-medium">שעות</label>
                               <input type="number" step="0.5" min="0" max="24" value={draft?.workedHours || ''} onChange={(e) => setDayField(day, 'workedHours', e.target.value)}
                                 placeholder="0" disabled={locked}
                                 className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-16 bg-white" />
@@ -541,16 +546,16 @@ export default function AttendancePage() {
 
             {/* Action bar */}
             {!locked && (
-              <div className="flex items-center justify-between gap-4 bg-white border border-gray-100 rounded-2xl px-5 py-4 shadow-sm">
-                <p className="text-xs text-gray-400 flex items-center gap-2">
+              <div className="flex items-center justify-between gap-3 rounded-xl px-4 py-2.5 shadow-md" style={{ background: 'linear-gradient(135deg, #003478 0%, #1B4080 100%)' }}>
+                <p className="text-sm text-blue-200 flex items-center gap-1.5">
                   {saving && !submitting ? (
                     <>
-                      <span className="inline-block w-3 h-3 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
-                      שומר אוטומטית...
+                      <span className="inline-block w-3 h-3 border-2 border-blue-300/50 border-t-blue-200 rounded-full animate-spin" />
+                      שומר...
                     </>
                   ) : hasDraftData ? (
-                    <span className="text-gray-600 font-medium">
-                      {Object.values(drafts).filter(d => d?.fromHour || d?.toHour || d?.workedHours).length} ימים מולאו
+                    <span className="text-white font-medium">
+                      ✏️ {Object.values(drafts).filter(d => d?.fromHour || d?.toHour || d?.workedHours).length} ימים מולאו
                     </span>
                   ) : (
                     'מלא שעות לימים בהם עבדת'
@@ -560,13 +565,13 @@ export default function AttendancePage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={busy || !hasDraftData}
-                  className="btn-primary flex items-center gap-2 px-6"
+                  className="bg-accent hover:bg-accent-dark text-white font-bold rounded-lg px-5 py-1.5 text-sm flex items-center gap-2 transition-all disabled:opacity-50"
                 >
                   {submitting ? (
-                    <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                   ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                     </svg>
                   )}
                   {submitting ? 'שולח...' : `שלח לאישור (${totalHoursFromDrafts.toFixed(1)} שע')`}

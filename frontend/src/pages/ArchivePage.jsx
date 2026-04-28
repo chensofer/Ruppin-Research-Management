@@ -24,9 +24,10 @@ function fmtDate(dt) {
 
 export default function ArchivePage() {
   const navigate = useNavigate();
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [restoring, setRestoring] = useState(null);
+  const [projects, setProjects]       = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [restoring, setRestoring]     = useState(null);
+  const [confirmProject, setConfirmProject] = useState(null);
 
   useEffect(() => {
     getArchivedProjects()
@@ -35,7 +36,9 @@ export default function ArchivePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleRestore = async (project) => {
+  const handleRestore = async () => {
+    const project = confirmProject;
+    setConfirmProject(null);
     setRestoring(project.projectId);
     try {
       await restoreProject(project.projectId);
@@ -121,7 +124,7 @@ export default function ArchivePage() {
                     צפה
                   </button>
                   <button
-                    onClick={() => handleRestore(p)}
+                    onClick={() => setConfirmProject(p)}
                     disabled={restoring === p.projectId}
                     className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded-xl disabled:opacity-60 transition-colors"
                   >
@@ -141,6 +144,39 @@ export default function ArchivePage() {
           </div>
         )}
       </div>
+      {/* Restore confirmation dialog */}
+      {confirmProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" dir="rtl">
+          <div className="bg-white rounded-2xl shadow-modal w-full max-w-sm p-6 text-center">
+            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </div>
+            <h2 className="text-base font-bold text-gray-900 mb-1">שחזור מחקר</h2>
+            <p className="text-sm text-gray-500 mb-1">האם אתה בטוח שברצונך לשחזר את המחקר</p>
+            <p className="text-sm font-semibold text-gray-800 mb-5">
+              "{confirmProject.projectNameHe || confirmProject.projectNameEn}"?
+            </p>
+            <p className="text-xs text-gray-400 mb-5">המחקר יועבר חזרה לרשימה הפעילה</p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={() => setConfirmProject(null)}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                ביטול
+              </button>
+              <button
+                onClick={handleRestore}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold bg-primary hover:bg-primary-dark text-white rounded-xl transition-colors"
+              >
+                כן, שחזר
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
