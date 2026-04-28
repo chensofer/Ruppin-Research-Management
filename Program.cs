@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using RupResearchAPI.Converters;
 using RupResearchAPI.Data;
 using RupResearchAPI.Services;
 
@@ -19,8 +20,8 @@ namespace RupResearchAPI
             {
                 options.AddPolicy("FrontendDev", policy =>
                     policy.AllowAnyOrigin()
-                          .AllowAnyHeader()
-                          .AllowAnyMethod());
+                        .AllowAnyHeader()
+                        .AllowAnyMethod());
             });
 
             // Database
@@ -52,7 +53,14 @@ namespace RupResearchAPI
                 });
 
             // Controllers + Swagger with JWT support
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddJsonOptions(opts =>
+                {
+                    opts.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
+                    opts.JsonSerializerOptions.Converters.Add(new NullableDateOnlyJsonConverter());
+                    opts.JsonSerializerOptions.Converters.Add(new TimeOnlyJsonConverter());
+                    opts.JsonSerializerOptions.Converters.Add(new NullableTimeOnlyJsonConverter());
+                });
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
             {

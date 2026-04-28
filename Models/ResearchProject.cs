@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RupResearchAPI.Models
@@ -37,7 +37,7 @@ namespace RupResearchAPI.Models
         public string? CreatedBy { get; set; }
 
         [Column("created_date")]
-        public DateOnly? CreatedDate { get; set; }
+        public DateTime? CreatedDate { get; set; }
 
         [Column("start_date")]
         public DateOnly? StartDate { get; set; }

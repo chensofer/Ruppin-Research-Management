@@ -26,7 +26,7 @@ function RoleAwareRoute({ children }) {
 export default function App() {
   return (
     <ThemeProvider>
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <CelebrationBanner />
       <Toaster position="top-center" toastOptions={{ duration: 4000 }} />
       <AuthProvider>

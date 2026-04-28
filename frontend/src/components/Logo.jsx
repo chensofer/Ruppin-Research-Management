@@ -11,7 +11,7 @@ const sizeClass = {
 export default function Logo({ size = 'md' }) {
   return (
     <img
-      src="/logo.png"
+      src={`${import.meta.env.BASE_URL}logo.png`}
       alt="RupResearch"
       className={`object-contain ${sizeClass[size] ?? sizeClass.md}`}
     />
