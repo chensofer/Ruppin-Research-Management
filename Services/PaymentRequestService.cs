@@ -8,10 +8,12 @@ namespace RupResearchAPI.Services
     public class PaymentRequestService : IPaymentRequestService
     {
         private readonly AppDbContext _db;
+        private readonly IEmailService _email;
 
-        public PaymentRequestService(AppDbContext db)
+        public PaymentRequestService(AppDbContext db, IEmailService email)
         {
             _db = db;
+            _email = email;
         }
 
         public async Task<List<PaymentRequestResponseDto>> GetByProject(int projectId)
@@ -203,6 +205,37 @@ namespace RupResearchAPI.Services
 
             await _db.SaveChangesAsync();
             return request.QuotationFilePath;
+        }
+
+        public async Task NotifySecretariat(int requestId, string submittedByUserId)
+        {
+            var req      = await _db.ResearchPaymentRequests.FindAsync(requestId);
+            if (req == null) return;
+
+            var project  = await _db.ResearchProjects.FindAsync(req.ProjectId);
+            var allUsers = await _db.ResearchUsers.ToListAsync();
+            var trimmed  = submittedByUserId.Trim();
+            var user     = allUsers.FirstOrDefault(u => u.UserId?.Trim() == trimmed);
+
+            var submitterName  = user != null ? $"{user.FirstName} {user.LastName}".Trim() : trimmed;
+            var submitterEmail = user?.Email ?? "";
+            var projectName    = project?.ProjectNameHe ?? $"מחקר #{req.ProjectId}";
+
+            // Collect file paths
+            var filePaths = string.IsNullOrWhiteSpace(req.QuotationFilePath)
+                ? new List<string>()
+                : req.QuotationFilePath.Split(';').Where(p => !string.IsNullOrWhiteSpace(p)).ToList();
+
+            await _email.SendPaymentRequestEmailAsync(
+                submitterName:  submitterName,
+                submitterEmail: submitterEmail,
+                projectName:    projectName,
+                requestTitle:   req.RequestTitle ?? "",
+                category:       req.CategoryName ?? "",
+                amount:         req.RequestedAmount ?? 0,
+                description:    req.RequestDescription,
+                comments:       req.Comments,
+                filePaths:      filePaths);
         }
 
         private static PaymentRequestResponseDto ToDto(ResearchPaymentRequest r, string? providerName = null, string? requestedByUserName = null) => new()

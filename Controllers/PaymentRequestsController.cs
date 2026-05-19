@@ -38,6 +38,8 @@ namespace RupResearchAPI.Controllers
         [HttpPost("api/projects/{projectId}/payment-requests")]
         public async Task<IActionResult> Create(int projectId, [FromBody] CreatePaymentRequestDto dto)
         {
+            // Attach the logged-in user's ID from JWT so the email shows the correct submitter
+            dto.RequestedByUserId = User.FindFirst("user_id")?.Value ?? dto.RequestedByUserId;
             try
             {
                 var created = await _service.Create(projectId, dto);
@@ -47,6 +49,14 @@ namespace RupResearchAPI.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
+        }
+
+        [HttpPost("api/payment-requests/{id}/notify")]
+        public async Task<IActionResult> Notify(int id)
+        {
+            var userId = User.FindFirst("user_id")?.Value ?? "";
+            await _service.NotifySecretariat(id, userId);
+            return Ok();
         }
 
         [HttpPut("api/payment-requests/{id}/status")]

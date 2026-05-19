@@ -29,6 +29,8 @@ namespace RupResearchAPI
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             // Services
+            builder.Services.AddHttpClient();
+            builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IProjectService, ProjectService>();
             builder.Services.AddScoped<IPaymentRequestService, PaymentRequestService>();

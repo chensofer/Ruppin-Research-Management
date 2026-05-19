@@ -10,5 +10,6 @@ namespace RupResearchAPI.Services
         Task<PaymentRequestResponseDto?> UpdateStatus(int id, UpdatePaymentRequestStatusDto dto);
         Task<List<PendingPaymentRequestDto>> GetPendingForUser(string userId);
         Task<string?> AppendQuotationFile(int id, IFormFile file, string uploadsRoot);
+        Task NotifySecretariat(int requestId, string submittedByUserId);
     }
 }
