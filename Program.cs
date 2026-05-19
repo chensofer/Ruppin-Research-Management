@@ -15,6 +15,9 @@ namespace RupResearchAPI
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            // Load secrets from appsettings.Secrets.json (gitignored)
+            builder.Configuration.AddJsonFile("appsettings.Secrets.json", optional: true, reloadOnChange: false);
+
             // CORS — allow the React dev server
             builder.Services.AddCors(options =>
             {
