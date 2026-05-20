@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import CategoryPicker from './CategoryPicker';
 import HebrewDatePicker from '../HebrewDatePicker';
 import { getProviders, createProvider } from '../../api/providersApi';
+import { analyzeDocuments } from '../../api/paymentRequestsApi';
 
 const inputCls =
   'w-full bg-white text-gray-900 border border-gray-200 rounded-lg px-3 py-2 text-sm ' +
@@ -36,6 +37,7 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
   const [errors, setErrors]             = useState({});
   const [savingProvider, setSavingProvider] = useState(false);
   const [providerSaveError, setProviderSaveError] = useState('');
+  const [scanning, setScanning] = useState(false);
   const fileRef                         = useRef(null);
   const providerInputRef                = useRef(null);
   const [providerDropRect, setProviderDropRect] = useState(null);
@@ -103,6 +105,53 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
 
   const removeFile = (idx) =>
     setDraft((d) => ({ ...d, files: d.files.filter((_, i) => i !== idx) }));
+
+  const handleScan = async () => {
+    if (draft.files.length === 0) return;
+    setScanning(true);
+    try {
+      const res = await analyzeDocuments(draft.files.map(f => f.file));
+      const d = res.data;
+
+      // Fill main fields
+      setDraft(prev => ({
+        ...prev,
+        requestDescription: d.requestDescription ?? prev.requestDescription,
+        requestedAmount:    d.requestedAmount ? String(d.requestedAmount) : prev.requestedAmount,
+        requestDate:        d.requestDate ?? prev.requestDate,
+        categoryName:       d.categoryName ?? prev.categoryName,
+      }));
+
+      // Handle provider
+      if (d.providerName) {
+        const match = providers.find(p =>
+          p.providerName?.toLowerCase().includes(d.providerName.toLowerCase()) ||
+          d.providerName.toLowerCase().includes(p.providerName?.toLowerCase() ?? '')
+        );
+        if (match) {
+          // Found existing provider — select automatically
+          selectProvider(match);
+          setProviderMode('existing');
+        } else {
+          // Not found — pre-fill new provider form (with phone + email) for user confirmation
+          setProviderMode('new');
+          setDraft(prev => ({
+            ...prev,
+            newProvider: {
+              ...prev.newProvider,
+              providerName: d.providerName,
+              phone: d.providerPhone ?? prev.newProvider.phone,
+              email: d.providerEmail ?? prev.newProvider.email,
+            },
+          }));
+        }
+      }
+    } catch {
+      // silent fail
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const submit = () => {
     const errs = {};
@@ -284,12 +333,21 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
 
       {/* File attachments */}
       <div className="border border-gray-200 rounded-xl p-3 bg-white space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-semibold text-gray-600">מסמכים מצורפים</span>
-          <button type="button" onClick={() => fileRef.current?.click()}
-            className="text-xs text-primary hover:text-primary-dark transition-colors font-medium">
-            + הוסף קובץ
-          </button>
+          <div className="flex items-center gap-2">
+            {draft.files.length > 0 && (
+              <button type="button" onClick={handleScan} disabled={scanning}
+                className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/5 border border-primary/20 px-2.5 py-1 rounded-lg hover:bg-primary/10 transition-colors disabled:opacity-50">
+                {scanning ? <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : '🤖'}
+                {scanning ? 'סורק...' : 'מלא אוטומטית'}
+              </button>
+            )}
+            <button type="button" onClick={() => fileRef.current?.click()}
+              className="text-xs text-primary hover:text-primary-dark transition-colors font-medium">
+              + הוסף קובץ
+            </button>
+          </div>
           <input ref={fileRef} type="file" multiple className="hidden" onChange={handleFiles} />
         </div>
         {draft.files.length > 0 ? (

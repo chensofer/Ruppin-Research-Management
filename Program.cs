@@ -34,6 +34,7 @@ namespace RupResearchAPI
             // Services
             builder.Services.AddHttpClient();
             builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IProjectService, ProjectService>();
             builder.Services.AddScoped<IPaymentRequestService, PaymentRequestService>();
@@ -108,6 +109,16 @@ namespace RupResearchAPI
                         ALTER TABLE research_projects ADD archived_at DATETIME NULL;
                     IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='research_future_commitments' AND COLUMN_NAME='file_path')
                         ALTER TABLE research_future_commitments ADD file_path NVARCHAR(MAX) NULL;
+                    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='research_activity_log')
+                        CREATE TABLE research_activity_log (
+                            log_id INT IDENTITY(1,1) PRIMARY KEY,
+                            project_id INT NOT NULL,
+                            action_type NVARCHAR(100) NOT NULL,
+                            action_description NVARCHAR(500) NULL,
+                            performed_by_user_id NVARCHAR(10) NULL,
+                            performed_by_name NVARCHAR(200) NULL,
+                            performed_at DATETIME2 NOT NULL DEFAULT GETUTCDATE()
+                        );
                 ");
             }
             catch { }

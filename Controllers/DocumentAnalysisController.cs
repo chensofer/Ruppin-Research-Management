@@ -66,6 +66,8 @@ namespace RupResearchAPI.Controllers
   ""requestedAmount"": 0,
   ""requestDescription"": ""תיאור מפורט של מה נרכש"",
   ""providerName"": ""שם הספק / העסק"",
+  ""providerPhone"": ""מספר טלפון של הספק (ספרות ומקפים בלבד) או null"",
+  ""providerEmail"": ""כתובת אימייל של הספק או null"",
   ""requestDate"": ""YYYY-MM-DD או null""
 }
 אם יש כמה מסמכים, חבר את הסכומים וסכם את התיאורים.
@@ -80,7 +82,7 @@ namespace RupResearchAPI.Controllers
             };
 
             var client = _http.CreateClient();
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={apiKey}";
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={apiKey}";
 
             var json = JsonSerializer.Serialize(requestBody);
             var content = new StringContent(json, Encoding.UTF8, "application/json");

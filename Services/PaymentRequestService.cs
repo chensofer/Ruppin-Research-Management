@@ -9,11 +9,13 @@ namespace RupResearchAPI.Services
     {
         private readonly AppDbContext _db;
         private readonly IEmailService _email;
+        private readonly IActivityLogService _log;
 
-        public PaymentRequestService(AppDbContext db, IEmailService email)
+        public PaymentRequestService(AppDbContext db, IEmailService email, IActivityLogService log)
         {
             _db = db;
             _email = email;
+            _log = log;
         }
 
         public async Task<List<PaymentRequestResponseDto>> GetByProject(int projectId)
@@ -97,6 +99,14 @@ namespace RupResearchAPI.Services
 
             _db.ResearchPaymentRequests.Add(request);
             await _db.SaveChangesAsync();
+
+            var submitterName2 = (await _db.ResearchUsers.ToListAsync())
+                .FirstOrDefault(u => u.UserId?.Trim() == dto.RequestedByUserId?.Trim());
+            var sName = submitterName2 != null ? $"{submitterName2.FirstName} {submitterName2.LastName}".Trim() : dto.RequestedByUserId;
+            await _log.LogAsync(projectId, "בקשת_תשלום_נשלחה",
+                $"בקשת תשלום נשלחה: \"{dto.RequestTitle}\" — ₪{dto.RequestedAmount:N0}",
+                dto.RequestedByUserId, sName);
+
             return ToDto(request);
         }
 
@@ -111,6 +121,20 @@ namespace RupResearchAPI.Services
             request.DecisionDate = DateOnly.FromDateTime(DateTime.Today);
 
             await _db.SaveChangesAsync();
+
+            if (request.ProjectId.HasValue)
+            {
+                var approver = dto.ApprovedByUserId != null
+                    ? (await _db.ResearchUsers.ToListAsync()).FirstOrDefault(u => u.UserId?.Trim() == dto.ApprovedByUserId.Trim())
+                    : null;
+                var approverName = approver != null ? $"{approver.FirstName} {approver.LastName}".Trim() : dto.ApprovedByUserId;
+                var actionType = dto.Status == "אושר" ? "בקשת_תשלום_אושרה" : "בקשת_תשלום_נדחתה";
+                var desc = dto.Status == "אושר"
+                    ? $"בקשת תשלום אושרה: \"{request.RequestTitle}\" — ₪{request.RequestedAmount:N0}"
+                    : $"בקשת תשלום נדחתה: \"{request.RequestTitle}\"" + (string.IsNullOrEmpty(dto.RejectionReason) ? "" : $" — {dto.RejectionReason}");
+                await _log.LogAsync(request.ProjectId.Value, actionType, desc, dto.ApprovedByUserId, approverName);
+            }
+
             return ToDto(request);
         }
 

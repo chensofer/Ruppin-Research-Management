@@ -101,13 +101,25 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
         requestDescription: d.requestDescription  ?? f.requestDescription,
         requestDate:        d.requestDate         ?? f.requestDate,
       }));
-      // Try to match provider name if found
+      // Handle provider from scanned document
       if (d.providerName) {
         const match = providers.find(p =>
           p.providerName?.toLowerCase().includes(d.providerName.toLowerCase()) ||
           d.providerName.toLowerCase().includes(p.providerName?.toLowerCase() ?? '')
         );
-        if (match) setForm(f => ({ ...f, providerId: String(match.providerId) }));
+        if (match) {
+          // Existing provider found — select automatically
+          setForm(f => ({ ...f, providerId: String(match.providerId) }));
+        } else {
+          // Not found — pre-fill new provider form (phone + email too) and ask user to confirm
+          setNewProvider(prev => ({
+            ...prev,
+            providerName: d.providerName,
+            phone: d.providerPhone ?? prev.phone,
+            email: d.providerEmail ?? prev.email,
+          }));
+          setShowNewProvider(true);
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || 'שגיאה בסריקת המסמך');
