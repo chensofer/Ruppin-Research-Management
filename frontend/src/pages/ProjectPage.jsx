@@ -13,6 +13,8 @@ import { getPaymentRequestsByProject } from '../api/paymentRequestsApi';
 import { getPendingHourApprovals } from '../api/hourReportsApi';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
+import ExportReportModal from '../components/ExportReportModal';
+import { exportProjectReport } from '../utils/exportReport';
 import TabOverview from '../components/ProjectPage/TabOverview';
 import TabPayments from '../components/ProjectPage/TabPayments';
 import TabTeam from '../components/ProjectPage/TabTeam';
@@ -81,6 +83,7 @@ export default function ProjectPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [showPendingPopup, setShowPendingPopup] = useState(false);
   const popupShownRef = useRef(false);
 
@@ -199,15 +202,26 @@ export default function ProjectPage() {
       <div className="mb-5 w-full" dir="rtl">
         <div className="flex items-center justify-between mb-3">
           {/* חזרה לרשימה — ימין (ראשון ב-RTL) */}
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary transition-colors font-medium group"
-          >
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary transition-colors font-medium group"
+            >
             חזרה לרשימה
             <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
+            <button
+              onClick={() => setShowExport(true)}
+              className="flex items-center gap-1.5 text-xs font-semibold text-green-600 border border-green-200 px-2.5 py-1.5 rounded-xl hover:bg-green-50 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              ייצוא דוח
+            </button>
+          </div>
           {/* Archive / Restore — שמאל (אחרון ב-RTL) */}
           {isArchived ? (
             <button
@@ -599,6 +613,21 @@ export default function ProjectPage() {
         <TabHistory
           projectId={id}
           projectName={detail.projectNameHe || detail.projectNameEn}
+        />
+      )}
+
+      {showExport && (
+        <ExportReportModal
+          type="project"
+          onClose={() => setShowExport(false)}
+          onExport={async (sections, format) => {
+            const safeName = (detail.projectNameHe || detail.projectNameEn || 'מחקר')
+              .replace(/[\\/:*?"<>|]/g, '_').slice(0, 30);
+            await exportProjectReport({
+              detail, payments, commitments, sections, format,
+              filename: `דוח_${safeName}_${new Date().toISOString().slice(0,10)}.xlsx`,
+            });
+          }}
         />
       )}
     </Layout>

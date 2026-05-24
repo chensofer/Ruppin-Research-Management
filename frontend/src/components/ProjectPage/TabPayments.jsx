@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { getCategories } from '../../api/categoriesApi';
 import HebrewDatePicker from '../HebrewDatePicker';
 import { getProviders, createProvider } from '../../api/providersApi';
-import { createPaymentRequest, uploadQuotationFile } from '../../api/paymentRequestsApi';
+import { createPaymentRequest, uploadQuotationFile, notifyPaymentRequest, analyzeDocuments } from '../../api/paymentRequestsApi';
 import { celebrate } from '../../utils/celebrate';
 import { useEffect } from 'react';
 
@@ -47,6 +47,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
   const [showNewProvider, setShowNewProvider] = useState(false);
   const [providerError, setProviderError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [statusFilter, setStatusFilter] = useState('הכל');
@@ -86,6 +87,47 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
     }
   };
 
+  const handleScanDocument = async () => {
+    if (selectedFiles.length === 0) { setError('יש לבחור קובץ לסריקה תחילה'); return; }
+    setScanning(true);
+    setError('');
+    try {
+      const res = await analyzeDocuments(selectedFiles);
+      const d = res.data;
+      setForm(f => ({
+        ...f,
+        requestTitle:       d.requestTitle       ?? f.requestTitle,
+        requestedAmount:    d.requestedAmount     ? String(d.requestedAmount) : f.requestedAmount,
+        requestDescription: d.requestDescription  ?? f.requestDescription,
+        requestDate:        d.requestDate         ?? f.requestDate,
+      }));
+      // Handle provider from scanned document
+      if (d.providerName) {
+        const match = providers.find(p =>
+          p.providerName?.toLowerCase().includes(d.providerName.toLowerCase()) ||
+          d.providerName.toLowerCase().includes(p.providerName?.toLowerCase() ?? '')
+        );
+        if (match) {
+          // Existing provider found — select automatically
+          setForm(f => ({ ...f, providerId: String(match.providerId) }));
+        } else {
+          // Not found — pre-fill new provider form (phone + email too) and ask user to confirm
+          setNewProvider(prev => ({
+            ...prev,
+            providerName: d.providerName,
+            phone: d.providerPhone ?? prev.phone,
+            email: d.providerEmail ?? prev.email,
+          }));
+          setShowNewProvider(true);
+        }
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'שגיאה בסריקת המסמך');
+    } finally {
+      setScanning(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!form.categoryName) { setError('יש לבחור קטגורית הוצאה'); return; }
     if (!form.requestTitle?.trim()) { setError('יש להזין כותרת לבקשה'); return; }
@@ -114,18 +156,16 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
       celebrate('payment_submitted');
       onCreated();
 
-      // Upload files sequentially; refresh again when done
+      // Upload files then notify secretariat by email
+      const newId = res.data.paymentRequestId;
       if (filesToUpload.length > 0) {
-        const newId = res.data.paymentRequestId;
         for (const file of filesToUpload) {
-          try {
-            await uploadQuotationFile(newId, file);
-          } catch {
-            // ignore individual file upload errors
-          }
+          try { await uploadQuotationFile(newId, file); } catch { /* ignore */ }
         }
         onCreated();
       }
+      // Send email after files are uploaded (includes attachments)
+      try { await notifyPaymentRequest(newId); } catch { /* ignore */ }
     } catch (err) {
       setError(err.response?.data?.message || 'שגיאה בשמירת הבקשה');
     } finally {
@@ -262,7 +302,22 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
               </div>
 
               <div>
-                <label className="block text-xs text-gray-500 mb-1">קבצי הצעת מחיר</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs text-gray-500">קבצי הצעת מחיר</label>
+                  {selectedFiles.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleScanDocument}
+                      disabled={scanning}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/5 border border-primary/20 px-3 py-1 rounded-lg hover:bg-primary/10 transition-colors disabled:opacity-50"
+                    >
+                      {scanning ? (
+                        <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      ) : '🤖'}
+                      {scanning ? 'סורק...' : 'מלא טופס אוטומטית'}
+                    </button>
+                  )}
+                </div>
                 <input
                   type="file"
                   multiple

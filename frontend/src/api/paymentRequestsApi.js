@@ -12,6 +12,17 @@ export const updatePaymentRequestStatus = (id, data) =>
 export const getPendingPaymentRequests = () =>
   axiosInstance.get('/payment-requests/pending');
 
+export const notifyPaymentRequest = (id) =>
+  axiosInstance.post(`/payment-requests/${id}/notify`);
+
+export const analyzeDocuments = (files) => {
+  const fd = new FormData();
+  files.forEach(f => fd.append('files', f));
+  return axiosInstance.post('/documents/analyze', fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
 export const uploadQuotationFile = (id, file) => {
   const formData = new FormData();
   formData.append('file', file);

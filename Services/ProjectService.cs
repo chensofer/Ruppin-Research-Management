@@ -8,10 +8,12 @@ namespace RupResearchAPI.Services
     public class ProjectService : IProjectService
     {
         private readonly AppDbContext _db;
+        private readonly IActivityLogService _log;
 
-        public ProjectService(AppDbContext db)
+        public ProjectService(AppDbContext db, IActivityLogService log)
         {
             _db = db;
+            _log = log;
         }
 
         public async Task<List<ProjectResponseDto>> GetAll(string userId)
@@ -231,7 +233,7 @@ namespace RupResearchAPI.Services
                 PrincipalResearcherName = piName,
                 CreatedByName = createdByName,
                 FundingSource = project.FundingSource,
-                CreatedDate = project.CreatedDate,
+                CreatedDate = project.CreatedDate.HasValue ? DateOnly.FromDateTime(project.CreatedDate.Value) : null,
                 StartDate = project.StartDate,
                 EndDate = project.EndDate,
                 Status = project.Status,
@@ -259,7 +261,7 @@ namespace RupResearchAPI.Services
                 TotalBudget = dto.TotalBudget,
                 CenterId = dto.CenterId,
                 PrincipalResearcherId = dto.PrincipalResearcherId,
-                CreatedDate = DateOnly.FromDateTime(DateTime.Today),
+                CreatedDate = DateTime.Today,
                 CreatedBy = creatorUserId,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
@@ -352,6 +354,7 @@ namespace RupResearchAPI.Services
             project.IsArchived = true;
             project.ArchivedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
+            await _log.LogAsync(id, "ארכיון", $"המחקר \"{project.ProjectNameHe}\" הועבר לארכיון", null, null);
             return true;
         }
 
@@ -363,6 +366,7 @@ namespace RupResearchAPI.Services
             project.IsArchived = false;
             project.ArchivedAt = null;
             await _db.SaveChangesAsync();
+            await _log.LogAsync(id, "שחזור", $"המחקר \"{project.ProjectNameHe}\" שוחזר מהארכיון", null, null);
             return true;
         }
 
@@ -409,7 +413,7 @@ namespace RupResearchAPI.Services
                     EndDate = dto.EndDate,
                     PrincipalResearcherId = dto.PrincipalResearcherId?.Trim(),
                     CenterId = dto.CenterId,
-                    CreatedDate = DateOnly.FromDateTime(DateTime.Today),
+                    CreatedDate = DateTime.Today,
                     CreatedBy = requestedByUserId,
                 };
                 _db.ResearchProjects.Add(project);
@@ -618,6 +622,8 @@ namespace RupResearchAPI.Services
 
             var project = await _db.ResearchProjects.FindAsync(projectId);
             var piId = project?.PrincipalResearcherId?.Trim() ?? "";
+            var memberName = $"{user.FirstName} {user.LastName}".Trim();
+            await _log.LogAsync(projectId, "הוספת_חבר_צוות", $"חבר צוות נוסף: {memberName} ({projectRole})", null, null);
 
             return new TeamMemberDetailDto
             {
@@ -636,8 +642,11 @@ namespace RupResearchAPI.Services
                 .FirstOrDefaultAsync(up => up.ProjectId == projectId && up.UserId == userId);
             if (entry == null) return false;
 
+            var user = await _db.ResearchUsers.FindAsync(userId);
+            var memberName = user != null ? $"{user.FirstName} {user.LastName}".Trim() : userId;
             _db.ResearchUsersProjects.Remove(entry);
             await _db.SaveChangesAsync();
+            await _log.LogAsync(projectId, "הסרת_חבר_צוות", $"חבר צוות הוסר: {memberName}", null, null);
             return true;
         }
 
@@ -1143,6 +1152,9 @@ namespace RupResearchAPI.Services
             });
 
             await _db.SaveChangesAsync();
+
+            await _log.LogAsync(sourceId, "העברת_תקציב", $"הועברו ₪{amount:N0} למחקר \"{targetName}\"", userId, null);
+            await _log.LogAsync(targetId, "קבלת_תקציב",  $"התקבלו ₪{amount:N0} ממחקר \"{sourceName}\"", userId, null);
         }
 
         private static ProjectResponseDto ToDto(ResearchProject p) => new()
@@ -1154,7 +1166,7 @@ namespace RupResearchAPI.Services
             TotalBudget = p.TotalBudget,
             CenterId = p.CenterId,
             PrincipalResearcherId = p.PrincipalResearcherId,
-            CreatedDate = p.CreatedDate,
+            CreatedDate = p.CreatedDate.HasValue ? DateOnly.FromDateTime(p.CreatedDate.Value) : null,
             StartDate = p.StartDate,
             EndDate = p.EndDate,
             Status = p.Status,
