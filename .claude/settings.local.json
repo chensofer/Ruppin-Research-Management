@@ -22,7 +22,8 @@
       "PowerShell($file = \"c:\\\\Users\\\\USER\\\\source\\\\repos\\\\Ruppin-Research-Management\\\\bin\\\\Debug\\\\net8.0\\\\RupResearchAPI.exe\"; if \\(Test-Path $file\\) { \\(Get-Item $file\\).LastWriteTime } else { \"File not found\" })",
       "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:5269/api/projects/1/audit-logs\" -Method GET -Headers @{Authorization=\"Bearer test\"} -ErrorAction Stop; $r.StatusCode } catch { $_.Exception.Response.StatusCode.value__ })",
       "PowerShell(sqlcmd -S \"media.ruppin.ac.il\" -d \"bgroup11_test2\" -U \"bgroup11\" -P \"bgroup11_79466\" -Q \"SELECT CASE WHEN EXISTS \\(SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='research_audit_logs'\\) THEN 'TABLE EXISTS' ELSE 'TABLE MISSING' END AS status\" -N -C 2>&1)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }
