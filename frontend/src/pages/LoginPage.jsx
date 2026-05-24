@@ -32,7 +32,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center px-4 py-8"
+      className="min-h-screen flex flex-col items-center justify-center px-4 py-4"
       dir="rtl"
       style={{ background: 'linear-gradient(145deg, #003478 0%, #001E50 55%, #001030 100%)' }}
     >
@@ -43,10 +43,10 @@ export default function LoginPage() {
         style={{ background: 'radial-gradient(circle, rgba(92,184,0,0.12) 0%, transparent 70%)' }} />
 
       {/* ── Logo & title ── */}
-      <div className="flex flex-col items-center text-center mb-6 select-none">
-        <Logo size="sm2x" />
-        <h1 className="text-white text-lg font-bold tracking-wide mt-3">מערכת ניהול מחקרים</h1>
-        <p className="text-white/40 text-sm mt-0.5">המכללה האקדמית רופין</p>
+      <div className="flex flex-col items-center text-center mb-3 select-none">
+        <Logo size="sm" />
+        <h1 className="text-white text-base font-bold tracking-wide mt-1.5">מערכת ניהול מחקרים</h1>
+        <p className="text-white/40 text-xs mt-0.5">המכללה האקדמית רופין</p>
       </div>
 
       {/* ── Form card ── */}
@@ -55,8 +55,8 @@ export default function LoginPage() {
         {/* Card top accent */}
         <div className="h-1.5 w-full" style={{ background: 'linear-gradient(90deg, #5CB800 0%, #003478 100%)' }} />
 
-        <div className="px-8 py-7">
-          <div className="mb-6">
+        <div className="px-8 py-5">
+          <div className="mb-4">
             <h2 className="text-xl font-extrabold text-gray-900">ברוכים הבאים</h2>
             <p className="text-gray-400 text-sm mt-1">התחברו למערכת ניהול המחקר</p>
           </div>
@@ -112,7 +112,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-400 mt-6">
+          <p className="text-center text-sm text-gray-400 mt-4">
             אין לכם חשבון?{' '}
             <Link to="/register" className="text-primary font-semibold hover:text-primary-dark transition-colors">
               הרשמה

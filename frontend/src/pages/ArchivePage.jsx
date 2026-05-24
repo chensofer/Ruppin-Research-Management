@@ -64,7 +64,7 @@ export default function ArchivePage() {
               </svg>
             </button>
           </div>
-          <h1 className="text-2xl font-extrabold text-gray-900">ארכיון מחקרים</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">ארכיון מחקרים</h1>
           <p className="text-gray-500 text-sm mt-1">מחקרים שהועברו לארכיון — ניתן לשחזר אותם בכל עת</p>
         </div>
 

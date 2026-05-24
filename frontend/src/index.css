@@ -122,72 +122,228 @@
 }
 
 /* ── Dark Mode ──────────────────────────────────────────────────────────────── */
+/*
+ * Palette:
+ *   Page bg   #111827  |  Surface  #1C2536  |  Elevated  #1F2F45
+ *   Input     #1A2A3C  |  Border   #2A3A50  |  Border+   #3D5272
+ *   Text-1    #EAF1FB  |  Text-2   #BACCE0  |  Text-3    #8AADC8  |  Text-4  #506070
+ */
 
 @layer base {
-  .dark body                            { background-color: #0D1B2A; color: #E8EEF7; }
-  .dark h1, .dark h2                    { color: #E8EEF7; }
-  .dark h3                              { color: #C8DAF0; }
-  .dark h4                              { color: #B0C8E4; }
-  .dark ::-webkit-scrollbar-thumb       { background: #2A3F58; }
-  .dark ::-webkit-scrollbar-thumb:hover { background: #3D5A78; }
+  .dark body {
+    background-color: #111827;
+    color: #D8E8F5;
+  }
+  .dark h1, .dark h2           { color: #EAF1FB; }
+  .dark h3                     { color: #C4D6EC; }
+  .dark h4                     { color: #A0B8D0; }
+  .dark ::-webkit-scrollbar-thumb       { background: #2A3A50; }
+  .dark ::-webkit-scrollbar-thumb:hover { background: #3D5272; }
+  .dark ::selection { background-color: rgba(96,152,232,0.25); color: #EAF1FB; }
 }
 
 @layer components {
-  .dark .card                           { background-color: #132338; border-color: #2A3F58; }
-  .dark .btn-ghost                      { color: #8DA4BE; }
-  .dark .btn-ghost:hover                { background-color: #1A2D42; color: #E8EEF7; }
-  .dark .input-field                    { background-color: #1A2D42; border-color: #2A3F58; color: #E8EEF7; }
-  .dark .input-field:hover:not(:focus)  { border-color: #3D5A78; }
-  .dark .input-field::placeholder       { color: #5A7A9A; }
-  .dark .field-label                    { color: #8DA4BE; }
-  .dark .section-header                 { color: #B0C4DE; }
-  .dark .badge-green  { background-color: rgba(92,184,0,0.15);  color: #73D400; }
-  .dark .badge-blue   { background-color: rgba(0,52,120,0.35);  color: #7BA8E8; }
-  .dark .badge-yellow { background-color: rgba(180,135,0,0.2);  color: #F0C040; }
-  .dark .badge-red    { background-color: rgba(220,38,38,0.2);  color: #F87171; }
+  .dark .card {
+    background-color: #1C2536;
+    border-color: #2A3A50;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.2);
+  }
+  .dark .btn-ghost                     { color: #8AADC8; }
+  .dark .btn-ghost:hover               { background-color: #1A2A3C; color: #EAF1FB; }
+  .dark .input-field {
+    background-color: #1A2A3C;
+    border-color: #2A3A50;
+    color: #EAF1FB;
+  }
+  .dark .input-field:hover:not(:focus) { border-color: #3D5272; }
+  .dark .input-field::placeholder      { color: #3E5468; }
+  .dark .field-label                   { color: #8AADC8; }
+  .dark .section-header                { color: #A0B8D0; }
+
+  .dark .badge-green  { background-color: rgba(92,184,0,0.14);   color: #74D600; border-color: rgba(92,184,0,0.2); }
+  .dark .badge-blue   { background-color: rgba(96,152,232,0.12); color: #7EB8F7; border-color: rgba(96,152,232,0.2); }
+  .dark .badge-yellow { background-color: rgba(250,204,21,0.11); color: #FCD34D; border-color: rgba(250,204,21,0.2); }
+  .dark .badge-red    { background-color: rgba(248,113,113,0.11);color: #FCA5A5; border-color: rgba(248,113,113,0.2); }
 }
 
 @layer utilities {
-  /* Backgrounds */
-  .dark .bg-white                                                   { background-color: #132338; }
-  .dark .bg-gray-50                                                  { background-color: #1A2D42; }
-  .dark .bg-gray-100                                                 { background-color: #1E3450; }
-  .dark .bg-gray-200                                                 { background-color: #243C58; }
-  .dark .bg-page-bg                                                  { background-color: #0D1B2A; }
 
-  /* Text */
-  .dark .text-gray-900 { color: #E8EEF7; }
-  .dark .text-gray-800 { color: #D0DCF0; }
-  .dark .text-gray-700 { color: #B0C8E4; }
-  .dark .text-gray-600 { color: #8DA4BE; }
-  .dark .text-gray-500 { color: #7090B0; }
-  .dark .text-gray-400 { color: #5A7A9A; }
+  /* ── Core backgrounds ─────────────────────────────────────────────── */
+  .dark .bg-white                { background-color: #1C2536; }
+  .dark .bg-gray-50              { background-color: #1A2535; }
+  .dark .bg-gray-100             { background-color: #1F2F45; }
+  .dark .bg-gray-200             { background-color: #253545; }
+  .dark .bg-page-bg              { background-color: #111827; }
+  .dark .bg-primary-light        { background-color: rgba(96,152,232,0.12); }
+  .dark .bg-accent-light         { background-color: rgba(92,184,0,0.14); }
+  .dark .bg-accent-light\/50     { background-color: rgba(92,184,0,0.08); }
 
-  /* Borders */
-  .dark .border-gray-100 { border-color: #2A3F58; }
-  .dark .border-gray-200 { border-color: #2A3F58; }
-  .dark .border-gray-300 { border-color: #3D5A78; }
+  /* ── Brand text ───────────────────────────────────────────────────── */
+  .dark .text-primary            { color: #6098E8; }
+  .dark .text-accent             { color: #74D600; }
+  .dark .text-accent-dark        { color: #74D600; }
+  .dark .hover\:text-primary:hover { color: #7AACF0; }
 
-  /* Dividers */
-  .dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: #2A3F58; }
-  .dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #2A3F58; }
+  /* ── Gray text scale ──────────────────────────────────────────────── */
+  .dark .text-gray-900           { color: #EAF1FB; }
+  .dark .text-gray-800           { color: #D0DEED; }
+  .dark .text-gray-700           { color: #A8C0D6; }
+  .dark .text-gray-600           { color: #8AADC8; }
+  .dark .text-gray-500           { color: #6A8BA2; }
+  .dark .text-gray-400           { color: #506070; }
+  .dark .hover\:text-gray-700:hover { color: #C4D6EC; }
+  .dark .hover\:text-gray-900:hover { color: #EAF1FB; }
 
-  /* Hover states */
-  .dark .hover\:bg-gray-50:hover  { background-color: #1A2D42; }
-  .dark .hover\:bg-gray-100:hover { background-color: #1E3450; }
+  /* ── Borders ──────────────────────────────────────────────────────── */
+  .dark .border-gray-100         { border-color: #2A3A50; }
+  .dark .border-gray-200         { border-color: #2A3A50; }
+  .dark .border-gray-300         { border-color: #3D5272; }
+  .dark .focus\:border-primary:focus { border-color: #4A7FCE; }
 
-  /* Opacity/special variants */
-  .dark .bg-gray-50\/60                 { background-color: rgba(26,45,66,0.7); }
-  .dark .bg-blue-50\/30                 { background-color: rgba(26,45,66,0.6); }
-  .dark .bg-primary\/5                  { background-color: rgba(0,52,120,0.25); }
-  .dark .bg-primary\/10                 { background-color: rgba(0,52,120,0.3); }
-  .dark .bg-primary\/20                 { background-color: rgba(0,52,120,0.45); }
-  .dark .bg-white\/80                   { background-color: rgba(13,27,42,0.92); }
+  /* ── Dividers ─────────────────────────────────────────────────────── */
+  .dark .divide-gray-50  > :not([hidden]) ~ :not([hidden]) { border-color: #1F2F45; }
+  .dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: #2A3A50; }
+  .dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #2A3A50; }
 
-  /* Native select options */
-  .dark select option { background-color: #1A2D42; color: #E8EEF7; }
+  /* ── Shadows ──────────────────────────────────────────────────────── */
+  .dark .shadow-card      { box-shadow: 0 1px 4px rgba(0,0,0,0.45), 0 4px 16px rgba(0,0,0,0.25); }
+  .dark .shadow-card-hover{ box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.3); }
+  .dark .shadow-sm        { box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+  .dark .shadow-md        { box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
 
-  /* Modal / overlay backdrop stays dark — no override needed for bg-black/50 */
+  /* ── Focus rings ──────────────────────────────────────────────────── */
+  .dark .focus\:ring-primary\/20:focus  { --tw-ring-color: rgba(96,152,232,0.25); }
+  .dark .focus\:ring-primary\/25:focus  { --tw-ring-color: rgba(96,152,232,0.30); }
+
+  /* ── Hover / interactive states ───────────────────────────────────── */
+  .dark .hover\:bg-gray-50:hover         { background-color: #1A2535; }
+  .dark .hover\:bg-gray-100:hover        { background-color: #1F2F45; }
+  .dark .hover\:bg-white\/50:hover       { background-color: rgba(255,255,255,0.05); }
+  .dark .hover\:bg-gray-50\/60:hover     { background-color: rgba(26,37,53,0.75); }
+
+  /* ── Opacity / special variants ───────────────────────────────────── */
+  .dark .bg-gray-50\/60                  { background-color: rgba(26,37,53,0.75); }
+  .dark .bg-gray-100\/70                 { background-color: rgba(31,47,69,0.92); }
+  .dark .bg-white\/80                    { background-color: rgba(17,24,39,0.95); }
+  .dark .bg-white\/60                    { background-color: rgba(255,255,255,0.07); }
+  .dark .bg-blue-50\/30                  { background-color: rgba(26,37,53,0.6); }
+  .dark .bg-primary\/5                   { background-color: rgba(0,52,120,0.18); }
+  .dark .bg-primary\/10                  { background-color: rgba(0,52,120,0.26); }
+  .dark .bg-primary\/15                  { background-color: rgba(0,52,120,0.32); }
+  .dark .bg-primary\/20                  { background-color: rgba(0,52,120,0.40); }
+
+  /* ── Amber / Warning ──────────────────────────────────────────────── */
+  .dark .bg-amber-50                     { background-color: rgba(251,191,36,0.07); }
+  .dark .bg-amber-100                    { background-color: rgba(251,191,36,0.13); }
+  .dark .text-amber-700                  { color: #FBBA45; }
+  .dark .text-amber-600                  { color: #F6A820; }
+  .dark .text-amber-500                  { color: #F6A820; }
+  .dark .border-amber-200                { border-color: rgba(251,191,36,0.22); }
+  .dark .border-amber-300                { border-color: rgba(251,191,36,0.35); }
+  .dark .hover\:bg-amber-50:hover        { background-color: rgba(251,191,36,0.12); }
+  .dark .hover\:border-amber-300:hover   { border-color: rgba(251,191,36,0.36); }
+
+  /* ── Red / Error ──────────────────────────────────────────────────── */
+  .dark .bg-red-50                       { background-color: rgba(248,113,113,0.07); }
+  .dark .bg-red-100                      { background-color: rgba(248,113,113,0.13); }
+  .dark .text-red-700                    { color: #FC8181; }
+  .dark .text-red-600                    { color: #F87171; }
+  .dark .text-red-500                    { color: #F87171; }
+  .dark .border-red-200                  { border-color: rgba(248,113,113,0.22); }
+  .dark .border-red-300                  { border-color: rgba(248,113,113,0.35); }
+  .dark .hover\:bg-red-50:hover          { background-color: rgba(248,113,113,0.12); }
+  .dark .hover\:border-red-300:hover     { border-color: rgba(248,113,113,0.36); }
+
+  /* ── Green / Success ──────────────────────────────────────────────── */
+  .dark .bg-green-50                     { background-color: rgba(52,211,153,0.07); }
+  .dark .bg-green-100                    { background-color: rgba(52,211,153,0.13); }
+  .dark .text-green-700                  { color: #6EE7B7; }
+  .dark .text-green-600                  { color: #34D399; }
+  .dark .text-green-500                  { color: #34D399; }
+  .dark .border-green-200                { border-color: rgba(52,211,153,0.22); }
+  .dark .border-green-300                { border-color: rgba(52,211,153,0.35); }
+  .dark .hover\:bg-green-50:hover        { background-color: rgba(52,211,153,0.12); }
+  .dark .hover\:bg-green-100:hover       { background-color: rgba(52,211,153,0.18); }
+  .dark .hover\:border-green-300:hover   { border-color: rgba(52,211,153,0.36); }
+
+  /* ── Blue / Info ──────────────────────────────────────────────────── */
+  .dark .bg-blue-50                      { background-color: rgba(96,165,250,0.07); }
+  .dark .bg-blue-100                     { background-color: rgba(96,165,250,0.13); }
+  .dark .text-blue-700                   { color: #7EB8F7; }
+  .dark .text-blue-600                   { color: #60A5FA; }
+  .dark .text-blue-500                   { color: #60A5FA; }
+  .dark .border-blue-200                 { border-color: rgba(96,165,250,0.22); }
+
+  /* ── Yellow / Pending ─────────────────────────────────────────────── */
+  .dark .bg-yellow-50                    { background-color: rgba(250,204,21,0.07); }
+  .dark .bg-yellow-100                   { background-color: rgba(250,204,21,0.13); }
+  .dark .text-yellow-700                 { color: #FCD34D; }
+  .dark .text-yellow-600                 { color: #FACC15; }
+  .dark .border-yellow-200               { border-color: rgba(250,204,21,0.20); }
+  .dark .hover\:bg-yellow-50:hover       { background-color: rgba(250,204,21,0.12); }
+
+  /* ── Emerald / Paid ───────────────────────────────────────────────── */
+  .dark .bg-emerald-50                   { background-color: rgba(52,211,153,0.07); }
+  .dark .bg-emerald-100                  { background-color: rgba(52,211,153,0.13); }
+  .dark .text-emerald-700                { color: #6EE7B7; }
+  .dark .text-emerald-600                { color: #34D399; }
+  .dark .border-emerald-200              { border-color: rgba(52,211,153,0.22); }
+
+  /* ── Orange / Hours ───────────────────────────────────────────────── */
+  .dark .bg-orange-50                    { background-color: rgba(251,146,60,0.07); }
+  .dark .bg-orange-100                   { background-color: rgba(251,146,60,0.13); }
+  .dark .text-orange-700                 { color: #FB923C; }
+  .dark .text-orange-600                 { color: #F97316; }
+  .dark .border-orange-200               { border-color: rgba(251,146,60,0.22); }
+
+  /* ── Purple / Team ────────────────────────────────────────────────── */
+  .dark .bg-purple-50                    { background-color: rgba(192,132,252,0.07); }
+  .dark .bg-purple-100                   { background-color: rgba(192,132,252,0.13); }
+  .dark .text-purple-700                 { color: #C084FC; }
+  .dark .text-purple-400                 { color: #A78BFA; }
+  .dark .border-purple-200               { border-color: rgba(192,132,252,0.22); }
+
+  /* ── Violet / Assistants ──────────────────────────────────────────── */
+  .dark .bg-violet-50                    { background-color: rgba(167,139,250,0.07); }
+  .dark .bg-violet-100                   { background-color: rgba(167,139,250,0.13); }
+  .dark .text-violet-700                 { color: #C4B5FD; }
+  .dark .text-violet-600                 { color: #A78BFA; }
+  .dark .text-violet-400                 { color: #A78BFA; }
+  .dark .border-violet-200               { border-color: rgba(167,139,250,0.22); }
+
+  /* ── Teal / Budget ────────────────────────────────────────────────── */
+  .dark .bg-teal-50                      { background-color: rgba(45,212,191,0.07); }
+  .dark .bg-teal-100                     { background-color: rgba(45,212,191,0.13); }
+  .dark .text-teal-700                   { color: #2DD4BF; }
+  .dark .text-teal-400                   { color: #5EEAD4; }
+  .dark .border-teal-200                 { border-color: rgba(45,212,191,0.20); }
+  .dark .hover\:bg-teal-50:hover         { background-color: rgba(45,212,191,0.12); }
+
+  /* ── Cyan / Commitments ───────────────────────────────────────────── */
+  .dark .bg-cyan-50                      { background-color: rgba(34,211,238,0.06); }
+  .dark .bg-cyan-100                     { background-color: rgba(34,211,238,0.11); }
+  .dark .text-cyan-700                   { color: #22D3EE; }
+  .dark .text-cyan-600                   { color: #06B6D4; }
+  .dark .border-cyan-200                 { border-color: rgba(34,211,238,0.20); }
+
+  /* ── Slate / Files ────────────────────────────────────────────────── */
+  .dark .bg-slate-50                     { background-color: rgba(148,163,184,0.06); }
+  .dark .bg-slate-100                    { background-color: rgba(148,163,184,0.11); }
+  .dark .text-slate-600                  { color: #94A3B8; }
+  .dark .text-slate-500                  { color: #64748B; }
+  .dark .border-slate-200                { border-color: rgba(148,163,184,0.20); }
+
+  /* ── Native select options ────────────────────────────────────────── */
+  .dark select option { background-color: #1A2535; color: #EAF1FB; }
+
+  /* ── Recharts tooltip ─────────────────────────────────────────────── */
+  .dark .recharts-default-tooltip {
+    background-color: #1C2536 !important;
+    border-color: #2A3A50 !important;
+    border-radius: 12px !important;
+  }
+  .dark .recharts-tooltip-label  { color: #EAF1FB !important; }
+  .dark .recharts-tooltip-item   { color: #BACCE0 !important; }
 }
 
 /* ── Hebrew Date Picker ─────────────────────────────────────────────────────── */
@@ -339,21 +495,21 @@
 
 /* Dark mode overrides for the calendar */
 .dark .react-datepicker {
-  background: #132338 !important;
-  border-color: #2A3F58 !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+  background: #1C2536 !important;
+  border-color: #2A3A50 !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
 }
-.dark .react-datepicker__header         { border-bottom-color: #2A3F58 !important; }
-.dark .react-datepicker__day-names      { background: #1A2D42 !important; }
-.dark .react-datepicker__day-name       { color: #5A7A9A !important; }
-.dark .react-datepicker__day            { color: #D0DCF0 !important; }
+.dark .react-datepicker__header         { border-bottom-color: #2A3A50 !important; }
+.dark .react-datepicker__day-names      { background: #1A2535 !important; }
+.dark .react-datepicker__day-name       { color: #506070 !important; }
+.dark .react-datepicker__day            { color: #D0DEED !important; }
 .dark .react-datepicker__day:hover:not(.react-datepicker__day--disabled) {
-  background-color: #1E3450 !important;
-  color: #7BA8E8 !important;
+  background-color: #1F2F45 !important;
+  color: #7EB8F7 !important;
 }
-.dark .react-datepicker__day--selected  { background-color: #1B4080 !important; color: #fff !important; }
-.dark .react-datepicker__day--keyboard-selected { background-color: #1A2D42 !important; color: #7BA8E8 !important; }
-.dark .react-datepicker__day--today     { color: #7BA8E8 !important; box-shadow: inset 0 0 0 1.5px #1B4080; }
-.dark .react-datepicker__day--outside-month { color: #2A3F58 !important; }
-.dark .react-datepicker__day--disabled  { color: #2A3F58 !important; }
-.dark .hdp-select option { background: #1A2D42; color: #E8EEF7; }
+.dark .react-datepicker__day--selected  { background-color: #2B5BA8 !important; color: #fff !important; }
+.dark .react-datepicker__day--keyboard-selected { background-color: #1A2535 !important; color: #7EB8F7 !important; }
+.dark .react-datepicker__day--today     { color: #7EB8F7 !important; box-shadow: inset 0 0 0 1.5px #2B5BA8; }
+.dark .react-datepicker__day--outside-month { color: #2A3A50 !important; }
+.dark .react-datepicker__day--disabled  { color: #2A3A50 !important; }
+.dark .hdp-select option { background: #1A2535; color: #EAF1FB; }

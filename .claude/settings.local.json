@@ -8,7 +8,24 @@
       "Bash(dotnet ef *)",
       "Bash(python3)",
       "Bash(node -e \"const fs=require\\('fs'\\); fs.writeFileSync\\('C:/Users/shach/Desktop/Ruppin-Research-Management/frontend/src/pages/ComparisonPage.jsx', 'placeholder2\\\\n', 'utf8'\\); console.log\\('ok'\\);\")",
-      "Bash(sqlcmd -S media.ruppin.ac.il -d bgroup11_test2 -U bgroup11 -P \"bgroup11_79466\" -Q \"SELECT DISTINCT RTRIM\\(status\\) as status FROM research_projects\")"
+      "Bash(sqlcmd -S media.ruppin.ac.il -d bgroup11_test2 -U bgroup11 -P \"bgroup11_79466\" -Q \"SELECT DISTINCT RTRIM\\(status\\) as status FROM research_projects\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\USER\\\\source\\\\repos\\\\Ruppin-Research-Management\" -Force)",
+      "Bash(Select-Object -Property Name, PSIsContainer)",
+      "Bash(Sort-Object Name)",
+      "Bash(Stop-Process -Id 19276 -Force)",
+      "Bash(Start-Sleep -Seconds 1)",
+      "Bash(Write-Host \"Process stopped\")",
+      "PowerShell(Stop-Process -Id 19276 -Force)",
+      "PowerShell(Get-Process -Name \"dotnet\" -ErrorAction SilentlyContinue)",
+      "PowerShell(netstat -ano)",
+      "PowerShell(Get-Process -Id 21680)",
+      "PowerShell(Get-Process -Id 21680 -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, Path, StartTime; \\(Get-Item \"c:\\\\Users\\\\USER\\\\source\\\\repos\\\\Ruppin-Research-Management\\\\bin\\\\Debug\\\\net8.0\\\\RupResearchAPI.exe\"\\).LastWriteTime)",
+      "PowerShell($file = \"c:\\\\Users\\\\USER\\\\source\\\\repos\\\\Ruppin-Research-Management\\\\bin\\\\Debug\\\\net8.0\\\\RupResearchAPI.exe\"; if \\(Test-Path $file\\) { \\(Get-Item $file\\).LastWriteTime } else { \"File not found\" })",
+      "PowerShell(Get-Date; \\(Get-Item \"c:\\\\Users\\\\USER\\\\source\\\\repos\\\\Ruppin-Research-Management\\\\Controllers\\\\ProjectsController.cs\"\\).LastWriteTime; \\(Get-Item \"c:\\\\Users\\\\USER\\\\source\\\\repos\\\\Ruppin-Research-Management\\\\bin\\\\Debug\\\\net8.0\\\\RupResearchAPI.exe\"\\).LastWriteTime)",
+      "PowerShell($proc = Get-WmiObject Win32_Process -Filter \"ProcessId = 21680\"; if \\($proc\\) { \"Started: $\\($proc.CreationDate\\)`nExe: $\\($proc.ExecutablePath\\)\" } else { \"Process not found via WMI\" })",
+      "PowerShell($proc = Get-WmiObject Win32_Process -Filter \"ProcessId = 18476\"; \"PID: $\\($proc.ProcessId\\)\"; \"Exe: $\\($proc.ExecutablePath\\)\"; \"Started: $\\($proc.CreationDate\\)\"; $exeTime = \\(Get-Item \"c:\\\\Users\\\\USER\\\\source\\\\repos\\\\Ruppin-Research-Management\\\\bin\\\\Debug\\\\net8.0\\\\RupResearchAPI.exe\"\\).LastWriteTime; \"Exe built: $exeTime\")",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:5269/api/projects/1/audit-logs\" -Method GET -Headers @{Authorization=\"Bearer test\"} -ErrorAction Stop; $r.StatusCode } catch { $_.Exception.Response.StatusCode.value__ })",
+      "PowerShell(sqlcmd -S \"media.ruppin.ac.il\" -d \"bgroup11_test2\" -U \"bgroup11\" -P \"bgroup11_79466\" -Q \"SELECT CASE WHEN EXISTS \\(SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='research_audit_logs'\\) THEN 'TABLE EXISTS' ELSE 'TABLE MISSING' END AS status\" -N -C 2>&1)"
     ]
   }
 }

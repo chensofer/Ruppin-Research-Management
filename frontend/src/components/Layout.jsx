@@ -6,7 +6,7 @@ import Logo from './Logo';
 import {
   HiSquares2X2, HiCheckCircle, HiCalendarDays, HiDocumentChartBar,
   HiArrowRightOnRectangle, HiBars3, HiChartBar, HiArchiveBox,
-  HiSun, HiMoon,
+  HiSun, HiMoon, HiClock,
 } from 'react-icons/hi2';
 import { getPendingPaymentRequests } from '../api/paymentRequestsApi';
 import { getPendingHourApprovals } from '../api/hourReportsApi';
@@ -31,6 +31,7 @@ export default function Layout({ children }) {
     { to: '/comparison',  label: 'השוואות בין מחקרים',   icon: <HiChartBar    className="w-5 h-5 flex-shrink-0" /> },
     { to: '/approvals',   label: 'אישורים ממתינים',      icon: <HiCheckCircle className="w-5 h-5 flex-shrink-0" />, badge: pendingCount },
     { to: '/archive',     label: 'ארכיון מחקרים',        icon: <HiArchiveBox  className="w-5 h-5 flex-shrink-0" /> },
+    { to: '/history',     label: 'היסטוריית שינויים',    icon: <HiClock       className="w-5 h-5 flex-shrink-0" /> },
   ];
 
   const navItems = isResearcher ? RESEARCHER_NAV : ASSISTANT_NAV;

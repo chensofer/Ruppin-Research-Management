@@ -33,6 +33,7 @@ namespace RupResearchAPI
             builder.Services.AddScoped<IPaymentRequestService, PaymentRequestService>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IHourReportService, HourReportService>();
+            builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
             // JWT Authentication
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -99,6 +100,23 @@ namespace RupResearchAPI
                         WHERE TABLE_NAME = 'research_projects' AND COLUMN_NAME = 'archived_at'
                     )
                         ALTER TABLE research_projects ADD archived_at DATETIME NULL;
+
+                    IF NOT EXISTS (
+                        SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+                        WHERE TABLE_NAME = 'research_audit_logs'
+                    )
+                    BEGIN
+                        CREATE TABLE research_audit_logs (
+                            id               INT           IDENTITY(1,1) PRIMARY KEY,
+                            project_id       INT           NOT NULL,
+                            performed_by_user_id NVARCHAR(20) NOT NULL,
+                            action_type      NVARCHAR(100) NOT NULL,
+                            action_description NVARCHAR(500) NOT NULL,
+                            entity_type      NVARCHAR(50)  NULL,
+                            entity_id        NVARCHAR(50)  NULL,
+                            created_at       DATETIME      NOT NULL DEFAULT GETDATE()
+                        );
+                    END
                 ");
             }
 

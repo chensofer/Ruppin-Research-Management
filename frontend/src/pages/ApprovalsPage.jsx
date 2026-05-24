@@ -390,7 +390,7 @@ export default function ApprovalsPage() {
         {/* Header */}
         <div className="mb-7 flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-extrabold text-gray-900">אישורים ממתינים</h1>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">אישורים ממתינים</h1>
             <p className="text-sm text-gray-400 mt-0.5 font-medium">
               {requests.length + hourRecords.length} פריטים ממתינים לאישורך
             </p>

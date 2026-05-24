@@ -62,11 +62,11 @@ export default function RegisterPage() {
   };
 
   const inputClass = "input-field";
-  const labelClass = "block text-sm font-semibold text-gray-700 mb-1.5";
+  const labelClass = "block text-xs font-semibold text-gray-700 mb-1";
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-start px-4 py-8"
+      className="min-h-screen flex flex-col items-center justify-center px-4 py-3"
       dir="rtl"
       style={{ background: 'linear-gradient(145deg, #003478 0%, #001E50 55%, #001030 100%)' }}
     >
@@ -77,10 +77,10 @@ export default function RegisterPage() {
         style={{ background: 'radial-gradient(circle, rgba(92,184,0,0.12) 0%, transparent 70%)' }} />
 
       {/* ── Logo & title ── */}
-      <div className="flex flex-col items-center text-center mb-5 select-none">
-        <Logo size="sm2x" />
-        <h1 className="text-white text-lg font-bold tracking-wide mt-3">מערכת ניהול מחקרים</h1>
-        <p className="text-white/40 text-sm mt-0.5">המכללה האקדמית רופין</p>
+      <div className="flex flex-col items-center text-center mb-2 select-none">
+        <Logo size="xs2" />
+        <h1 className="text-white text-sm font-bold tracking-wide mt-1">מערכת ניהול מחקרים</h1>
+        <p className="text-white/40 text-xs">המכללה האקדמית רופין</p>
       </div>
 
       {/* ── Form card ── */}
@@ -89,30 +89,30 @@ export default function RegisterPage() {
         {/* Card top accent */}
         <div className="h-1.5 w-full" style={{ background: 'linear-gradient(90deg, #5CB800 0%, #003478 100%)' }} />
 
-        <div className="px-8 py-7">
-          <div className="mb-6">
+        <div className="px-7 py-4">
+          <div className="mb-3">
             <h2 className="text-xl font-extrabold text-gray-900">הרשמה למערכת</h2>
-            <p className="text-gray-400 text-sm mt-1">צרו חשבון חדש</p>
+            <p className="text-gray-400 text-sm mt-0.5">צרו חשבון חדש</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-2.5">
 
             {/* Profile image */}
-            <div className="flex flex-col items-center gap-2 mb-2">
+            <div className="flex flex-col items-center gap-1">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="relative w-20 h-20 rounded-full border-2 border-dashed border-gray-300 hover:border-primary transition-colors overflow-hidden bg-gray-50 flex items-center justify-center group"
+                className="relative w-14 h-14 rounded-full border-2 border-dashed border-gray-300 hover:border-primary transition-colors overflow-hidden bg-gray-50 flex items-center justify-center group"
               >
                 {profilePreview ? (
                   <img src={profilePreview} alt="תמונת פרופיל" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="flex flex-col items-center gap-1 text-gray-400 group-hover:text-primary transition-colors">
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex flex-col items-center gap-0.5 text-gray-400 group-hover:text-primary transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                         d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                   </div>
@@ -191,7 +191,7 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-400 mt-6">
+          <p className="text-center text-sm text-gray-400 mt-3">
             כבר יש לכם חשבון?{' '}
             <Link to="/login" className="text-primary font-semibold hover:text-primary-dark transition-colors">
               התחברות

@@ -12,11 +12,13 @@ namespace RupResearchAPI.Controllers
     {
         private readonly IPaymentRequestService _service;
         private readonly IWebHostEnvironment _env;
+        private readonly IAuditLogService _audit;
 
-        public PaymentRequestsController(IPaymentRequestService service, IWebHostEnvironment env)
+        public PaymentRequestsController(IPaymentRequestService service, IWebHostEnvironment env, IAuditLogService audit)
         {
             _service = service;
             _env = env;
+            _audit = audit;
         }
 
         [HttpGet("api/projects/{projectId}/payment-requests")]
@@ -41,6 +43,11 @@ namespace RupResearchAPI.Controllers
             try
             {
                 var created = await _service.Create(projectId, dto);
+                var actorId = dto.RequestedByUserId ?? User.FindFirst("user_id")?.Value ?? string.Empty;
+                var amount = dto.RequestedAmount?.ToString("N0") ?? "לא צוין";
+                await _audit.LogAsync(projectId, actorId, "payment_request_created",
+                    $"יצירת בקשת תשלום: {dto.RequestTitle ?? "ללא כותרת"} | סכום: ₪{amount}",
+                    "payment", created.PaymentRequestId.ToString());
                 return Ok(created);
             }
             catch (InvalidOperationException ex)
@@ -54,6 +61,20 @@ namespace RupResearchAPI.Controllers
         {
             var updated = await _service.UpdateStatus(id, dto);
             if (updated == null) return NotFound();
+
+            if (updated.ProjectId.HasValue)
+            {
+                var actorId = dto.ApprovedByUserId ?? User.FindFirst("user_id")?.Value ?? string.Empty;
+                var (actionType, description) = dto.Status switch
+                {
+                    "אושר"  => ("payment_approved",  $"אישור בקשת תשלום: {updated.RequestTitle ?? "ללא כותרת"} | סכום: ₪{updated.RequestedAmount?.ToString("N0")}"),
+                    "נדחה"  => ("payment_rejected",  $"דחיית בקשת תשלום: {updated.RequestTitle ?? "ללא כותרת"} | סיבה: {dto.RejectionReason ?? "לא צוינה"}"),
+                    "שולם"  => ("payment_paid",      $"סימון תשלום כשולם: {updated.RequestTitle ?? "ללא כותרת"}"),
+                    _       => ("payment_status_updated", $"עדכון סטטוס בקשת תשלום: {dto.Status}"),
+                };
+                await _audit.LogAsync(updated.ProjectId.Value, actorId, actionType, description,
+                    "payment", id.ToString());
+            }
             return Ok(updated);
         }
 

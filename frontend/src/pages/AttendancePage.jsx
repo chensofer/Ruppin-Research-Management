@@ -283,7 +283,7 @@ export default function AttendancePage() {
 
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">דיווח נוכחות</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">דיווח נוכחות</h1>
           <p className="text-gray-500 text-sm mt-1">
             {user?.firstName} {user?.lastName} — מלא את שעות העבודה שלך לחודש הנבחר
           </p>
@@ -541,7 +541,7 @@ export default function AttendancePage() {
 
             {/* Action bar */}
             {!locked && (
-              <div className="flex items-center justify-between gap-4 bg-white border border-gray-100 rounded-2xl px-5 py-4 shadow-sm">
+              <div className="flex items-center justify-between gap-4 flex-wrap bg-white border border-gray-100 rounded-2xl px-5 py-4 shadow-sm">
                 <p className="text-xs text-gray-400 flex items-center gap-2">
                   {saving && !submitting ? (
                     <>

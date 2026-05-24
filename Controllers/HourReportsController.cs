@@ -11,7 +11,13 @@ namespace RupResearchAPI.Controllers
     public class HourReportsController : ControllerBase
     {
         private readonly IHourReportService _svc;
-        public HourReportsController(IHourReportService svc) => _svc = svc;
+        private readonly IAuditLogService _audit;
+
+        public HourReportsController(IHourReportService svc, IAuditLogService audit)
+        {
+            _svc = svc;
+            _audit = audit;
+        }
 
         // GET /api/hour-reports?userId=&projectId=&month=&year=
         [HttpGet]
@@ -51,6 +57,13 @@ namespace RupResearchAPI.Controllers
         public async Task<IActionResult> SubmitMonthly([FromBody] SubmitMonthlyApprovalDto dto)
         {
             var result = await _svc.SubmitMonthly(dto);
+            if (dto.ProjectId.HasValue && !string.IsNullOrEmpty(dto.UserId))
+            {
+                var monthStr = $"{dto.Month:D2}/{dto.Year}";
+                await _audit.LogAsync(dto.ProjectId.Value, dto.UserId, "hour_report_submitted",
+                    $"הגשת דוח שעות חודשי לאישור: {monthStr} | שעות: {dto.TotalWorkedHours?.ToString("F1") ?? "?"}",
+                    "hour_report", result?.MonthlyApprovalId.ToString());
+            }
             return Ok(result);
         }
 
@@ -62,6 +75,18 @@ namespace RupResearchAPI.Controllers
             {
                 var result = await _svc.DecideMonthly(id, dto);
                 if (result == null) return NotFound();
+
+                if (result.ProjectId.HasValue)
+                {
+                    var actorId = dto.ApprovedByUserId ?? User.FindFirst("user_id")?.Value ?? string.Empty;
+                    var monthStr = $"{result.Month:D2}/{result.Year}";
+                    var (actionType, description) = dto.ApprovalStatus == "אושר"
+                        ? ("hour_report_approved", $"אישור דוח שעות חודשי: {result.UserName ?? result.UserId} | {monthStr} | {result.TotalWorkedHours?.ToString("F1")} שעות")
+                        : ("hour_report_rejected", $"דחיית דוח שעות חודשי: {result.UserName ?? result.UserId} | {monthStr}");
+
+                    await _audit.LogAsync(result.ProjectId.Value, actorId, actionType, description,
+                        "hour_report", id.ToString());
+                }
                 return Ok(result);
             }
             catch (InvalidOperationException ex)

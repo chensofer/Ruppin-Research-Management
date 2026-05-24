@@ -158,9 +158,9 @@ export default function MyReportsPage() {
       <div className="max-w-4xl mx-auto" dir="rtl">
 
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">הדוחות שלי</h1>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-y-2">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">הדוחות שלי</h1>
             <p className="text-gray-500 text-sm mt-1">
               {user?.firstName} {user?.lastName} — כל הדוחות החודשיים שנשלחו לאישור
             </p>
