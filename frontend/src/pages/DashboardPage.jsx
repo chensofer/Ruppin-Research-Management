@@ -174,7 +174,7 @@ export default function DashboardPage() {
         <div dir="rtl">
 
           {/* ── Page Header ────────────────────────────────────────────── */}
-          <div className="flex items-center justify-between mb-7 gap-4">
+          <div className="flex items-center justify-between mb-4 gap-4">
             {/* Title */}
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 leading-tight">
@@ -213,7 +213,7 @@ export default function DashboardPage() {
           </div>
 
           {/* ── Search ─────────────────────────────────────────────────── */}
-          <div className="relative mb-4">
+          <div className="relative mb-3">
             <svg
               className="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
               fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -241,7 +241,7 @@ export default function DashboardPage() {
           </div>
 
           {/* ── Filter + Sort bar ───────────────────────────────────────── */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-7">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             {/* Status chips + clear */}
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1 bg-gray-100/80 p-1 rounded-xl">
@@ -315,7 +315,7 @@ export default function DashboardPage() {
           ) : (
             <>
               {/* Results label */}
-              <p className="text-xs text-gray-400 mb-4 font-medium">
+              <p className="text-xs text-gray-400 mb-3 font-medium">
                 {hasActiveFilters
                   ? `מציג ${displayed.length} מתוך ${projects.length} מחקרים`
                   : `${projects.length} מחקרים`}

@@ -129,7 +129,7 @@ export default function ProfilePage() {
 
         {/* Page header */}
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900">הפרופיל שלי</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">הפרופיל שלי</h1>
           <p className="text-gray-500 text-sm mt-1">עדכון פרטים אישיים ותמונת פרופיל</p>
         </div>
 

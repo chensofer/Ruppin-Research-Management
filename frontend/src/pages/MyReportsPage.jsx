@@ -156,28 +156,22 @@ export default function MyReportsPage() {
       <div className="max-w-4xl mx-auto" dir="rtl">
 
         {/* Header */}
-        <div className="mb-5 rounded-xl px-5 py-3.5 text-white relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #1B4080 0%, #003478 60%, #7C3AED 100%)' }}>
-          <div className="absolute top-0 left-0 w-32 h-32 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
-          <div className="relative z-10 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-lg flex-shrink-0">📊</div>
-              <div>
-                <h1 className="text-lg font-extrabold tracking-tight leading-tight">הדוחות שלי</h1>
-                <p className="text-blue-200 text-xs mt-0.5">
-                  {user?.firstName} {user?.lastName} — כל הדוחות החודשיים שנשלחו לאישור
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/attendance')}
-              className="flex items-center gap-2 text-xs text-blue-200 hover:text-white font-medium transition-colors bg-white/10 hover:bg-white/20 rounded-lg px-3 py-1.5 flex-shrink-0"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              דיווח נוכחות
-            </button>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-y-2">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">הדוחות שלי</h1>
+            <p className="text-gray-500 text-sm mt-1">
+              {user?.firstName} {user?.lastName} — כל הדוחות החודשיים שנשלחו לאישור
+            </p>
           </div>
+          <button
+            onClick={() => navigate('/attendance')}
+            className="flex items-center gap-2 text-sm text-primary hover:text-primary-dark font-medium transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            חזרה לדיווח נוכחות
+          </button>
         </div>
 
         {/* Summary cards — also serve as status filter */}

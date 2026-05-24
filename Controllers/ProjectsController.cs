@@ -12,11 +12,13 @@ namespace RupResearchAPI.Controllers
     {
         private readonly IProjectService _projectService;
         private readonly IWebHostEnvironment _env;
+        private readonly IAuditLogService _audit;
 
-        public ProjectsController(IProjectService projectService, IWebHostEnvironment env)
+        public ProjectsController(IProjectService projectService, IWebHostEnvironment env, IAuditLogService audit)
         {
             _projectService = projectService;
             _env = env;
+            _audit = audit;
         }
 
         [HttpGet]
@@ -49,6 +51,8 @@ namespace RupResearchAPI.Controllers
         {
             var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
             var created = await _projectService.Create(dto, userId);
+            await _audit.LogAsync(created.ProjectId, userId, "project_created",
+                $"יצירת מחקר חדש: {dto.ProjectNameHe}", "project", created.ProjectId.ToString());
             return CreatedAtAction(nameof(GetById), new { id = created.ProjectId }, created);
         }
 
@@ -63,6 +67,10 @@ namespace RupResearchAPI.Controllers
 
             var updated = await _projectService.Update(id, dto);
             if (updated == null) return NotFound();
+
+            var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
+            await _audit.LogAsync(id, userId, "project_updated",
+                $"עדכון נתוני מחקר: {dto.ProjectNameHe}", "project", id.ToString());
             return Ok(updated);
         }
 
@@ -89,6 +97,8 @@ namespace RupResearchAPI.Controllers
             {
                 var deleted = await _projectService.Archive(id);
                 if (!deleted) return NotFound();
+                var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
+                await _audit.LogAsync(id, userId, "project_archived", "ארכוב מחקר", "project", id.ToString());
                 return NoContent();
             }
             catch (InvalidOperationException ex)
@@ -109,6 +119,8 @@ namespace RupResearchAPI.Controllers
             {
                 var archived = await _projectService.Archive(id);
                 if (!archived) return NotFound();
+                var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
+                await _audit.LogAsync(id, userId, "project_archived", "ארכוב מחקר", "project", id.ToString());
                 return NoContent();
             }
             catch (Exception ex)
@@ -123,6 +135,8 @@ namespace RupResearchAPI.Controllers
         {
             var restored = await _projectService.Restore(id);
             if (!restored) return NotFound();
+            var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
+            await _audit.LogAsync(id, userId, "project_restored", "שחזור מחקר מארכיון", "project", id.ToString());
             return NoContent();
         }
 
@@ -157,6 +171,9 @@ namespace RupResearchAPI.Controllers
             }
 
             var result = await _projectService.ReplaceBudgetCategories(id, req.Categories);
+            var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
+            await _audit.LogAsync(id, userId, "budget_categories_updated",
+                $"עדכון קטגוריות תקציב ({req.Categories.Count} קטגוריות)", "budget", id.ToString());
             return Ok(result);
         }
 
@@ -170,7 +187,6 @@ namespace RupResearchAPI.Controllers
             if (errs.Count > 0)
                 return BadRequest(new { message = string.Join(" | ", errs) });
 
-            // Validate that budget categories do not exceed total approved budget
             if (dto.TotalBudget.HasValue && dto.BudgetCategories.Count > 0)
             {
                 var totalAllocated = dto.BudgetCategories.Sum(c => c.AllocatedAmount ?? 0);
@@ -182,6 +198,8 @@ namespace RupResearchAPI.Controllers
             {
                 var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
                 var created = await _projectService.CreateFull(dto, userId);
+                await _audit.LogAsync(created.ProjectId, userId, "project_created",
+                    $"יצירת מחקר חדש: {dto.ProjectNameHe}", "project", created.ProjectId.ToString());
                 return CreatedAtAction(nameof(GetById), new { id = created.ProjectId }, created);
             }
             catch (InvalidOperationException ex)
@@ -213,12 +231,13 @@ namespace RupResearchAPI.Controllers
             var relativePath = $"/uploads/{id}/{safeFileName}";
             var userId = User.FindFirst("user_id")?.Value;
 
-            // Use file extension instead of full MIME type (avoids truncation of long MIME strings like xlsx/docx)
             var fileType = Path.GetExtension(safeFileName).ToLowerInvariant();
 
             var record = await _projectService.SaveFileRecord(
                 id, safeFileName, relativePath, fileType, folderName, userId);
 
+            await _audit.LogAsync(id, userId ?? string.Empty, "file_uploaded",
+                $"העלאת קובץ: {safeFileName}", "file", record?.FileId.ToString());
             return Ok(record);
         }
 
@@ -236,6 +255,8 @@ namespace RupResearchAPI.Controllers
         {
             var deleted = await _projectService.DeleteFile(fileId);
             if (!deleted) return NotFound();
+            var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
+            await _audit.LogAsync(id, userId, "file_deleted", "מחיקת קובץ", "file", fileId.ToString());
             return NoContent();
         }
 
@@ -258,6 +279,9 @@ namespace RupResearchAPI.Controllers
                 var member = await _projectService.AddTeamMember(id, req.UserId, req.ProjectRole);
                 if (member == null)
                     return Conflict(new { message = "המשתמש כבר חבר בצוות" });
+                var actorId = User.FindFirst("user_id")?.Value ?? string.Empty;
+                await _audit.LogAsync(id, actorId, "team_member_added",
+                    $"הוספת חבר צוות: {req.UserId} בתפקיד {req.ProjectRole}", "team_member", req.UserId);
                 return Ok(member);
             }
             catch (InvalidOperationException ex)
@@ -272,6 +296,9 @@ namespace RupResearchAPI.Controllers
         {
             var removed = await _projectService.RemoveTeamMember(id, userId);
             if (!removed) return NotFound();
+            var actorId = User.FindFirst("user_id")?.Value ?? string.Empty;
+            await _audit.LogAsync(id, actorId, "team_member_removed",
+                $"הסרת חבר צוות: {userId}", "team_member", userId);
             return NoContent();
         }
 
@@ -292,6 +319,9 @@ namespace RupResearchAPI.Controllers
             var assistant = await _projectService.AddAssistant(id, req.AssistantUserId, req.Role, req.SalaryPerHour);
             if (assistant == null)
                 return Conflict(new { message = "העוזר כבר מוגדר במחקר" });
+            var actorId = User.FindFirst("user_id")?.Value ?? string.Empty;
+            await _audit.LogAsync(id, actorId, "assistant_added",
+                $"הוספת עוזר מחקר: {req.AssistantUserId}", "assistant", req.AssistantUserId);
             return Ok(assistant);
         }
 
@@ -301,6 +331,9 @@ namespace RupResearchAPI.Controllers
         {
             var removed = await _projectService.RemoveAssistant(id, userId);
             if (!removed) return NotFound();
+            var actorId = User.FindFirst("user_id")?.Value ?? string.Empty;
+            await _audit.LogAsync(id, actorId, "assistant_removed",
+                $"הסרת עוזר מחקר: {userId}", "assistant", userId);
             return NoContent();
         }
 
@@ -316,6 +349,10 @@ namespace RupResearchAPI.Controllers
             try
             {
                 var result = await _projectService.CreateAndAddAssistant(id, req);
+                var actorId = User.FindFirst("user_id")?.Value ?? string.Empty;
+                await _audit.LogAsync(id, actorId, "assistant_created",
+                    $"יצירה והוספת עוזר מחקר חדש: {req.FirstName} {req.LastName} ({req.UserId})",
+                    "assistant", req.UserId);
                 return Ok(result);
             }
             catch (ArgumentException ex)
@@ -337,6 +374,9 @@ namespace RupResearchAPI.Controllers
 
             var result = await _projectService.UpdateAssistant(id, userId, req);
             if (result == null) return NotFound();
+            var actorId = User.FindFirst("user_id")?.Value ?? string.Empty;
+            await _audit.LogAsync(id, actorId, "assistant_updated",
+                $"עדכון פרטי עוזר מחקר: {userId}", "assistant", userId);
             return Ok(result);
         }
 
@@ -368,6 +408,13 @@ namespace RupResearchAPI.Controllers
             {
                 var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
                 await _projectService.TransferBudget(sourceId, req.TargetProjectId, req.Amount, userId);
+
+                var amountStr = req.Amount.ToString("N0");
+                await _audit.LogAsync(sourceId, userId, "budget_transferred",
+                    $"העברת תקציב של ₪{amountStr} למחקר #{req.TargetProjectId}", "budget", req.TargetProjectId.ToString());
+                await _audit.LogAsync(req.TargetProjectId, userId, "budget_transferred",
+                    $"קבלת תקציב של ₪{amountStr} ממחקר #{sourceId}", "budget", sourceId.ToString());
+
                 return Ok(new { message = "ההעברה בוצעה בהצלחה" });
             }
             catch (InvalidOperationException ex)
@@ -404,6 +451,10 @@ namespace RupResearchAPI.Controllers
         public async Task<IActionResult> AddCommitment(int id, [FromBody] CreateFutureCommitmentRequest req)
         {
             var commitment = await _projectService.AddCommitment(id, req);
+            var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
+            await _audit.LogAsync(id, userId, "commitment_added",
+                $"הוספת התחייבות עתידית: {req.CommitmentDescription ?? "ללא תיאור"} | סכום: ₪{req.ExpectedAmount?.ToString("N0") ?? "לא צוין"}",
+                "commitment", commitment?.CommitmentId.ToString());
             return Ok(commitment);
         }
 
@@ -413,6 +464,10 @@ namespace RupResearchAPI.Controllers
         {
             var updated = await _projectService.UpdateCommitment(commitmentId, req);
             if (updated == null) return NotFound();
+            var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
+            await _audit.LogAsync(id, userId, "commitment_updated",
+                $"עדכון התחייבות עתידית: {req.CommitmentDescription ?? "ללא תיאור"}",
+                "commitment", commitmentId.ToString());
             return Ok(updated);
         }
 
@@ -422,6 +477,9 @@ namespace RupResearchAPI.Controllers
         {
             var deleted = await _projectService.DeleteCommitment(commitmentId);
             if (!deleted) return NotFound();
+            var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
+            await _audit.LogAsync(id, userId, "commitment_deleted",
+                "מחיקת התחייבות עתידית", "commitment", commitmentId.ToString());
             return NoContent();
         }
 

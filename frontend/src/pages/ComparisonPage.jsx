@@ -161,22 +161,27 @@ function buildMetrics(selectedProjects, compareData) {
 function CustomXTick({ x, y, payload }) {
   const full = payload.value;
   const words = full.split(' ');
-  const lines = [];
+  const allLines = [];
   let current = '';
   for (const word of words) {
     if ((current + ' ' + word).trim().length > 10) {
-      if (current) lines.push(current);
+      if (current) allLines.push(current);
       current = word;
     } else {
       current = (current + ' ' + word).trim();
     }
   }
-  if (current) lines.push(current);
+  if (current) allLines.push(current);
+
+  const displayLines = allLines.length > 2
+    ? [allLines[0], allLines.slice(1).join(' ').slice(0, 9) + '…']
+    : allLines;
+
   return (
     <g transform={`translate(${x},${y})`}>
       <title>{full}</title>
-      {lines.map((line, i) => (
-        <text key={i} x={0} y={0} dy={14 + i * 14} textAnchor="middle" fill="#374151" fontSize={12}>
+      {displayLines.map((line, i) => (
+        <text key={i} x={0} y={0} dy={14 + i * 14} textAnchor="middle" fill="#374151" fontSize={11}>
           {line}
         </text>
       ))}
@@ -299,7 +304,7 @@ export default function ComparisonPage() {
       <div dir="rtl">
         <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-extrabold text-gray-900">השוואות בין מחקרים</h1>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">השוואות בין מחקרים</h1>
             <p className="text-sm text-gray-400 mt-0.5">{projects.length} מחקרים פעילים</p>
           </div>
           <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
@@ -337,24 +342,11 @@ export default function ComparisonPage() {
               ) : projects.length === 0 ? (
                 <p className="text-center text-gray-400 py-20 text-sm">אין מחקרים פעילים להצגה</p>
               ) : (
-                <div dir="ltr">
-                <ResponsiveContainer width="100%" height={460}>
-                  <BarChart data={chartData} margin={{ top: 55, right: 10, left: 10, bottom: 80 }}>
+                <ResponsiveContainer width="100%" height={420}>
+                  <BarChart data={chartData} margin={{ top: 4, right: 10, left: 10, bottom: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="name" tick={<CustomXTick />} interval={0} />
-                    <YAxis
-                      domain={[() => 0, (dataMax) => Math.ceil(dataMax * 1.05) || 100]}
-                      allowDataOverflow={false}
-                      orientation="left"
-                      width={70}
-                      tick={{ fontSize: 12, fill: '#6b7280' }}
-                      tickFormatter={(v) => {
-                        if (v === 0) return '₪0';
-                        if (v >= 1000000) return `₪${Math.round(v / 1000000)}M`;
-                        if (v >= 1000) return `₪${Math.round(v / 1000)}K`;
-                        return `₪${v}`;
-                      }}
-                    />
+                    <XAxis dataKey="name" tick={<CustomXTick />} interval={0} height={44} />
+                    <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} tickFormatter={(v) => `₪${(v/1000).toFixed(0)}k`} />
                     <Tooltip content={<ChartTooltip />} />
                     <Legend
                       verticalAlign="top"
@@ -365,7 +357,6 @@ export default function ComparisonPage() {
                     {(metric==='all'||metric==='available') && <Bar dataKey="יתרה זמינה"  fill="#4ade80" radius={[4,4,0,0]} />}
                   </BarChart>
                 </ResponsiveContainer>
-                </div>
               )}
             </div>
             {!loading && projects.length > 0 && (

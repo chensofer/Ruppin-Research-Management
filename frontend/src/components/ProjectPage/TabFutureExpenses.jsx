@@ -128,7 +128,7 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
       {error && <p className="text-sm text-red-500">{error}</p>}
 
       {/* Balance banner */}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-center justify-between">
+      <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm text-blue-700 font-medium">יתרה זמינה להתחייבויות: {fmt(availableBalance)}</span>
         <span className="text-xs text-blue-500">לאחר ניכוי הוצאות שאושרו</span>
       </div>

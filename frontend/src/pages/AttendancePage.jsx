@@ -283,17 +283,11 @@ export default function AttendancePage() {
       <div className="max-w-4xl mx-auto" dir="rtl">
 
         {/* Header */}
-        <div className="mb-5 rounded-xl px-5 py-3.5 text-white relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #003478 0%, #1B4080 60%, #0369A1 100%)' }}>
-          <div className="absolute top-0 left-0 w-32 h-32 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
-          <div className="relative z-10 flex items-center gap-3">
-            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-lg flex-shrink-0">📋</div>
-            <div>
-              <h1 className="text-lg font-extrabold tracking-tight leading-tight">דיווח נוכחות</h1>
-              <p className="text-blue-200 text-xs mt-0.5">
-                {user?.firstName} {user?.lastName} — מלא את שעות העבודה שלך לחודש הנבחר
-              </p>
-            </div>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">דיווח נוכחות</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {user?.firstName} {user?.lastName} — מלא את שעות העבודה שלך לחודש הנבחר
+          </p>
         </div>
 
         {/* Selectors */}
@@ -546,15 +540,15 @@ export default function AttendancePage() {
 
             {/* Action bar */}
             {!locked && (
-              <div className="flex items-center justify-between gap-3 rounded-xl px-4 py-2.5 shadow-md" style={{ background: 'linear-gradient(135deg, #003478 0%, #1B4080 100%)' }}>
-                <p className="text-sm text-blue-200 flex items-center gap-1.5">
+              <div className="flex items-center justify-between gap-4 flex-wrap bg-white border border-gray-100 rounded-2xl px-5 py-4 shadow-sm">
+                <p className="text-xs text-gray-400 flex items-center gap-2">
                   {saving && !submitting ? (
                     <>
-                      <span className="inline-block w-3 h-3 border-2 border-blue-300/50 border-t-blue-200 rounded-full animate-spin" />
+                      <span className="inline-block w-3 h-3 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
                       שומר...
                     </>
                   ) : hasDraftData ? (
-                    <span className="text-white font-medium">
+                    <span className="text-gray-700 font-medium">
                       ✏️ {Object.values(drafts).filter(d => d?.fromHour || d?.toHour || d?.workedHours).length} ימים מולאו
                     </span>
                   ) : (

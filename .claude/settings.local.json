@@ -11,7 +11,18 @@
       "Bash(sqlcmd -S media.ruppin.ac.il -d bgroup11_test2 -U bgroup11 -P \"bgroup11_79466\" -Q \"SELECT DISTINCT RTRIM\\(status\\) as status FROM research_projects\")",
       "Bash(netstat -ano)",
       "Bash(npm install *)",
-      "Bash(node -e \"const pkg = require\\('./node_modules/exceljs/package.json'\\); console.log\\('main:', pkg.main\\); console.log\\('browser:', JSON.stringify\\(pkg.browser\\)\\); console.log\\('exports keys:', Object.keys\\(pkg.exports||{}\\).slice\\(0,5\\)\\)\")"
+      "Bash(node -e \"const pkg = require\\('./node_modules/exceljs/package.json'\\); console.log\\('main:', pkg.main\\); console.log\\('browser:', JSON.stringify\\(pkg.browser\\)\\); console.log\\('exports keys:', Object.keys\\(pkg.exports||{}\\).slice\\(0,5\\)\\)\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\USER\\\\source\\\\repos\\\\Ruppin-Research-Management\" -Force)",
+      "Bash(Stop-Process -Id 19276 -Force)",
+      "PowerShell(Stop-Process -Id 19276 -Force)",
+      "PowerShell(Get-Process -Name \"dotnet\" -ErrorAction SilentlyContinue)",
+      "PowerShell(netstat -ano)",
+      "PowerShell(Get-Process -Id 21680)",
+      "PowerShell(Get-Process -Id 21680 -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, Path, StartTime; \\(Get-Item \"c:\\\\Users\\\\USER\\\\source\\\\repos\\\\Ruppin-Research-Management\\\\bin\\\\Debug\\\\net8.0\\\\RupResearchAPI.exe\"\\).LastWriteTime)",
+      "PowerShell($file = \"c:\\\\Users\\\\USER\\\\source\\\\repos\\\\Ruppin-Research-Management\\\\bin\\\\Debug\\\\net8.0\\\\RupResearchAPI.exe\"; if \\(Test-Path $file\\) { \\(Get-Item $file\\).LastWriteTime } else { \"File not found\" })",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:5269/api/projects/1/audit-logs\" -Method GET -Headers @{Authorization=\"Bearer test\"} -ErrorAction Stop; $r.StatusCode } catch { $_.Exception.Response.StatusCode.value__ })",
+      "PowerShell(sqlcmd -S \"media.ruppin.ac.il\" -d \"bgroup11_test2\" -U \"bgroup11\" -P \"bgroup11_79466\" -Q \"SELECT CASE WHEN EXISTS \\(SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='research_audit_logs'\\) THEN 'TABLE EXISTS' ELSE 'TABLE MISSING' END AS status\" -N -C 2>&1)",
+      "Bash(git add *)"
     ]
   }
 }

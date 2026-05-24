@@ -21,6 +21,7 @@ import TabTransactions from '../components/ProjectPage/TabTransactions';
 import TabDocuments from '../components/ProjectPage/TabDocuments';
 import TabFutureExpenses from '../components/ProjectPage/TabFutureExpenses';
 import TabBudgetTransfer from '../components/ProjectPage/TabBudgetTransfer';
+import TabHistory from '../components/ProjectPage/TabHistory';
 
 const TABS = [
   { id: 'overview',     label: 'סקירה כללית' },
@@ -31,6 +32,7 @@ const TABS = [
   { id: 'documents',    label: 'מסמכים' },
   { id: 'future',       label: 'הוצאות עתידיות' },
   { id: 'transfer',     label: 'העברת תקציב' },
+  { id: 'history',     label: 'היסטוריית שינויים' },
 ];
 
 const fmt = (n) =>
@@ -591,6 +593,12 @@ export default function ProjectPage() {
           availableBalance={available}
           onTransferred={() => { reloadPayments(); reloadDetail(); }}
           readOnly={isArchived}
+        />
+      )}
+      {activeTab === 'history' && (
+        <TabHistory
+          projectId={id}
+          projectName={detail.projectNameHe || detail.projectNameEn}
         />
       )}
     </Layout>
