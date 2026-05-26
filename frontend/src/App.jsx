@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ThemeProvider } from './context/ThemeContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import CelebrationBanner from './components/CelebrationBanner';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
@@ -24,12 +24,29 @@ function RoleAwareRoute({ children }) {
   return children;
 }
 
+function ThemedToaster() {
+  const { dark } = useTheme();
+  return (
+    <Toaster
+      position="top-center"
+      toastOptions={{
+        duration: 4000,
+        style: dark ? {
+          background: '#1C2536',
+          color: '#EAF1FB',
+          border: '1px solid #2A3A50',
+        } : undefined,
+      }}
+    />
+  );
+}
+
 export default function App() {
   return (
     <ThemeProvider>
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <CelebrationBanner />
-      <Toaster position="top-center" toastOptions={{ duration: 4000 }} />
+      <ThemedToaster />
       <AuthProvider>
         <Routes>
           {/* Public routes */}

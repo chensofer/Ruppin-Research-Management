@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 
 const TODAY = new Date().toISOString().split('T')[0];
 
@@ -69,10 +70,10 @@ function calcPerformanceScore(project) {
   return Math.min(Math.max(Math.round(score), 0), 100);
 }
 
-function getPerformanceLabel(score) {
-  if (score >= 80) return { label: 'ביצועים מצוינים',  color: '#5CB800', bg: '#f0fae0', ring: '#5CB800' };
-  if (score >= 60) return { label: 'דורש תשומת לב',    color: '#f59e0b', bg: '#fffbeb', ring: '#f59e0b' };
-  return               { label: 'סיכון תקציבי גבוה',  color: '#ef4444', bg: '#fef2f2', ring: '#ef4444' };
+function getPerformanceLabel(score, dark) {
+  if (score >= 80) return { label: 'ביצועים מצוינים',  color: dark ? '#74D600' : '#5CB800', bg: dark ? 'rgba(92,184,0,0.12)'   : '#f0fae0', ring: dark ? '#5CB800' : '#5CB800' };
+  if (score >= 60) return { label: 'דורש תשומת לב',    color: dark ? '#FBBF24' : '#f59e0b', bg: dark ? 'rgba(251,191,36,0.1)'  : '#fffbeb', ring: dark ? '#f59e0b' : '#f59e0b' };
+  return               { label: 'סיכון תקציבי גבוה',  color: dark ? '#F87171' : '#ef4444', bg: dark ? 'rgba(248,113,113,0.1)' : '#fef2f2', ring: dark ? '#ef4444' : '#ef4444' };
 }
 
 function buildPerformanceExplanation(project) {
@@ -183,7 +184,8 @@ function UsageBar({ percent }) {
 
 function PerformanceBadge({ score, project }) {
   const [open, setOpen] = useState(false);
-  const { label, color, bg, ring } = getPerformanceLabel(score);
+  const { dark } = useTheme();
+  const { label, color, bg, ring } = getPerformanceLabel(score, dark);
   const { reasons, improvements } = buildPerformanceExplanation(project);
 
   return (
@@ -200,7 +202,7 @@ function PerformanceBadge({ score, project }) {
         {/* Score circle */}
         <div className="relative w-9 h-9 flex-shrink-0">
           <svg viewBox="0 0 36 36" className="w-9 h-9 -rotate-90">
-            <circle cx="18" cy="18" r="15" fill="none" stroke="#e5e7eb" strokeWidth="3" />
+            <circle cx="18" cy="18" r="15" fill="none" stroke={dark ? '#2A3A50' : '#e5e7eb'} strokeWidth="3" />
             <circle
               cx="18" cy="18" r="15" fill="none"
               stroke={color} strokeWidth="3"
@@ -263,6 +265,7 @@ function PerformanceBadge({ score, project }) {
 
 export default function ProjectCard({ project }) {
   const navigate  = useNavigate();
+  const { dark }  = useTheme();
   const isActive  = getIsActive(project);
 
   const budget    = project.totalBudget || 0;
@@ -281,7 +284,7 @@ export default function ProjectCard({ project }) {
       {/* Status stripe */}
       <div
         className="h-1"
-        style={{ background: isActive ? 'linear-gradient(90deg,#5CB800,#78D900)' : '#e5e7eb' }}
+        style={{ background: isActive ? 'linear-gradient(90deg,#5CB800,#78D900)' : (dark ? '#2A3A50' : '#e5e7eb') }}
       />
 
       <div className="p-5 flex flex-col gap-4 flex-1">
@@ -323,7 +326,7 @@ export default function ProjectCard({ project }) {
         )}
 
         {/* Budget panel */}
-        <div className="bg-gray-50/80 rounded-xl p-3.5 border border-gray-100 space-y-3 mt-auto">
+        <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-100 space-y-3 mt-auto">
           <div className="flex justify-between items-end" dir="rtl">
             <div className="text-right">
               <p className="text-xs text-gray-400 font-medium mb-0.5">יתרה זמינה</p>

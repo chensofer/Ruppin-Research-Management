@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
@@ -26,6 +27,7 @@ import TabBudgetTransfer from '../components/ProjectPage/TabBudgetTransfer';
 import TabHistory from '../components/ProjectPage/TabHistory';
 
 const TABS = [
+  { id: 'history',      label: 'היסטוריית שינויים' },
   { id: 'overview',     label: 'סקירה כללית' },
   { id: 'transactions', label: 'ריכוז תנועות' },
   { id: 'payments',     label: 'בקשות תשלום' },
@@ -34,7 +36,6 @@ const TABS = [
   { id: 'documents',    label: 'מסמכים' },
   { id: 'future',       label: 'הוצאות עתידיות' },
   { id: 'transfer',     label: 'העברת תקציב' },
-  { id: 'history',     label: 'היסטוריית שינויים' },
 ];
 
 const fmt = (n) =>
@@ -44,7 +45,7 @@ function StatCard({ label, value, valueClass = 'text-gray-900', sub, icon, bg = 
   return (
     <div className={`${bg} rounded-2xl border border-gray-100 shadow-card p-4 flex flex-col gap-2`}>
       <div className="flex items-center justify-between">
-        <div className="w-8 h-8 rounded-xl bg-gray-100/80 flex items-center justify-center text-gray-400 flex-shrink-0">
+        <div className="w-8 h-8 rounded-xl bg-gray-100/80 flex items-center justify-center text-gray-500 flex-shrink-0">
           {icon}
         </div>
         <p className="text-xs text-gray-400 font-semibold text-right leading-tight">{label}</p>
@@ -71,13 +72,14 @@ export default function ProjectPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { dark } = useTheme();
 
   const [detail, setDetail] = useState(null);
   const [payments, setPayments] = useState([]);
   const [files, setFiles] = useState([]);
   const [commitments, setCommitments] = useState([]);
   const [pendingHourApprovals, setPendingHourApprovals] = useState([]);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('history');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -400,7 +402,7 @@ export default function ProjectPage() {
       })()}
 
       {/* Budget summary — 5 stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4 w-full" dir="rtl">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4 w-full" dir="rtl">
         <StatCard
           label="תקציב כולל"
           value={fmt(budget)}
@@ -426,7 +428,7 @@ export default function ProjectPage() {
           sub={`${commitments.length} רשומות`}
           icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
         />
-        <div className="col-span-2 lg:col-span-1">
+        <div className="col-span-2 sm:col-span-1">
           <StatCard
             label="יתרה זמינה"
             value={fmt(available)}
@@ -465,12 +467,12 @@ export default function ProjectPage() {
                 </Pie>
                 <Tooltip
                   formatter={(v) => `₪${new Intl.NumberFormat('he-IL').format(v)}`}
-                  contentStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 12 }}
+                  contentStyle={{ borderRadius: 12, border: `1px solid ${dark ? '#2A3A50' : '#e5e7eb'}`, fontSize: 12, background: dark ? '#1C2536' : '#fff', color: dark ? '#EAF1FB' : '#1f2937' }}
                 />
                 <Legend
                   iconType="circle"
                   iconSize={8}
-                  formatter={(value) => <span style={{ fontSize: 12, color: '#6b7280' }}>{value}</span>}
+                  formatter={(value) => <span className="text-gray-500" style={{ fontSize: 12 }}>{value}</span>}
                 />
               </PieChart>
             </ResponsiveContainer>

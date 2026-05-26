@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getUsers } from '../../api/usersApi';
 import UserAvatar from '../UserAvatar';
 
-const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400';
+const inputCls = 'w-full bg-white text-gray-800 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400';
 
 export default function StepTeam({ data, onChange, excludeIds = [] }) {
   const [allUsers, setAllUsers] = useState([]);

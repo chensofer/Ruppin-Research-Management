@@ -10,7 +10,7 @@ import {
 import UserAvatar from '../UserAvatar';
 
 const inputCls =
-  'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400';
+  'w-full bg-white text-gray-800 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400';
 
 const fmt = (n) =>
   n != null
@@ -177,8 +177,8 @@ function Field({ label, name, value, onChange, error, type = 'text', placeholder
         min={min}
         step={step}
         maxLength={maxLength}
-        className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400 ${
-          error ? 'border-red-400 bg-red-50' : 'border-gray-200'
+        className={`w-full text-gray-800 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400 ${
+          error ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'
         }`}
       />
       {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}

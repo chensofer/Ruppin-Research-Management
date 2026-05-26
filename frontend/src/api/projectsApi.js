@@ -11,6 +11,12 @@ export const archiveProject  = (id) => axiosInstance.post(`/projects/${id}/archi
 export const restoreProject  = (id) => axiosInstance.post(`/projects/${id}/restore`);
 export const getArchivedProjects = () => axiosInstance.get('/projects/archived');
 
+// Folders
+export const getProjectFolders = (projectId) =>
+  axiosInstance.get(`/projects/${projectId}/folders`);
+export const createProjectFolder = (projectId, folderName) =>
+  axiosInstance.post(`/projects/${projectId}/folders`, { folderName });
+
 // Files
 export const uploadProjectFile = (projectId, formData) =>
   axiosInstance.post(`/projects/${projectId}/files`, formData, {

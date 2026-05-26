@@ -399,7 +399,7 @@ export default function AttendancePage() {
             ) : (
               <div className="card overflow-hidden mb-5">
                 {/* Grid header */}
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%)' }}>
+                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-primary-light">
                   <span className="text-sm font-bold text-gray-800 flex items-center gap-2">
                     <span className="text-base">📅</span>
                     {MONTH_NAMES[month - 1]} {year}

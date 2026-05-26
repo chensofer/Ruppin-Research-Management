@@ -138,6 +138,13 @@ namespace RupResearchAPI
                             performed_by_name NVARCHAR(200) NULL,
                             performed_at DATETIME2 NOT NULL DEFAULT GETUTCDATE()
                         );
+
+                    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='research_project_folders')
+                        CREATE TABLE research_project_folders (
+                            folder_id   INT IDENTITY(1,1) PRIMARY KEY,
+                            project_id  INT           NOT NULL,
+                            folder_name NVARCHAR(100) NOT NULL
+                        );
                 ");
             }
             catch { }

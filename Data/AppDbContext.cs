@@ -27,6 +27,7 @@ namespace RupResearchAPI.Data
         public DbSet<ResearchUsersProject> ResearchUsersProjects { get; set; }
         public DbSet<ResearchAuditLog> ResearchAuditLogs { get; set; }
         public DbSet<ResearchActivityLog> ResearchActivityLogs { get; set; }
+        public DbSet<ResearchProjectFolder> ResearchProjectFolders { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

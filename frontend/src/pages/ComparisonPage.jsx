@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useState } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
@@ -159,6 +160,7 @@ function buildMetrics(selectedProjects, compareData) {
 }
 
 function CustomXTick({ x, y, payload }) {
+  const { dark } = useTheme();
   const full = payload.value;
   const words = full.split(' ');
   const allLines = [];
@@ -181,7 +183,7 @@ function CustomXTick({ x, y, payload }) {
     <g transform={`translate(${x},${y})`}>
       <title>{full}</title>
       {displayLines.map((line, i) => (
-        <text key={i} x={0} y={0} dy={14 + i * 14} textAnchor="middle" fill="#374151" fontSize={11}>
+        <text key={i} x={0} y={0} dy={14 + i * 14} textAnchor="middle" fill={dark ? '#6A8099' : '#374151'} fontSize={11}>
           {line}
         </text>
       ))}
@@ -190,12 +192,23 @@ function CustomXTick({ x, y, payload }) {
 }
 
 function ChartTooltip({ active, payload, label }) {
+  const { dark } = useTheme();
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-right" dir="rtl">
-      <p className="text-sm font-bold text-gray-800 mb-2">{label}</p>
+    <div
+      dir="rtl"
+      style={{
+        background: dark ? '#1C2536' : '#fff',
+        border: `1px solid ${dark ? '#2A3A50' : '#e5e7eb'}`,
+        borderRadius: 12,
+        padding: '10px 14px',
+        boxShadow: dark ? '0 4px 16px rgba(0,0,0,0.5)' : '0 4px 16px rgba(0,0,0,0.1)',
+        textAlign: 'right',
+      }}
+    >
+      <p style={{ fontSize: 13, fontWeight: 700, color: dark ? '#EAF1FB' : '#1f2937', marginBottom: 6 }}>{label}</p>
       {payload.map((e) => (
-        <p key={e.name} className="text-xs mt-0.5" style={{ color: e.color }}>{e.name}: {fmt(e.value)}</p>
+        <p key={e.name} style={{ fontSize: 11, marginTop: 2, color: e.color }}>{e.name}: {fmt(e.value)}</p>
       ))}
     </div>
   );
@@ -203,6 +216,11 @@ function ChartTooltip({ active, payload, label }) {
 
 export default function ComparisonPage() {
   const navigate = useNavigate();
+  const { dark } = useTheme();
+  const gridColor   = dark ? '#2A3A50' : '#f0f0f0';
+  const axisColor   = dark ? '#6A8099' : '#6b7280';
+  const cursorFill  = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
+  const barChartHeight = typeof window !== 'undefined' && window.innerWidth < 640 ? 260 : 420;
   const [projects,    setProjects]    = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [metric,      setMetric]      = useState('all');
@@ -302,12 +320,12 @@ export default function ComparisonPage() {
   return (
     <Layout>
       <div dir="rtl">
-        <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">השוואות בין מחקרים</h1>
             <p className="text-sm text-gray-400 mt-0.5">{projects.length} מחקרים פעילים</p>
           </div>
-          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
+          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl self-start">
             {[{ key: 'overview', label: 'סקירה כללית' }, { key: 'compare', label: '⚖️ השוואה ישירה' }].map((m) => (
               <button key={m.key} onClick={() => setMode(m.key)}
                 className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
@@ -342,15 +360,15 @@ export default function ComparisonPage() {
               ) : projects.length === 0 ? (
                 <p className="text-center text-gray-400 py-20 text-sm">אין מחקרים פעילים להצגה</p>
               ) : (
-                <ResponsiveContainer width="100%" height={420}>
+                <ResponsiveContainer width="100%" height={barChartHeight}>
                   <BarChart data={chartData} margin={{ top: 4, right: 10, left: 10, bottom: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                     <XAxis dataKey="name" tick={<CustomXTick />} interval={0} height={44} />
-                    <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} tickFormatter={(v) => `₪${(v/1000).toFixed(0)}k`} />
-                    <Tooltip content={<ChartTooltip />} />
+                    <YAxis tick={{ fontSize: 11, fill: axisColor }} tickFormatter={(v) => `₪${(v/1000).toFixed(0)}k`} />
+                    <Tooltip content={<ChartTooltip />} cursor={{ fill: cursorFill }} />
                     <Legend
                       verticalAlign="top"
-                      wrapperStyle={{ fontSize: 13, paddingBottom: '12px', top: 0 }}
+                      wrapperStyle={{ fontSize: 13, paddingBottom: '12px', top: 0, color: axisColor }}
                     />
                     {(metric==='all'||metric==='budget')    && <Bar dataKey="תקציב כולל"  fill="#93c5fd" radius={[4,4,0,0]} />}
                     {(metric==='all'||metric==='paid')      && <Bar dataKey="הוצאות בפועל" fill="#f87171" radius={[4,4,0,0]} />}
@@ -407,17 +425,17 @@ export default function ComparisonPage() {
           <>
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-5">
               {/* Header row */}
-              <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
                 <h2 className="text-sm font-semibold text-gray-700">בחר מחקרים להשוואה</h2>
                 <div className="flex items-center gap-2 flex-wrap">
                   {/* Search */}
-                  <div className="relative">
+                  <div className="relative flex-1 sm:flex-none">
                     <input
                       type="text"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="חיפוש מחקר..."
-                      className="border border-gray-200 rounded-xl pr-3 pl-7 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-white w-44"
+                      className="border border-gray-200 rounded-xl pr-3 pl-7 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-white w-full sm:w-44"
                     />
                     {search ? (
                       <button
@@ -498,25 +516,32 @@ export default function ComparisonPage() {
               </div>
             ) : (
               <>
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto mb-5">
+                {/* Scroll hint on mobile */}
+                <p className="sm:hidden text-xs text-gray-400 mb-2 flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+                  </svg>
+                  ניתן לגלול לרוחב
+                </p>
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-auto mb-5" style={{ maxHeight: '75vh' }}>
                     <table className="text-sm" dir="rtl"
-                      style={{ minWidth: `${180 + selectedProjects.length * 160}px` }}>
+                      style={{ minWidth: `${120 + selectedProjects.length * 130}px` }}>
                       <thead>
-                        <tr className="border-b border-gray-100 bg-gray-50/70">
-                          <th className="px-5 py-4 text-right sticky right-0 z-10 bg-gray-50 w-44 border-l border-gray-100">
+                        <tr className="border-b border-gray-100">
+                          <th className="px-3 sm:px-5 py-3 sm:py-4 text-right sticky top-0 right-0 z-30 bg-gray-50 w-28 sm:w-44 border-l border-r-0 border-gray-100">
                             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">פרמטר</span>
                           </th>
                           {selectedProjects.map((p, i) => (
                             <th key={p.projectId}
-                              className="px-4 py-4 text-right border-r border-gray-100 last:border-r-0 cursor-pointer hover:bg-gray-100 transition-colors bg-gray-50/70"
+                              className="px-3 sm:px-4 py-3 sm:py-4 text-right sticky top-0 z-20 border-r border-gray-100 last:border-r-0 cursor-pointer hover:bg-gray-100 transition-colors bg-gray-50"
                               onClick={() => navigate(`/projects/${p.projectId}`)}>
-                              <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                                <span className="text-sm font-bold text-gray-800 truncate max-w-[130px]" title={p.projectNameHe}>
+                              <div className="flex items-center gap-1.5 sm:gap-2">
+                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                <span className="text-xs sm:text-sm font-bold text-gray-800 truncate max-w-[90px] sm:max-w-[130px]" title={p.projectNameHe}>
                                   {p.projectNameHe || p.projectNameEn || `#${p.projectId}`}
                                 </span>
                               </div>
-                              <p className="text-xs text-primary font-medium mt-0.5 mr-5">פתח מחקר ←</p>
+                              <p className="text-xs text-primary font-medium mt-0.5 mr-4 sm:mr-5 hidden sm:block">פתח מחקר ←</p>
                             </th>
                           ))}
                         </tr>
@@ -527,28 +552,28 @@ export default function ComparisonPage() {
                           const max  = Math.max(...raws.filter(v => isFinite(v) && v > 0));
                           return (
                             <tr key={label} className="hover:bg-gray-50/40 transition-colors">
-                              <td className="px-5 py-4 sticky right-0 bg-white border-l border-gray-50 z-10 w-44">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-base leading-none">{icon}</span>
-                                  <span className="text-xs font-semibold text-gray-600">{label}</span>
+                              <td className="px-3 sm:px-5 py-3 sm:py-4 sticky right-0 bg-white border-l border-gray-50 z-10 w-28 sm:w-44">
+                                <div className="flex items-center gap-1.5 sm:gap-2">
+                                  <span className="text-sm sm:text-base leading-none">{icon}</span>
+                                  <span className="text-[10px] sm:text-xs font-semibold text-gray-600 leading-tight">{label}</span>
                                 </div>
                               </td>
                               {values.map((v, i) => {
                                 const color = COLORS[i % COLORS.length];
                                 const pct   = max > 0 ? (v.raw / max) * 100 : 0;
                                 return (
-                                  <td key={i} className="px-4 py-4 border-r border-gray-50 last:border-r-0 align-top min-w-[160px]">
-                                    <div className="flex items-start gap-1.5 flex-wrap">
-                                      <p className="text-base font-extrabold tabular-nums leading-tight" style={{ color }}>
+                                  <td key={i} className="px-3 sm:px-4 py-3 sm:py-4 border-r border-gray-50 last:border-r-0 align-top min-w-[110px] sm:min-w-[160px]">
+                                    <div className="flex items-start gap-1 sm:gap-1.5 flex-wrap">
+                                      <p className="text-sm sm:text-base font-extrabold tabular-nums leading-tight" style={{ color }}>
                                         {v.display}
                                       </p>
                                       {v.badge && (
-                                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${v.badge.cls}`}>
+                                        <span className={`text-[10px] sm:text-xs font-bold px-1 sm:px-1.5 py-0.5 rounded-full ${v.badge.cls}`}>
                                           {v.badge.text}
                                         </span>
                                       )}
                                     </div>
-                                    {v.sub && <p className="text-xs text-gray-400 mt-0.5">{v.sub}</p>}
+                                    {v.sub && <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">{v.sub}</p>}
                                   </td>
                                 );
                               })}
@@ -559,10 +584,10 @@ export default function ComparisonPage() {
                     </table>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                  <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 gap-2">
                     <h2 className="text-sm font-semibold text-gray-700">הוצאות לאורך זמן</h2>
-                    <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
+                    <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl self-start">
                       {PERIODS.map((pp) => (
                         <button key={pp.key} onClick={() => setPeriod(pp.key)}
                           className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
@@ -576,13 +601,14 @@ export default function ComparisonPage() {
                   {trendData.length === 0 ? (
                     <p className="text-center text-gray-400 py-12 text-sm">אין נתוני הוצאות לתקופה זו</p>
                   ) : (
-                    <ResponsiveContainer width="100%" height={300}>
+                    <ResponsiveContainer width="100%" height={typeof window !== 'undefined' && window.innerWidth < 640 ? 220 : 300}>
                       <LineChart data={trendData} margin={{ top: 4, right: 10, left: 10, bottom: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis dataKey="period" tick={{ fontSize: 12, fill: '#6b7280' }} />
-                        <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} tickFormatter={(v) => `₪${(v/1000).toFixed(0)}k`} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                        <XAxis dataKey="period" tick={{ fontSize: 12, fill: axisColor }} />
+                        <YAxis tick={{ fontSize: 12, fill: axisColor }} tickFormatter={(v) => `₪${(v/1000).toFixed(0)}k`} />
                         <Tooltip formatter={(v, name) => [fmt(v), name]}
-                          contentStyle={{ direction: 'rtl', borderRadius: '12px', fontSize: '12px' }} />
+                          contentStyle={{ direction: 'rtl', borderRadius: '12px', fontSize: '12px', background: dark ? '#1C2536' : '#fff', borderColor: dark ? '#2A3A50' : '#e5e7eb', color: dark ? '#EAF1FB' : '#1f2937' }}
+                          cursor={{ stroke: dark ? '#2A3A50' : '#d1d5db' }} />
                         <Legend wrapperStyle={{ fontSize: 12, paddingTop: '12px' }} />
                         {selectedProjects.map((p, i) => (
                           <Line key={p.projectId} type="monotone"

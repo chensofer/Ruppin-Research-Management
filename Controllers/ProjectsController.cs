@@ -260,6 +260,26 @@ namespace RupResearchAPI.Controllers
             return NoContent();
         }
 
+        // ── Folder endpoints ─────────────────────────────────────────────────
+
+        // GET /api/projects/{id}/folders
+        [HttpGet("{id:int}/folders")]
+        public async Task<IActionResult> GetFolders(int id)
+        {
+            var folders = await _projectService.GetFolders(id);
+            return Ok(folders);
+        }
+
+        // POST /api/projects/{id}/folders
+        [HttpPost("{id:int}/folders")]
+        public async Task<IActionResult> CreateFolder(int id, [FromBody] CreateFolderRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.FolderName))
+                return BadRequest(new { message = "שם תיקייה לא יכול להיות ריק" });
+            var folder = await _projectService.CreateFolder(id, req.FolderName.Trim());
+            return Ok(folder);
+        }
+
         // ── Team endpoints ────────────────────────────────────────────────────
 
         // GET /api/projects/{id}/team
@@ -500,4 +520,6 @@ namespace RupResearchAPI.Controllers
         }
 
     }
+
+    public record CreateFolderRequest(string FolderName);
 }

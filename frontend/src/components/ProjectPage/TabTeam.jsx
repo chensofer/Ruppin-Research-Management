@@ -5,7 +5,7 @@ import UserAvatar from '../UserAvatar';
 
 const RESEARCH_ASSISTANT_ROLE = 'עוזר מחקר';
 
-const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400';
+const inputCls = 'w-full bg-white text-gray-800 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400';
 
 function getProjectRole(systemAuthorization) {
   if (systemAuthorization === 'מנהל מרכז') return 'מנהל מרכז מחקר';

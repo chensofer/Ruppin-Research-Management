@@ -49,16 +49,28 @@ export default function Layout({ children }) {
     if (location.pathname === '/approvals') setPendingCount(0);
   }, [location.pathname]);
 
-  // Fetch pending approvals count on mount (researchers only)
+  // Fetch pending approvals count — on mount, every 60s, and when window regains focus
   useEffect(() => {
     if (!isResearcher || !user?.userId) return;
-    Promise.all([
-      getPendingPaymentRequests().catch(() => ({ data: [] })),
-      getPendingHourApprovals(user.userId).catch(() => ({ data: [] })),
-    ]).then(([pRes, hRes]) => {
-      setPendingCount((pRes.data?.length ?? 0) + (hRes.data?.length ?? 0));
-    });
-  }, [user, isResearcher]);
+
+    const fetchCount = () => {
+      if (location.pathname === '/approvals') return;
+      Promise.all([
+        getPendingPaymentRequests().catch(() => ({ data: [] })),
+        getPendingHourApprovals(user.userId).catch(() => ({ data: [] })),
+      ]).then(([pRes, hRes]) => {
+        setPendingCount((pRes.data?.length ?? 0) + (hRes.data?.length ?? 0));
+      });
+    };
+
+    fetchCount();
+    const interval = setInterval(fetchCount, 60_000);
+    window.addEventListener('focus', fetchCount);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', fetchCount);
+    };
+  }, [user, isResearcher, location.pathname]);
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full" style={{ background: 'linear-gradient(180deg, #003478 0%, #001E50 100%)' }}>

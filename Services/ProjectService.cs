@@ -967,6 +967,29 @@ namespace RupResearchAPI.Services
             return true;
         }
 
+        // ── Folders ───────────────────────────────────────────────────────────
+
+        public async Task<List<object>> GetFolders(int projectId)
+        {
+            return await _db.ResearchProjectFolders
+                .Where(f => f.ProjectId == projectId)
+                .Select(f => (object)new { f.FolderId, f.FolderName })
+                .ToListAsync();
+        }
+
+        public async Task<object> CreateFolder(int projectId, string folderName)
+        {
+            var existing = await _db.ResearchProjectFolders
+                .FirstOrDefaultAsync(f => f.ProjectId == projectId && f.FolderName == folderName);
+            if (existing != null)
+                return new { existing.FolderId, existing.FolderName };
+
+            var folder = new ResearchProjectFolder { ProjectId = projectId, FolderName = folderName };
+            _db.ResearchProjectFolders.Add(folder);
+            await _db.SaveChangesAsync();
+            return new { folder.FolderId, folder.FolderName };
+        }
+
         // ── Providers ─────────────────────────────────────────────────────────
 
         public async Task<List<ProviderDto>> GetProviders()

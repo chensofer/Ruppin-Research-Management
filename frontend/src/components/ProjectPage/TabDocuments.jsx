@@ -1,23 +1,8 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { uploadProjectFile, deleteProjectFile } from '../../api/projectsApi';
+import { uploadProjectFile, deleteProjectFile, getProjectFolders, createProjectFolder } from '../../api/projectsApi';
 
-const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent';
-
-// ── Folder storage via localStorage ──────────────────────────────────────────
-const STORAGE_KEY = (projectId) => `project_folders_${projectId}`;
-
-function loadSavedFolders(projectId) {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY(projectId))) ?? [];
-  } catch {
-    return [];
-  }
-}
-
-function saveFolders(projectId, folders) {
-  localStorage.setItem(STORAGE_KEY(projectId), JSON.stringify(folders));
-}
+const inputCls = 'w-full bg-white text-gray-800 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent';
 
 // ── File type icon ────────────────────────────────────────────────────────────
 function FileIcon({ fileType }) {
@@ -51,8 +36,7 @@ function fmtDate(d) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function TabDocuments({ projectId, files, onChanged, readOnly = false }) {
-  // Build unified folder list: fixed default + localStorage + folders from existing files
-  const [extraFolders, setExtraFolders] = useState(() => loadSavedFolders(projectId));
+  const [extraFolders, setExtraFolders] = useState([]);
   const [newFolderInput, setNewFolderInput] = useState('');
   const [showNewFolder, setShowNewFolder] = useState(false);
 
@@ -62,31 +46,38 @@ export default function TabDocuments({ projectId, files, onChanged, readOnly = f
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(null);
 
-  // All known folders = default + localStorage + from uploaded files
+  // Load folders from server on mount
+  useEffect(() => {
+    getProjectFolders(projectId)
+      .then((r) => setExtraFolders((r.data ?? []).map((f) => f.folderName)))
+      .catch(() => {});
+  }, [projectId]);
+
+  // All known folders = default + server folders + folders from uploaded files
   const foldersFromFiles = [...new Set(files.map((f) => f.folderName).filter(Boolean))];
   const allFolders = [
     'כללי',
     ...new Set([...extraFolders, ...foldersFromFiles].filter((f) => f !== 'כללי')),
   ];
 
-  // Persist localStorage whenever extraFolders changes
-  useEffect(() => {
-    saveFolders(projectId, extraFolders);
-  }, [extraFolders, projectId]);
-
   // ── Create folder (no upload needed) ───────────────────────────────────────
-  const handleCreateFolder = () => {
+  const handleCreateFolder = async () => {
     const name = newFolderInput.trim();
     if (!name) return;
     if (allFolders.includes(name)) {
       toast.error('תיקייה בשם זה כבר קיימת');
       return;
     }
-    setExtraFolders((prev) => [...prev, name]);
-    setSelectedFolder(name);
-    setNewFolderInput('');
-    setShowNewFolder(false);
-    toast.success(`התיקייה "${name}" נוצרה`);
+    try {
+      await createProjectFolder(projectId, name);
+      setExtraFolders((prev) => [...prev, name]);
+      setSelectedFolder(name);
+      setNewFolderInput('');
+      setShowNewFolder(false);
+      toast.success(`התיקייה "${name}" נוצרה`);
+    } catch {
+      toast.error('שגיאה ביצירת התיקייה');
+    }
   };
 
   // ── Upload file ─────────────────────────────────────────────────────────────
@@ -315,17 +306,19 @@ export default function TabDocuments({ projectId, files, onChanged, readOnly = f
                       </a>
 
                       {/* Delete */}
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(f.fileId)}
-                        disabled={deleting === f.fileId}
-                        className="p-1.5 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-40 rounded-lg hover:bg-red-50"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(f.fileId)}
+                          disabled={deleting === f.fileId}
+                          className="p-1.5 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-40 rounded-lg hover:bg-red-50"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>

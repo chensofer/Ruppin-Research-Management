@@ -119,12 +119,14 @@ export default function TabHistory({ projectId, projectName }) {
     let result = logs;
     if (category !== 'all')
       result = result.filter(l => getActionMeta(l.actionType).category === category);
-    if (search.trim())
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
       result = result.filter(l =>
-        l.actionDescription?.includes(search) ||
-        l.performedByName?.includes(search) ||
-        l.performedByUserId?.includes(search)
+        l.actionDescription?.toLowerCase().includes(q) ||
+        l.performedByName?.toLowerCase().includes(q) ||
+        l.performedByUserId?.toLowerCase().includes(q)
       );
+    }
     return result;
   }, [logs, category, search]);
 

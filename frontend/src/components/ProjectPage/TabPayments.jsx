@@ -304,19 +304,18 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs text-gray-500">קבצי הצעת מחיר</label>
-                  {selectedFiles.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={handleScanDocument}
-                      disabled={scanning}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/5 border border-primary/20 px-3 py-1 rounded-lg hover:bg-primary/10 transition-colors disabled:opacity-50"
-                    >
-                      {scanning ? (
-                        <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                      ) : '🤖'}
-                      {scanning ? 'סורק...' : 'מלא טופס אוטומטית'}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={handleScanDocument}
+                    disabled={selectedFiles.length === 0 || scanning}
+                    title={selectedFiles.length === 0 ? 'בחר קובץ תחילה' : 'מלא טופס אוטומטית מתוך המסמך'}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/5 border border-primary/20 px-3 py-1 rounded-lg hover:bg-primary/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {scanning ? (
+                      <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    ) : '🤖'}
+                    {scanning ? 'סורק...' : 'מלא טופס אוטומטית'}
+                  </button>
                 </div>
                 <input
                   type="file"
