@@ -1,12 +1,12 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, LineChart, Line,
 } from 'recharts';
-import { getProjects, getCommitments } from '../api/projectsApi';
+import { getAllProjects, getCommitments } from '../api/projectsApi';
 import { getPaymentRequestsByProject } from '../api/paymentRequestsApi';
 import Layout from '../components/Layout';
 
@@ -159,6 +159,409 @@ function buildMetrics(selectedProjects, compareData) {
   ];
 }
 
+// ── Transfer recommendations ──────────────────────────────────────────────────
+function buildTransferRecommendations(projects) {
+  const enriched = projects.map(p => {
+    const timePct  = calcTimePct(p);
+    const budget   = p.totalBudget ?? 0;
+    const paid     = p.totalPaid   ?? 0;
+    const avail    = p.availableBalance ?? 0;
+    const usagePct = budget > 0 ? (paid / budget) * 100 : 0;
+    const burnRate = (timePct && timePct > 0) ? usagePct / timePct : null;
+    const daysLeft = calcDaysLeft(p);
+
+    const isGiver =
+      avail > Math.max(budget * 0.15, 5000) &&
+      (burnRate === null || burnRate < 0.80) &&
+      (daysLeft === null || daysLeft > 45);
+
+    const isReceiver =
+      avail < 0 ||
+      (budget > 0 && usagePct > 78 && (burnRate === null || burnRate > 1.1));
+
+    return { ...p, timePct, budget, paid, avail, usagePct, burnRate, daysLeft, isGiver, isReceiver };
+  });
+
+  const givers    = enriched.filter(p => p.isGiver).sort((a, b) => b.avail - a.avail);
+  const receivers = enriched.filter(p => p.isReceiver).sort((a, b) => a.avail - b.avail);
+
+  const recs = [];
+  const usedGivers = new Set();
+
+  for (const recv of receivers) {
+    const giver = givers.find(g => g.projectId !== recv.projectId && !usedGivers.has(g.projectId));
+    if (!giver) break;
+
+    const need   = recv.avail < 0 ? Math.abs(recv.avail) + recv.budget * 0.05 : recv.budget * 0.12;
+    const amount = Math.min(giver.avail * 0.35, need);
+    if (amount < 2000) continue;
+
+    usedGivers.add(giver.projectId);
+
+    const tags = [];
+    if (giver.burnRate !== null && giver.burnRate < 0.80)
+      tags.push(`קצב שריפה נמוך (×${giver.burnRate.toFixed(2)})`);
+    if (giver.daysLeft !== null && giver.daysLeft > 45)
+      tags.push(`${giver.daysLeft} ימים נותרו למקור`);
+    if (recv.avail < 0)
+      tags.push(`גירעון ${fmt(Math.abs(recv.avail))}`);
+    if (recv.burnRate !== null && recv.burnRate > 1.1)
+      tags.push(`קצב שריפה גבוה (×${recv.burnRate.toFixed(2)})`);
+
+    recs.push({ giver, receiver: recv, amount, tags });
+  }
+  return recs;
+}
+
+// ── Similarity groups ─────────────────────────────────────────────────────────
+function buildSimilarityGroups(projects) {
+  const cat = (p) => {
+    const budget   = p.totalBudget ?? 0;
+    const paid     = p.totalPaid   ?? 0;
+    const timePct  = calcTimePct(p);
+    const usagePct = budget > 0 ? (paid / budget) * 100 : 0;
+    const burnRate = (timePct && timePct > 0) ? usagePct / timePct : null;
+    const daysLeft = calcDaysLeft(p);
+    return {
+      budgetTier: budget < 60000 ? 'small' : budget < 350000 ? 'medium' : 'large',
+      burnTier:   burnRate === null ? null : burnRate < 0.75 ? 'slow' : burnRate > 1.25 ? 'fast' : 'normal',
+      timeTier:   daysLeft === null ? null : daysLeft < 30 ? 'urgent' : daysLeft < 180 ? 'mid' : 'long',
+    };
+  };
+
+  const enriched = projects.map(p => ({ ...p, _cat: cat(p) }));
+  const groups   = [];
+
+  // By budget tier
+  const budgetLabels = { small: 'תקציב קטן (עד ₪60k)', medium: 'תקציב בינוני (₪60k–₪350k)', large: 'תקציב גדול (מעל ₪350k)' };
+  const budgetIcons  = { small: '🪙', medium: '💵', large: '💰' };
+  for (const tier of ['small','medium','large']) {
+    const items = enriched.filter(p => p._cat.budgetTier === tier);
+    if (items.length < 2) continue;
+    groups.push({
+      icon: budgetIcons[tier], title: `מחקרים עם ${budgetLabels[tier]}`,
+      insight: `${items.length} מחקרים בטווח תקציב דומה — כדאי להשוות ניצול`,
+      projects: items, alert: false,
+    });
+  }
+
+  // Fast burners
+  const fast = enriched.filter(p => p._cat.burnTier === 'fast');
+  if (fast.length >= 1)
+    groups.push({ icon: '🔥', title: 'שריפת תקציב מהירה', alert: true, projects: fast,
+      insight: 'מחקרים שמוציאים מהר מהצפוי — מועמדים לקבל העברת תקציב' });
+
+  // Slow burners
+  const slow = enriched.filter(p => p._cat.burnTier === 'slow');
+  if (slow.length >= 1)
+    groups.push({ icon: '🐢', title: 'שריפת תקציב איטית', alert: false, projects: slow,
+      insight: 'מחקרים שעשויים לסיים עם יתרה — מועמדים לתת העברת תקציב' });
+
+  // Urgent timeline
+  const urgent = enriched.filter(p => p._cat.timeTier === 'urgent');
+  if (urgent.length >= 1)
+    groups.push({ icon: '⚠️', title: 'קרובים לסיום (פחות מ-30 יום)', alert: true, projects: urgent,
+      insight: 'יש לטפל ביתרות עודפות בדחיפות לפני סגירת המחקר' });
+
+  return groups;
+}
+
+function buildExplanation(giver, receiver) {
+  const parts = [];
+  const giverName = giver.projectNameHe || giver.projectNameEn || `מחקר #${giver.projectId}`;
+  const recvName  = receiver.projectNameHe || receiver.projectNameEn || `מחקר #${receiver.projectId}`;
+
+  if (giver.daysLeft !== null && giver.daysLeft <= 90)
+    parts.push(`"${giverName}" עומד להסתיים בעוד ${giver.daysLeft} ימים עם יתרה של ${fmt(giver.avail)}.`);
+  else if (giver.burnRate !== null && giver.burnRate < 0.75)
+    parts.push(`"${giverName}" מוציא לאט מהצפוי — צפויה יתרה עודפת של ${fmt(giver.avail)} בסיום.`);
+  else
+    parts.push(`"${giverName}" מחזיק יתרה זמינה של ${fmt(giver.avail)}.`);
+
+  if (receiver.avail < 0)
+    parts.push(`"${recvName}" נמצא בגירעון של ${fmt(Math.abs(receiver.avail))}.`);
+  else if (receiver.burnRate !== null && receiver.burnRate > 1.1)
+    parts.push(`"${recvName}" מוציא מהר מהצפוי ועלול לחרוג מהתקציב.`);
+  else
+    parts.push(`"${recvName}" ניצל ${Math.round(receiver.usagePct)}% מהתקציב וזקוק לחיזוק.`);
+
+  return parts.join(' ');
+}
+
+function StatBadge({ color, children }) {
+  const colors = {
+    green:  'bg-green-100 text-green-800 border border-green-200',
+    red:    'bg-red-100 text-red-800 border border-red-200',
+    amber:  'bg-amber-100 text-amber-800 border border-amber-200',
+    gray:   'bg-gray-100 text-gray-600 border border-gray-200',
+    blue:   'bg-blue-100 text-blue-800 border border-blue-200',
+  };
+  return (
+    <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${colors[color] ?? colors.gray}`}>
+      {children}
+    </span>
+  );
+}
+
+function BudgetBar({ pct, color }) {
+  const capped = Math.min(pct, 100);
+  const barColor = color === 'red' ? 'bg-red-500' : color === 'amber' ? 'bg-amber-400' : 'bg-green-500';
+  return (
+    <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden mt-1">
+      <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${capped}%` }} />
+    </div>
+  );
+}
+
+function RecommendationCard({ rec, onTransfer }) {
+  const { giver, receiver, amount } = rec;
+  const explanation = buildExplanation(giver, receiver);
+
+  const giverUsagePct  = Math.round(giver.usagePct ?? 0);
+  const receiverUsagePct = Math.round(receiver.usagePct ?? 0);
+  const giverBarColor  = giverUsagePct > 80 ? 'amber' : 'green';
+  const receiverBarColor = receiver.avail < 0 ? 'red' : receiverUsagePct > 80 ? 'red' : 'amber';
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden" dir="rtl">
+      <div className="h-1 bg-gradient-to-l from-primary to-accent" />
+
+      <div className="p-5 space-y-4">
+        {/* שני המחקרים + חץ */}
+        <div className="flex items-stretch gap-3">
+
+          {/* מקור — יתרה עודפת */}
+          <div className="flex-1 bg-green-50 border border-green-200 rounded-2xl p-4 flex flex-col gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm">📤</span>
+              <span className="text-[10px] font-bold text-green-700 uppercase tracking-wider">מקור</span>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900 leading-snug">
+                {giver.projectNameHe || giver.projectNameEn || `מחקר #${giver.projectId}`}
+              </p>
+              {giver.principalResearcherName && (
+                <p className="text-[11px] text-gray-500 mt-0.5">👤 {giver.principalResearcherName}</p>
+              )}
+            </div>
+
+            {/* מספר ראשי — יתרה */}
+            <div className="bg-white border border-green-200 rounded-xl px-3 py-2">
+              <p className="text-[10px] text-green-700 font-semibold mb-0.5">✅ יתרה זמינה</p>
+              <p className="text-lg font-extrabold text-green-700 leading-none">{fmt(giver.avail)}</p>
+              <BudgetBar pct={giverUsagePct} color={giverBarColor} />
+              <p className="text-[10px] text-gray-400 mt-1">{giverUsagePct}% מהתקציב נוצל</p>
+            </div>
+
+            {/* תגיות */}
+            <div className="flex flex-wrap gap-1">
+              {giver.burnRate !== null && (
+                <StatBadge color={giver.burnRate < 0.75 ? 'green' : 'gray'}>
+                  {giver.burnRate < 0.75 ? '🐢 קצב איטי' : '📊 קצב תקין'}
+                </StatBadge>
+              )}
+              {giver.daysLeft !== null && (
+                <StatBadge color={giver.daysLeft <= 30 ? 'amber' : giver.daysLeft <= 90 ? 'amber' : 'green'}>
+                  {giver.daysLeft <= 30 ? `⚠️ ${giver.daysLeft} ימים` : `📅 ${giver.daysLeft} ימים`}
+                </StatBadge>
+              )}
+            </div>
+          </div>
+
+          {/* חץ + סכום */}
+          <div className="flex flex-col items-center justify-center gap-2 flex-shrink-0">
+            <div className="bg-primary text-white text-xs font-extrabold px-3 py-1.5 rounded-full shadow whitespace-nowrap">
+              {fmt(amount)}
+            </div>
+            <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+            </svg>
+          </div>
+
+          {/* יעד — זקוק לתקציב */}
+          <div className="flex-1 bg-red-50 border border-red-200 rounded-2xl p-4 flex flex-col gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm">📥</span>
+              <span className="text-[10px] font-bold text-red-700 uppercase tracking-wider">יעד</span>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900 leading-snug">
+                {receiver.projectNameHe || receiver.projectNameEn || `מחקר #${receiver.projectId}`}
+              </p>
+              {receiver.principalResearcherName && (
+                <p className="text-[11px] text-gray-500 mt-0.5">👤 {receiver.principalResearcherName}</p>
+              )}
+            </div>
+
+            {/* מספר ראשי — גירעון או ניצול גבוה */}
+            <div className={`border rounded-xl px-3 py-2 ${receiver.avail < 0 ? 'bg-red-100 border-red-300' : 'bg-amber-50 border-amber-200'}`}>
+              {receiver.avail < 0 ? (
+                <>
+                  <p className="text-[10px] text-red-700 font-semibold mb-0.5">🚨 גירעון תקציבי</p>
+                  <p className="text-lg font-extrabold text-red-700 leading-none">−{fmt(Math.abs(receiver.avail))}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[10px] text-amber-700 font-semibold mb-0.5">⚠️ ניצול גבוה</p>
+                  <p className="text-lg font-extrabold text-amber-700 leading-none">{receiverUsagePct}%</p>
+                </>
+              )}
+              <BudgetBar pct={receiverUsagePct} color={receiverBarColor} />
+              <p className="text-[10px] text-gray-400 mt-1">{receiverUsagePct}% מהתקציב נוצל</p>
+            </div>
+
+            {/* תגיות */}
+            <div className="flex flex-wrap gap-1">
+              {receiver.burnRate !== null && (
+                <StatBadge color={receiver.burnRate > 1.1 ? 'red' : 'gray'}>
+                  {receiver.burnRate > 1.1 ? '🔥 קצב מהיר' : '📊 קצב תקין'}
+                </StatBadge>
+              )}
+              {receiver.daysLeft !== null && (
+                <StatBadge color={receiver.daysLeft <= 30 ? 'red' : receiver.daysLeft <= 90 ? 'amber' : 'gray'}>
+                  {receiver.daysLeft <= 30 ? `🚨 ${receiver.daysLeft} ימים` : `📅 ${receiver.daysLeft} ימים`}
+                </StatBadge>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* הסבר */}
+        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5 flex gap-2 items-start">
+          <span className="text-blue-500 text-sm mt-0.5 flex-shrink-0">💬</span>
+          <p className="text-xs text-blue-800 leading-relaxed">{explanation}</p>
+        </div>
+
+        {/* כפתור */}
+        <button
+          onClick={() => onTransfer(giver.projectId, receiver.projectId, amount)}
+          className="w-full bg-primary hover:bg-primary-dark text-white text-sm font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+          עבור לביצוע העברת תקציב
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ProjectHealthCard({ p, navigate }) {
+  const avail     = p.availableBalance ?? 0;
+  const budget    = p.totalBudget ?? 0;
+  const usagePct  = budget > 0 ? Math.min(Math.round(((p.totalPaid ?? 0) / budget) * 100), 100) : 0;
+  const daysLeft  = calcDaysLeft(p);
+  const isDeficit = avail < 0;
+
+  const health =
+    isDeficit || usagePct >= 90 ? 'danger'
+    : usagePct >= 70             ? 'warning'
+    :                              'good';
+
+  const borderColor = health === 'danger' ? 'border-red-300'   : health === 'warning' ? 'border-amber-300'  : 'border-green-200';
+  const barColor    = health === 'danger' ? 'bg-red-500'        : health === 'warning' ? 'bg-amber-400'       : 'bg-green-500';
+  const badgeCls    = health === 'danger' ? 'bg-red-100 text-red-700 border-red-200'
+                    : health === 'warning' ? 'bg-amber-100 text-amber-700 border-amber-200'
+                    :                        'bg-green-100 text-green-700 border-green-200';
+  const statusIcon  = health === 'danger' ? '🚨' : health === 'warning' ? '⚠️' : '✅';
+
+  return (
+    <button
+      key={p.projectId}
+      onClick={() => navigate(`/projects/${p.projectId}`)}
+      className={`text-right bg-white hover:bg-gray-50 border ${borderColor} rounded-xl p-3.5 transition-all group flex flex-col gap-2 w-full`}
+    >
+      {/* שורה עליונה: שם + אחוז */}
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-bold text-gray-800 leading-snug group-hover:text-primary transition-colors line-clamp-2 flex-1">
+          {p.projectNameHe || p.projectNameEn || `מחקר #${p.projectId}`}
+        </p>
+        <span className={`flex-shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded-full border ${badgeCls}`}>
+          {usagePct}%
+        </span>
+      </div>
+
+      {/* פס ניצול תקציב */}
+      <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${barColor}`} style={{ width: `${usagePct}%` }} />
+      </div>
+
+      {/* יתרה / גירעון */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-sm leading-none">{statusIcon}</span>
+        <p className={`text-xs font-extrabold ${isDeficit ? 'text-red-600' : 'text-green-700'}`}>
+          {isDeficit ? `גירעון ${fmt(Math.abs(avail))}` : `יתרה ${fmt(avail)}`}
+        </p>
+      </div>
+
+      {/* ימים לסיום */}
+      {daysLeft !== null && (
+        <p className={`text-[11px] font-medium ${
+          daysLeft <= 30  ? 'text-red-600'
+          : daysLeft <= 90 ? 'text-amber-600'
+          : 'text-gray-400'
+        }`}>
+          📅 {daysLeft} ימים לסיום
+        </p>
+      )}
+    </button>
+  );
+}
+
+function SimilarityGroupCard({ group, navigate }) {
+  const dangerCount  = group.projects.filter(p => {
+    const u = (p.totalBudget ?? 0) > 0 ? Math.round(((p.totalPaid ?? 0) / p.totalBudget) * 100) : 0;
+    return (p.availableBalance ?? 0) < 0 || u >= 90;
+  }).length;
+  const warningCount = group.projects.filter(p => {
+    const u = (p.totalBudget ?? 0) > 0 ? Math.round(((p.totalPaid ?? 0) / p.totalBudget) * 100) : 0;
+    const avail = p.availableBalance ?? 0;
+    return avail >= 0 && u >= 70 && u < 90;
+  }).length;
+
+  const headerBg = group.alert ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-100';
+  const cardBorder = group.alert ? 'border-amber-300' : 'border-gray-100';
+
+  return (
+    <div className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${cardBorder}`} dir="rtl">
+      {/* כותרת */}
+      <div className={`px-5 py-3.5 flex items-center justify-between border-b ${headerBg}`}>
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="text-xl leading-none flex-shrink-0">{group.icon}</span>
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-gray-800">{group.title}</h3>
+            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{group.insight}</p>
+          </div>
+        </div>
+        {/* סיכום בריאות הקבוצה */}
+        <div className="flex items-center gap-1.5 flex-shrink-0 mr-3">
+          {dangerCount > 0 && (
+            <span className="text-[11px] font-bold bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-full">
+              🚨 {dangerCount}
+            </span>
+          )}
+          {warningCount > 0 && (
+            <span className="text-[11px] font-bold bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
+              ⚠️ {warningCount}
+            </span>
+          )}
+          <span className="text-[11px] font-bold text-gray-400 bg-white border border-gray-200 px-2 py-0.5 rounded-full">
+            {group.projects.length} מחקרים
+          </span>
+        </div>
+      </div>
+
+      {/* רשימת מחקרים */}
+      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {group.projects.map(p => (
+          <ProjectHealthCard key={p.projectId} p={p} navigate={navigate} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function CustomXTick({ x, y, payload }) {
   const { dark } = useTheme();
   const full = payload.value;
@@ -216,6 +619,7 @@ function ChartTooltip({ active, payload, label }) {
 
 export default function ComparisonPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { dark } = useTheme();
   const gridColor   = dark ? '#2A3A50' : '#f0f0f0';
   const axisColor   = dark ? '#6A8099' : '#6b7280';
@@ -224,7 +628,17 @@ export default function ComparisonPage() {
   const [projects,    setProjects]    = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [metric,      setMetric]      = useState('all');
-  const [mode,        setMode]        = useState('overview');
+  const urlMode = searchParams.get('mode');
+  const [mode,        setMode]        = useState(urlMode === 'recommendations' ? 'recommendations' : 'overview');
+
+  const switchMode = (key) => {
+    setMode(key);
+    setSearchParams({ mode: key }, { replace: true });
+  };
+
+  useEffect(() => {
+    setMode(urlMode || 'overview');
+  }, [urlMode]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [compareData, setCompareData] = useState({});
   const [loadingCmp,  setLoadingCmp]  = useState(false);
@@ -233,7 +647,7 @@ export default function ComparisonPage() {
 
   const load = useCallback(() => {
     setLoading(true);
-    getProjects()
+    getAllProjects()
       .then((res) => setProjects((res.data ?? []).filter(isActive)))
       .catch(() => toast.error('שגיאה בטעינת הנתונים'))
       .finally(() => setLoading(false));
@@ -285,7 +699,9 @@ export default function ComparisonPage() {
     { key: 'yearly',    label: 'שנתי' },
   ];
 
-  const selectedProjects = selectedIds.map(id => projects.find(p => p.projectId === id)).filter(Boolean);
+  const selectedProjects  = selectedIds.map(id => projects.find(p => p.projectId === id)).filter(Boolean);
+  const recommendations   = useMemo(() => buildTransferRecommendations(projects), [projects]);
+  const similarityGroups  = useMemo(() => buildSimilarityGroups(projects), [projects]);
 
   // Projects shown in the picker (active only, filtered by search query)
   const filteredForDisplay = projects.filter((p) => {
@@ -325,13 +741,22 @@ export default function ComparisonPage() {
             <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">השוואות בין מחקרים</h1>
             <p className="text-sm text-gray-400 mt-0.5">{projects.length} מחקרים פעילים</p>
           </div>
-          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl self-start">
-            {[{ key: 'overview', label: 'סקירה כללית' }, { key: 'compare', label: '⚖️ השוואה ישירה' }].map((m) => (
-              <button key={m.key} onClick={() => setMode(m.key)}
-                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl self-start flex-wrap">
+            {[
+              { key: 'overview',        label: 'סקירה כללית' },
+              { key: 'compare',         label: '⚖️ השוואה ישירה' },
+              { key: 'recommendations', label: '💡 המלצות', badge: recommendations.length },
+            ].map((m) => (
+              <button key={m.key} onClick={() => switchMode(m.key)}
+                className={`relative px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
                   mode === m.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                 }`}>
                 {m.label}
+                {m.badge > 0 && (
+                  <span className="absolute -top-1.5 -left-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none px-1">
+                    {m.badge}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -419,6 +844,77 @@ export default function ComparisonPage() {
               </div>
             )}
           </>
+        )}
+
+        {mode === 'recommendations' && (
+          <div dir="rtl">
+            {/* המלצות להעברת תקציב */}
+            <div className="mb-8">
+              <div className="flex items-start gap-3 mb-4">
+                <span className="text-2xl mt-0.5">💡</span>
+                <div>
+                  <h2 className="text-base font-extrabold text-gray-800">המלצות להעברת תקציב</h2>
+                  <p className="text-sm text-gray-400 mt-0.5 leading-relaxed">
+                    מחקרים שעומדים להסתיים עם יתרה עודפת, או מוציאים לאט מהצפוי —<br />
+                    יכולים להעביר תקציב למחקרים שזקוקים לו.
+                  </p>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <div className="w-7 h-7 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : recommendations.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+                  <p className="text-4xl mb-3">✅</p>
+                  <p className="text-sm font-bold text-gray-700">אין המלצות להעברה כרגע</p>
+                  <p className="text-xs text-gray-400 mt-1">כל המחקרים מאוזנים מבחינת תקציב ולוח זמנים</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {recommendations.map((rec, i) => (
+                    <RecommendationCard
+                      key={i}
+                      rec={rec}
+                      onTransfer={(giverId, receiverId, amount) =>
+                        navigate(`/projects/${giverId}?tab=transfer&to=${receiverId}&amount=${Math.round(amount)}`)
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* מחקרים דומים */}
+            <div>
+              <div className="flex items-start gap-3 mb-4">
+                <span className="text-2xl mt-0.5">🔗</span>
+                <div>
+                  <h2 className="text-base font-extrabold text-gray-800">מחקרים דומים</h2>
+                  <p className="text-sm text-gray-400 mt-0.5 leading-relaxed">
+                    קיבוץ מחקרים לפי גודל תקציב, קצב הוצאות ולוח זמנים — לזיהוי דפוסים משותפים
+                  </p>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <div className="w-7 h-7 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : similarityGroups.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+                  <p className="text-sm text-gray-400">אין מספיק מחקרים לסיווג — נדרשים לפחות 2 מחקרים בקטגוריה</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {similarityGroups.map((group, i) => (
+                    <SimilarityGroupCard key={i} group={group} navigate={navigate} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {mode === 'compare' && (

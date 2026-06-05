@@ -8,5 +8,7 @@ namespace RupResearchAPI.Services
         Task<UserResponseDto?> GetByIdAsync(string userId);
         Task<UserResponseDto?> UpdateProfileAsync(string userId, UpdateProfileDto dto);
         Task ChangePasswordAsync(string userId, ChangePasswordDto dto);
+        Task<UserResponseDto?> UpdateUserRoleAsync(string userId, string newRole);
+        Task<bool> DeleteUserAsync(string userId);
     }
 }

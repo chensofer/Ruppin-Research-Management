@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
 import {
@@ -71,15 +71,19 @@ function StatusBadge({ status }) {
 export default function ProjectPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { dark } = useTheme();
+  const urlTab    = searchParams.get('tab');
+  const urlTo     = searchParams.get('to');
+  const urlAmount = searchParams.get('amount');
 
   const [detail, setDetail] = useState(null);
   const [payments, setPayments] = useState([]);
   const [files, setFiles] = useState([]);
   const [commitments, setCommitments] = useState([]);
   const [pendingHourApprovals, setPendingHourApprovals] = useState([]);
-  const [activeTab, setActiveTab] = useState('history');
+  const [activeTab, setActiveTab] = useState(urlTab && TABS.some(t => t.id === urlTab) ? urlTab : 'history');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -609,6 +613,8 @@ export default function ProjectPage() {
           availableBalance={available}
           onTransferred={() => { reloadPayments(); reloadDetail(); }}
           readOnly={isArchived}
+          initialTargetId={urlTo ? parseInt(urlTo, 10) : null}
+          initialAmount={urlAmount ? parseFloat(urlAmount) : null}
         />
       )}
       {activeTab === 'history' && (

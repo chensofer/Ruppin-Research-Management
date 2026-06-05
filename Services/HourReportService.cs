@@ -446,6 +446,44 @@ namespace RupResearchAPI.Services
             }).ToList();
         }
 
+        public async Task<List<MonthlyApprovalDto>> GetAllPendingApprovals()
+        {
+            var allApprovals = await _db.ResearchMonthlyWorkApprovals.ToListAsync();
+            var relevant = allApprovals
+                .Where(a => a.ApprovalStatus?.Trim() == "ממתין")
+                .ToList();
+
+            if (relevant.Count == 0) return [];
+
+            var allProjects = await _db.ResearchProjects.ToListAsync();
+            var projectDict = allProjects.ToDictionary(p => p.ProjectId);
+
+            var allUsers = await _db.ResearchUsers.ToListAsync();
+            var userDict = allUsers
+                .GroupBy(u => NormalizeId(u.UserId))
+                .ToDictionary(g => g.Key, g => g.First());
+
+            var allAssistants = await _db.ResearchAssistants.ToListAsync();
+
+            return relevant.Select(a =>
+            {
+                projectDict.TryGetValue(a.ProjectId ?? 0, out var project);
+                var uid = a.UserId?.Trim() ?? "";
+                var normalUid = NormalizeId(uid);
+                userDict.TryGetValue(normalUid, out var user);
+                string? userName = user != null ? $"{user.FirstName} {user.LastName}".Trim() : null;
+
+                var assistantRecord = allAssistants.FirstOrDefault(ast =>
+                    NormalizeId(ast.AssistantUserId) == normalUid && ast.ProjectId == (a.ProjectId ?? 0));
+                var salaryPerHour = assistantRecord?.SalaryPerHour;
+                var totalPayment = salaryPerHour.HasValue && a.TotalWorkedHours.HasValue
+                    ? salaryPerHour.Value * a.TotalWorkedHours.Value
+                    : (decimal?)null;
+
+                return ToApprovalDto(a, project?.ProjectNameHe, userName, salaryPerHour, totalPayment);
+            }).ToList();
+        }
+
         public async Task<List<MonthlyApprovalDto>> GetAllSubmissionsForUser(string userId)
         {
             var trimmedId = userId.Trim();

@@ -164,6 +164,7 @@ export default function RegisterPage() {
                 onChange={handleChange} className={inputClass}>
                 <option value="חוקר">חוקר</option>
                 <option value="מנהל מרכז">מנהל מרכז</option>
+                <option value="מזכירות">מזכירות</option>
                 <option value="עוזר מחקר">עוזר מחקר</option>
               </select>
             </div>

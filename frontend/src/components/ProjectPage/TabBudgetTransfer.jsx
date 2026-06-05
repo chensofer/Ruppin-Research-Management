@@ -5,10 +5,22 @@ import { getAllProjects, transferBudget } from '../../api/projectsApi';
 const fmt = (n) =>
   n != null ? `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)}` : '—';
 
-export default function TabBudgetTransfer({ projectId, projectName, availableBalance, onTransferred, readOnly = false }) {
+export default function TabBudgetTransfer({ projectId, projectName, availableBalance, onTransferred, readOnly = false, initialTargetId = null, initialAmount = null }) {
   const [allProjects, setAllProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
-  const [form, setForm] = useState({ targetProjectId: '', amount: '' });
+  const [form, setForm] = useState({
+    targetProjectId: initialTargetId ? String(initialTargetId) : '',
+    amount: initialAmount ? String(Math.round(initialAmount)) : '',
+  });
+
+  useEffect(() => {
+    if (initialTargetId || initialAmount) {
+      setForm({
+        targetProjectId: initialTargetId ? String(initialTargetId) : '',
+        amount: initialAmount ? String(Math.round(initialAmount)) : '',
+      });
+    }
+  }, [initialTargetId, initialAmount]);
   const [step, setStep] = useState('form'); // 'form' | 'confirm'
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -97,6 +109,16 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
           </div>
         )}
         {!readOnly && <>
+        {/* Pre-filled from recommendation */}
+        {initialTargetId && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-right flex items-center gap-2">
+            <span className="text-lg">💡</span>
+            <p className="text-xs text-amber-800 leading-relaxed">
+              <span className="font-bold">הפרטים מולאו אוטומטית</span> לפי המלצת המערכת — ניתן לשנות לפני האישור
+            </p>
+          </div>
+        )}
+
         {/* Available balance info */}
         <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-6 text-right">
           <p className="text-xs text-blue-500 mb-0.5">יתרה זמינה במחקר הנוכחי</p>

@@ -10,6 +10,17 @@ namespace RupResearchAPI.DTOs
     }
 
     public record UpdateProfileDto(string? FirstName, string? LastName, string? Email);
+    public record UpdateUserRoleDto(string SystemAuthorization);
+
+    public class CreateUserDto
+    {
+        public string UserId { get; set; } = null!;
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Email { get; set; }
+        public string? SystemAuthorization { get; set; }
+        public string? Password { get; set; }
+    }
 
     public record ChangePasswordDto(string CurrentPassword, string NewPassword);
 

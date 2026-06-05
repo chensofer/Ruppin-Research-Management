@@ -172,6 +172,60 @@ namespace RupResearchAPI.Services
             }).ToList();
         }
 
+        public async Task<List<PendingPaymentRequestDto>> GetAllPending()
+        {
+            var allPending = await _db.ResearchPaymentRequests
+                .Where(r => r.Status == "ממתין")
+                .OrderByDescending(r => r.RequestDate)
+                .ToListAsync();
+
+            if (allPending.Count == 0)
+                return new List<PendingPaymentRequestDto>();
+
+            var allProjects = await _db.ResearchProjects.ToListAsync();
+            var projectDict = allProjects.ToDictionary(p => p.ProjectId);
+
+            var allProviders = await _db.ResearchProviders.ToListAsync();
+            var providerDict = allProviders.ToDictionary(p => p.ProviderId);
+
+            return allPending.Select(r =>
+            {
+                projectDict.TryGetValue(r.ProjectId ?? 0, out var project);
+                providerDict.TryGetValue(r.ProviderId ?? -1, out var provider);
+                return ToPendingDto(r, project, provider?.ProviderName);
+            }).ToList();
+        }
+
+        public async Task<List<PendingPaymentRequestDto>> GetAllForSecretary()
+        {
+            var allRequests = await _db.ResearchPaymentRequests
+                .OrderByDescending(r => r.RequestDate)
+                .ToListAsync();
+
+            if (allRequests.Count == 0)
+                return new List<PendingPaymentRequestDto>();
+
+            var allProjects = await _db.ResearchProjects.ToListAsync();
+            var projectDict = allProjects.ToDictionary(p => p.ProjectId);
+
+            var allProviders = await _db.ResearchProviders.ToListAsync();
+            var providerDict = allProviders.ToDictionary(p => p.ProviderId);
+
+            var allUsers = await _db.ResearchUsers.ToListAsync();
+            var userDict = allUsers.ToDictionary(u => u.UserId.Trim());
+
+            return allRequests.Select(r =>
+            {
+                projectDict.TryGetValue(r.ProjectId ?? 0, out var project);
+                providerDict.TryGetValue(r.ProviderId ?? -1, out var provider);
+                var uid = r.RequestedByUserId?.Trim() ?? "";
+                userDict.TryGetValue(uid, out var reqUser);
+                var dto = ToPendingDto(r, project, provider?.ProviderName);
+                dto.RequestedByUserName = reqUser != null ? $"{reqUser.FirstName} {reqUser.LastName}".Trim() : null;
+                return dto;
+            }).ToList();
+        }
+
         private async Task<List<int>> GetUserProjectIds(string userId)
         {
             // All three role columns are char(10) in the DB — load in memory and Trim to avoid
@@ -259,6 +313,7 @@ namespace RupResearchAPI.Services
                 amount:         req.RequestedAmount ?? 0,
                 description:    req.RequestDescription,
                 comments:       req.Comments,
+                requestId:      requestId,
                 filePaths:      filePaths);
         }
 

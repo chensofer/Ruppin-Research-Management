@@ -5,7 +5,6 @@ using RupResearchAPI.Services;
 namespace RupResearchAPI.Controllers
 {
     [ApiController]
-    [Route("api/projects/{projectId:int}/audit-logs")]
     [Authorize]
     public class AuditLogsController : ControllerBase
     {
@@ -16,10 +15,19 @@ namespace RupResearchAPI.Controllers
             _audit = audit;
         }
 
-        [HttpGet]
+        [HttpGet("api/projects/{projectId:int}/audit-logs")]
         public async Task<IActionResult> GetByProject(int projectId)
         {
             var logs = await _audit.GetByProjectAsync(projectId);
+            return Ok(logs);
+        }
+
+        [HttpGet("api/audit-logs/all")]
+        public async Task<IActionResult> GetAll()
+        {
+            var role = User.FindFirst("system_authorization")?.Value;
+            if (role != "מזכירות") return Forbid();
+            var logs = await _audit.GetAllAsync();
             return Ok(logs);
         }
     }

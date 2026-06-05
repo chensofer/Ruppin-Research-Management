@@ -9,6 +9,7 @@ namespace RupResearchAPI.DTOs
         public decimal? TotalBudget { get; set; }
         public short? CenterId { get; set; }
         public string? PrincipalResearcherId { get; set; }
+        public string? PrincipalResearcherName { get; set; }
         public DateOnly? CreatedDate { get; set; }
         public DateOnly? StartDate { get; set; }
         public DateOnly? EndDate { get; set; }

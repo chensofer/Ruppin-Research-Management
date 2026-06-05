@@ -67,5 +67,42 @@ namespace RupResearchAPI.Services
                 CreatedAt = l.CreatedAt,
             }).ToList();
         }
+
+        public async Task<List<AuditLogResponseDto>> GetAllAsync()
+        {
+            var logs = await _db.ResearchAuditLogs
+                .OrderByDescending(l => l.CreatedAt)
+                .ToListAsync();
+
+            if (logs.Count == 0)
+                return new List<AuditLogResponseDto>();
+
+            var allUsers = await _db.ResearchUsers.ToListAsync();
+            var userDict = allUsers.ToDictionary(
+                u => u.UserId.Trim(),
+                u => $"{u.FirstName} {u.LastName}".Trim());
+
+            var allProjects = await _db.ResearchProjects.ToListAsync();
+            var projectDict = allProjects.ToDictionary(p => p.ProjectId);
+
+            return logs.Select(l =>
+            {
+                projectDict.TryGetValue(l.ProjectId, out var project);
+                return new AuditLogResponseDto
+                {
+                    Id = l.Id,
+                    ProjectId = l.ProjectId,
+                    ProjectNameHe = project?.ProjectNameHe,
+                    ProjectNameEn = project?.ProjectNameEn,
+                    PerformedByUserId = l.PerformedByUserId,
+                    PerformedByName = userDict.TryGetValue(l.PerformedByUserId.Trim(), out var name) ? name : l.PerformedByUserId,
+                    ActionType = l.ActionType,
+                    ActionDescription = l.ActionDescription,
+                    EntityType = l.EntityType,
+                    EntityId = l.EntityId,
+                    CreatedAt = l.CreatedAt,
+                };
+            }).ToList();
+        }
     }
 }

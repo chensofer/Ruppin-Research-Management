@@ -15,12 +15,21 @@ import ProfilePage from './pages/ProfilePage';
 import ComparisonPage from './pages/ComparisonPage';
 import ArchivePage from './pages/ArchivePage';
 import HistoryPage from './pages/HistoryPage';
+import UsersPage from './pages/UsersPage';
 
-// Redirects research assistants to their attendance page
+// Redirects research assistants to their attendance page; secretaries stay in the app
 function RoleAwareRoute({ children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   if (user.systemAuthorization === 'עוזר מחקר') return <Navigate to="/attendance" replace />;
+  return children;
+}
+
+// Only accessible by מזכירות
+function SecretaryRoute({ children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.systemAuthorization !== 'מזכירות') return <Navigate to="/dashboard" replace />;
   return children;
 }
 
@@ -79,6 +88,11 @@ export default function App() {
           } />
           <Route path="/my-reports" element={
             <ProtectedRoute><MyReportsPage /></ProtectedRoute>
+          } />
+
+          {/* Users management — secretary only */}
+          <Route path="/users" element={
+            <SecretaryRoute><UsersPage /></SecretaryRoute>
           } />
 
           {/* Profile — all authenticated users */}

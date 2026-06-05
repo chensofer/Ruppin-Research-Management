@@ -97,8 +97,15 @@ namespace RupResearchAPI.Controllers
 
         // GET /api/hour-reports/monthly/pending?researcherId=
         [HttpGet("monthly/pending")]
-        public async Task<IActionResult> GetPending([FromQuery] string researcherId)
+        public async Task<IActionResult> GetPending([FromQuery] string? researcherId)
         {
+            var role = User.FindFirst("system_authorization")?.Value;
+            if (role == "מזכירות")
+            {
+                var all = await _svc.GetAllPendingApprovals();
+                return Ok(all);
+            }
+            if (string.IsNullOrEmpty(researcherId)) return Ok(new List<object>());
             var list = await _svc.GetPendingForResearcher(researcherId);
             return Ok(list);
         }

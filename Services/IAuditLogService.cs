@@ -8,5 +8,6 @@ namespace RupResearchAPI.Services
             string? entityType = null, string? entityId = null);
 
         Task<List<AuditLogResponseDto>> GetByProjectAsync(int projectId);
+        Task<List<AuditLogResponseDto>> GetAllAsync();
     }
 }

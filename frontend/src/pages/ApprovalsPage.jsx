@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getPendingPaymentRequests, updatePaymentRequestStatus } from '../api/paymentRequestsApi';
+import { getPendingPaymentRequests, getAllPaymentRequests, updatePaymentRequestStatus } from '../api/paymentRequestsApi';
 import { getPendingHourApprovals, decideMonthlyApproval } from '../api/hourReportsApi';
 import Layout from '../components/Layout';
 import { requestNotificationPermission, sendNotification } from '../utils/notifications';
@@ -84,9 +84,16 @@ function ActionRow({ onApprove, onReject, busy }) {
   );
 }
 
-function RequestCard({ request, onApprove, onReject }) {
+const STATUS_BADGE = {
+  'אושר':  'bg-green-100 text-green-700',
+  'נדחה':  'bg-red-100 text-red-700',
+  'שולם':  'bg-blue-100 text-blue-700',
+  'ממתין': 'bg-yellow-100 text-yellow-700',
+};
+
+function RequestCard({ request, onApprove, onReject, showProject, highlighted }) {
   const [busy, setBusy] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(highlighted || false);
 
   const quotationFiles = request.quotationFilePath
     ? request.quotationFilePath.split(';').filter(Boolean)
@@ -94,7 +101,9 @@ function RequestCard({ request, onApprove, onReject }) {
   const hasDetails = request.providerName || request.requestDescription || quotationFiles.length > 0;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+    <div className={`bg-white rounded-2xl border shadow-card overflow-hidden transition-all ${
+      highlighted ? 'border-primary ring-2 ring-primary/30 shadow-lg' : 'border-gray-100'
+    }`}>
       {/* Accent stripe */}
       <div className="h-1 bg-gradient-to-l from-primary to-primary-mid" />
 
@@ -117,6 +126,16 @@ function RequestCard({ request, onApprove, onReject }) {
             </p>
           </div>
         </div>
+
+        {/* Project name (shown for secretary) */}
+        {showProject && (request.projectNameHe || request.projectNameEn) && (
+          <div className="flex items-center gap-1 text-xs text-primary font-semibold bg-primary-light px-2.5 py-1 rounded-lg w-fit" dir="rtl">
+            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            {request.projectNameHe || request.projectNameEn}
+          </div>
+        )}
 
         {/* Meta */}
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400" dir="rtl">
@@ -186,12 +205,23 @@ function RequestCard({ request, onApprove, onReject }) {
           </div>
         )}
 
-        {/* Actions */}
-        <ActionRow
-          busy={busy}
-          onApprove={async () => { setBusy(true); await onApprove(request.paymentRequestId); setBusy(false); }}
-          onReject={async (reason) => { setBusy(true); await onReject(request.paymentRequestId, reason); setBusy(false); }}
-        />
+        {/* Status badge (non-pending) or action buttons (pending) */}
+        {request.status && request.status !== 'ממתין' ? (
+          <div className="flex items-center gap-2 pt-1">
+            <span className={`text-xs font-semibold px-3 py-1 rounded-full ${STATUS_BADGE[request.status] ?? 'bg-gray-100 text-gray-600'}`}>
+              {request.status}
+            </span>
+            {request.rejectionReason && (
+              <span className="text-xs text-gray-400 truncate">— {request.rejectionReason}</span>
+            )}
+          </div>
+        ) : (
+          <ActionRow
+            busy={busy}
+            onApprove={async () => { setBusy(true); await onApprove(request.paymentRequestId); setBusy(false); }}
+            onReject={async (reason) => { setBusy(true); await onReject(request.paymentRequestId, reason); setBusy(false); }}
+          />
+        )}
       </div>
     </div>
   );
@@ -272,8 +302,11 @@ function HourApprovalCard({ record, onDecide }) {
 
 export default function ApprovalsPage() {
   const { user } = useAuth();
+  const isSecretary = user?.systemAuthorization === 'מזכירות';
   const [searchParams, setSearchParams] = useSearchParams();
   const filterProjectId = searchParams.get('projectId') ? parseInt(searchParams.get('projectId'), 10) : null;
+  const highlightId = searchParams.get('requestId') ? parseInt(searchParams.get('requestId'), 10) : null;
+  const highlightRef = useRef(null);
 
   const [tab, setTab] = useState('payments');
   const [requests, setRequests] = useState([]);
@@ -281,6 +314,8 @@ export default function ApprovalsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [toastMsg, setToastMsg] = useState('');
+  // If we arrived via a direct link to a specific request, show all statuses so it's always visible
+  const [statusFilter, setStatusFilter] = useState(highlightId ? '' : 'ממתין');
 
   const showToast = (msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 3000); };
 
@@ -289,11 +324,11 @@ export default function ApprovalsPage() {
     setError('');
     try {
       const [pRes, hRes] = await Promise.all([
-        getPendingPaymentRequests(),
-        user?.userId ? getPendingHourApprovals(user.userId).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+        getPendingPaymentRequests().catch(() => ({ data: [] })),
+        getPendingHourApprovals(isSecretary ? null : user?.userId).catch(() => ({ data: [] })),
       ]);
-      setRequests(pRes.data);
-      setHourRecords(hRes.data);
+      setRequests(Array.isArray(pRes.data) ? pRes.data : []);
+      setHourRecords(Array.isArray(hRes.data) ? hRes.data : []);
 
       // Push notification when there are pending items
       const totalPending = (pRes.data?.length ?? 0) + (hRes.data?.length ?? 0);
@@ -314,6 +349,15 @@ export default function ApprovalsPage() {
   }, [user]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Scroll to highlighted card once data is loaded
+  useEffect(() => {
+    if (!highlightId || loading) return;
+    const timer = setTimeout(() => {
+      highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [highlightId, loading]);
 
   const handleApprove = async (id) => {
     try {
@@ -346,7 +390,13 @@ export default function ApprovalsPage() {
     }
   };
 
-  const visibleRequests    = filterProjectId ? requests.filter((r) => r.projectId === filterProjectId) : requests;
+  const safeRequests = Array.isArray(requests) ? requests : [];
+  const pendingRequestsCount = safeRequests.filter(r => r.status === 'ממתין').length;
+  const statusFilteredRequests = isSecretary && statusFilter
+    ? safeRequests.filter((r) => r.status === statusFilter)
+    : safeRequests;
+
+  const visibleRequests    = filterProjectId ? statusFilteredRequests.filter((r) => r.projectId === filterProjectId) : statusFilteredRequests;
   const visibleHourRecords = filterProjectId ? hourRecords.filter((r) => r.projectId === filterProjectId) : hourRecords;
 
   const filterProjectName = filterProjectId
@@ -390,7 +440,7 @@ export default function ApprovalsPage() {
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">אישורים ממתינים</h1>
             <p className="text-sm text-gray-400 mt-0.5 font-medium">
-              {requests.length + hourRecords.length} פריטים ממתינים לאישורך
+              {pendingRequestsCount + hourRecords.length} פריטים ממתינים לאישורך
             </p>
           </div>
         </div>
@@ -414,10 +464,32 @@ export default function ApprovalsPage() {
           </div>
         )}
 
+        {/* Secretary status filter */}
+        {isSecretary && tab === 'payments' && (
+          <div className="flex gap-1.5 mb-5 flex-wrap">
+            {['ממתין', 'אושר', 'נדחה', 'שולם', ''].map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
+                  statusFilter === s
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-white text-gray-500 border-gray-200 hover:border-primary hover:text-primary'
+                }`}
+              >
+                {s === '' ? 'הכל' : s}
+                <span className="mr-1.5 text-xs opacity-70">
+                  ({s === '' ? requests.length : requests.filter(r => r.status === s).length})
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Tabs — pill style */}
         <div className="flex gap-1.5 bg-gray-100/70 p-1.5 rounded-2xl w-full sm:w-fit mb-7">
           {[
-            { id: 'payments', label: 'בקשות תשלום', count: requests.length },
+            { id: 'payments', label: 'בקשות תשלום', count: isSecretary ? pendingRequestsCount : safeRequests.length },
             { id: 'hours', label: 'שעות עוזרי מחקר', count: hourRecords.length },
           ].map((t) => (
             <button
@@ -474,10 +546,16 @@ export default function ApprovalsPage() {
                   <span className="badge-yellow">{group.items.length} ממתינות</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {group.items.map((req) => (
-                    <RequestCard key={req.paymentRequestId} request={req}
-                      onApprove={handleApprove} onReject={handleReject} />
-                  ))}
+                  {group.items.map((req) => {
+                    const isHighlighted = req.paymentRequestId === highlightId;
+                    return (
+                      <div key={req.paymentRequestId} ref={isHighlighted ? highlightRef : null}>
+                        <RequestCard request={req}
+                          onApprove={handleApprove} onReject={handleReject}
+                          showProject={isSecretary} highlighted={isHighlighted} />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))

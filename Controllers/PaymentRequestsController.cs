@@ -28,12 +28,25 @@ namespace RupResearchAPI.Controllers
             return Ok(results);
         }
 
+        [HttpGet("api/payment-requests/all")]
+        public async Task<IActionResult> GetAll()
+        {
+            var role = User.FindFirst("system_authorization")?.Value;
+            if (role != "מזכירות") return Forbid();
+            var results = await _service.GetAllForSecretary();
+            return Ok(results);
+        }
+
         [HttpGet("api/payment-requests/pending")]
         public async Task<IActionResult> GetPending()
         {
             var userId = User.FindFirst("user_id")?.Value;
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
-            var results = await _service.GetPendingForUser(userId);
+            var role = User.FindFirst("system_authorization")?.Value;
+            // Secretary sees ALL requests (all statuses, all projects)
+            var results = role == "מזכירות"
+                ? await _service.GetAllForSecretary()
+                : await _service.GetPendingForUser(userId);
             return Ok(results);
         }
 

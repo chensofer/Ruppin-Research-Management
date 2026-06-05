@@ -21,6 +21,7 @@ namespace RupResearchAPI.Services
             decimal amount,
             string? description,
             string? comments,
+            int requestId = 0,
             List<string>? filePaths = null)
         {
             try
@@ -92,7 +93,7 @@ namespace RupResearchAPI.Services
 
       <!-- CTA -->
       <tr><td style='background:white;padding:24px 28px;border-top:2px solid #f1f5f9;text-align:center;'>
-        <a href='{siteUrl}' style='display:inline-block;background:#003478;color:white;padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:bold;font-size:15px;'>🔐 כניסה למערכת לאישור</a>
+        <a href='{siteUrl}/approvals?requestId={requestId}' style='display:inline-block;background:#003478;color:white;padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:bold;font-size:15px;'>🔐 מעבר לאישור הבקשה</a>
         {(!string.IsNullOrWhiteSpace(submitterEmail) ? $"<p style='color:#94a3b8;font-size:12px;margin:16px 0 0;'>ניתן להשיב למייל זה כדי לפנות ישירות אל {submitterName}</p>" : "")}
       </td></tr>
 
@@ -109,8 +110,9 @@ namespace RupResearchAPI.Services
 
                 using var smtp = new SmtpClient(host, port)
                 {
-                    Credentials = new NetworkCredential(user, pass),
-                    EnableSsl   = true,
+                    UseDefaultCredentials = false,
+                    Credentials           = new NetworkCredential(user, pass),
+                    EnableSsl             = true,
                 };
 
                 var msg = new MailMessage

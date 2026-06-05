@@ -52,6 +52,10 @@ namespace RupResearchAPI.Services
             var allTeamMembers = await _db.ResearchUsersProjects.ToListAsync();
             var allBudgetPlans = await _db.ResearchBudgetPlans.ToListAsync();
             var allHourApprovals = await _db.ResearchMonthlyWorkApprovals.ToListAsync();
+            var allUsers = await _db.ResearchUsers.ToListAsync();
+            var userNameMap = allUsers.ToDictionary(
+                u => u.UserId?.Trim() ?? "",
+                u => $"{u.FirstName} {u.LastName}".Trim());
 
             const string salaryCategory = "שכר לעוזרי מחקר";
 
@@ -89,6 +93,8 @@ namespace RupResearchAPI.Services
                     + (!string.IsNullOrEmpty(piTrimmed) && !memberIds.Contains(piTrimmed) ? 1 : 0);
 
                 var dto = ToDto(p);
+                var piId = p.PrincipalResearcherId?.Trim() ?? "";
+                dto.PrincipalResearcherName = !string.IsNullOrEmpty(piId) && userNameMap.TryGetValue(piId, out var piName) ? piName : null;
                 dto.TotalPaid = totalPaid;
                 dto.PendingCount = pendingCount;
                 dto.PendingHourApprovalsCount = pendingHourApprovalsCount;
@@ -1095,8 +1101,33 @@ namespace RupResearchAPI.Services
 
         public async Task<List<ProjectResponseDto>> GetAllProjects()
         {
-            var all = await _db.ResearchProjects.ToListAsync();
-            return all.Select(ToDto).ToList();
+            var all             = await _db.ResearchProjects.ToListAsync();
+            var allPayments     = await _db.ResearchPaymentRequests.ToListAsync();
+            var allCommitments  = await _db.ResearchFutureCommitments.ToListAsync();
+            var allHourApprovals = await _db.ResearchMonthlyWorkApprovals.ToListAsync();
+            var allUsers        = await _db.ResearchUsers.ToListAsync();
+            var nameMap = allUsers.ToDictionary(u => u.UserId?.Trim() ?? "", u => $"{u.FirstName} {u.LastName}".Trim());
+
+            return all.Select(p =>
+            {
+                var payments    = allPayments.Where(r => r.ProjectId == p.ProjectId).ToList();
+                var totalPaid   = payments.Where(r => r.Status == "אושר" || r.Status == "שולם").Sum(r => r.RequestedAmount ?? 0);
+                var pendingCount = payments.Count(r => r.Status == "ממתין");
+                var pendingHourApprovalsCount = allHourApprovals.Count(a => a.ProjectId == p.ProjectId && a.ApprovalStatus?.Trim() == "ממתין");
+                var totalFuture = allCommitments.Where(c => c.ProjectId == p.ProjectId && c.Status != "בוטל").Sum(c => c.ExpectedAmount ?? 0);
+                var budget      = p.TotalBudget ?? 0;
+
+                var dto  = ToDto(p);
+                var piId = p.PrincipalResearcherId?.Trim() ?? "";
+                dto.PrincipalResearcherName     = !string.IsNullOrEmpty(piId) && nameMap.TryGetValue(piId, out var n) ? n : null;
+                dto.TotalPaid                   = totalPaid;
+                dto.PendingCount                = pendingCount;
+                dto.PendingHourApprovalsCount   = pendingHourApprovalsCount;
+                dto.TotalFuture                 = totalFuture;
+                dto.RemainingBalance            = budget - totalPaid;
+                dto.AvailableBalance            = budget - totalPaid - totalFuture;
+                return dto;
+            }).ToList();
         }
 
         public async Task TransferBudget(int sourceId, int targetId, decimal amount, string userId)

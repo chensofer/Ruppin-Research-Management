@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import Layout from '../components/Layout';
-import { getAuditLogs } from '../api/auditApi';
-import { getProjects } from '../api/projectsApi';
+import { useAuth } from '../context/AuthContext';
+import { getAuditLogs, getAllAuditLogs } from '../api/auditApi';
+import { getProjects, getAllProjects } from '../api/projectsApi';
 
 // ── Action metadata ────────────────────────────────────────────────────────────
 const ACTION_META = {
@@ -34,23 +35,25 @@ const ACTION_META = {
 };
 
 const CATEGORIES = [
-  { value: 'all',     label: 'הכל' },
-  { value: 'project', label: 'מחקר' },
-  { value: 'team',    label: 'צוות' },
-  { value: 'payment', label: 'תשלומים' },
-  { value: 'hours',   label: 'דוחות שעות' },
-  { value: 'budget',  label: 'תקציב' },
-  { value: 'files',   label: 'קבצים' },
+  { value: 'financial', label: 'תקציב ותשלומים' },
+  { value: 'all',       label: 'הכל' },
+  { value: 'project',   label: 'מחקר' },
+  { value: 'team',      label: 'צוות' },
+  { value: 'payment',   label: 'תשלומים' },
+  { value: 'hours',     label: 'דוחות שעות' },
+  { value: 'budget',    label: 'תקציב' },
+  { value: 'files',     label: 'קבצים' },
 ];
 
 const CATEGORY_COLORS = {
-  all:     'bg-gray-100 text-gray-700 border-gray-200',
-  project: 'bg-blue-50 text-blue-700 border-blue-200',
-  team:    'bg-purple-50 text-purple-700 border-purple-200',
-  payment: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  hours:   'bg-orange-50 text-orange-700 border-orange-200',
-  budget:  'bg-teal-50 text-teal-700 border-teal-200',
-  files:   'bg-slate-50 text-slate-600 border-slate-200',
+  financial: 'bg-green-50 text-green-700 border-green-200',
+  all:       'bg-gray-100 text-gray-700 border-gray-200',
+  project:   'bg-blue-50 text-blue-700 border-blue-200',
+  team:      'bg-purple-50 text-purple-700 border-purple-200',
+  payment:   'bg-yellow-50 text-yellow-700 border-yellow-200',
+  hours:     'bg-orange-50 text-orange-700 border-orange-200',
+  budget:    'bg-teal-50 text-teal-700 border-teal-200',
+  files:     'bg-slate-50 text-slate-600 border-slate-200',
 };
 
 function getActionMeta(actionType) {
@@ -77,6 +80,20 @@ function formatDateShort(iso) {
   return d.toLocaleDateString('he-IL', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
+function formatRelativeDate(iso) {
+  if (!iso) return null;
+  const now = new Date();
+  const d = new Date(iso);
+  const diffMs = now - d;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'היום';
+  if (diffDays === 1) return 'אתמול';
+  if (diffDays < 7) return `לפני ${diffDays} ימים`;
+  if (diffDays < 30) return `לפני ${Math.floor(diffDays / 7)} שבועות`;
+  if (diffDays < 365) return `לפני ${Math.floor(diffDays / 30)} חודשים`;
+  return `לפני ${Math.floor(diffDays / 365)} שנים`;
+}
+
 // ── Icons ────────────────────────────────────────────────────────────────────
 const IconProject  = () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
 const IconTeam     = () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
@@ -88,96 +105,150 @@ const IconFile     = () => <svg className="w-3.5 h-3.5" fill="none" stroke="curr
 const CATEGORY_ICONS = { project: IconProject, team: IconTeam, payment: IconPayment, hours: IconHours, budget: IconBudget, files: IconFile };
 
 // ── Excel export ─────────────────────────────────────────────────────────────
-function exportToExcel(logs, projectName) {
-  const rows = logs.map(log => ({
-    'תאריך ושעה':       formatDateTime(log.createdAt),
-    'מבצע הפעולה':      log.performedByName || log.performedByUserId,
-    'מזהה משתמש':       log.performedByUserId,
-    'סוג פעולה':        getActionMeta(log.actionType).label,
-    'תיאור הפעולה':     log.actionDescription,
-  }));
+function exportToExcel(logs, projectName, allProjects) {
+  const rows = logs.map(log => {
+    const row = {
+      'תאריך ושעה':   formatDateTime(log.createdAt),
+      'מבצע הפעולה':  log.performedByName || log.performedByUserId,
+      'מזהה משתמש':   log.performedByUserId,
+      'סוג פעולה':    getActionMeta(log.actionType).label,
+      'תיאור הפעולה': log.actionDescription,
+    };
+    if (allProjects) row['מחקר'] = log.projectNameHe || log.projectNameEn || `מחקר #${log.projectId}`;
+    return row;
+  });
 
   const ws = XLSX.utils.json_to_sheet(rows);
-
-  // RTL direction
   ws['!sheetViews'] = [{ rightToLeft: true }];
-
-  // Column widths
-  ws['!cols'] = [
-    { wch: 22 },
-    { wch: 22 },
-    { wch: 14 },
-    { wch: 20 },
-    { wch: 60 },
-  ];
+  ws['!cols'] = allProjects
+    ? [{ wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 60 }, { wch: 30 }]
+    : [{ wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 60 }];
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'היסטוריית שינויים');
 
-  const safeProjectName = (projectName || 'מחקר').replace(/[\\/:*?"<>|]/g, '_');
+  const safeProjectName = (projectName || (allProjects ? 'כל-המחקרים' : 'מחקר')).replace(/[\\/:*?"<>|]/g, '_');
   XLSX.writeFile(wb, `היסטוריית_שינויים_${safeProjectName}.xlsx`);
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function HistoryPage() {
+  const { user } = useAuth();
+  const isSecretary = user?.systemAuthorization === 'מזכירות';
+
   const [projects, setProjects]         = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [projectStatus, setProjectStatus] = useState('active'); // 'active' | 'archived'
   const [logs, setLogs]                 = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [loadingLogs, setLoadingLogs]   = useState(false);
   const [logsError, setLogsError]       = useState(false);
-  const [category, setCategory]         = useState('all');
+  const [category, setCategory]         = useState('financial');
   const [search, setSearch]             = useState('');
+  // map of projectId (string) → ISO date string of last financial change
+  const [lastChange, setLastChange]     = useState({});
 
-  // Load projects
+  // Load projects — secretary gets all (active+archived), others get their own
   useEffect(() => {
-    getProjects()
+    const fetch = isSecretary ? getAllProjects() : getProjects();
+    fetch
       .then(res => {
-        setProjects(res.data ?? []);
-        if (res.data?.length > 0) setSelectedProjectId(String(res.data[0].projectId));
+        const list = Array.isArray(res.data) ? res.data : [];
+        setProjects(list);
       })
       .catch(() => {})
       .finally(() => setLoadingProjects(false));
-  }, []);
+  }, [isSecretary]);
 
-  // Load logs when project changes
+  // Secretary: load all audit logs in background to compute per-project last financial change
+  useEffect(() => {
+    if (!isSecretary) return;
+    getAllAuditLogs()
+      .then(res => {
+        const all = Array.isArray(res.data) ? res.data : [];
+        const map = {};
+        for (const log of all) {
+          const cat = getActionMeta(log.actionType).category;
+          if (cat !== 'payment' && cat !== 'budget') continue;
+          const pid = String(log.projectId);
+          if (!map[pid] || log.createdAt > map[pid]) map[pid] = log.createdAt;
+        }
+        setLastChange(map);
+      })
+      .catch(() => {});
+  }, [isSecretary]);
+
+  // Filtered projects by active/archived status (secretary only), sorted by last financial change
+  const visibleProjects = useMemo(() => {
+    if (!isSecretary) return projects;
+    const filtered = projects.filter(p => projectStatus === 'archived' ? p.isArchived : !p.isArchived);
+    return [...filtered].sort((a, b) => {
+      const da = lastChange[String(a.projectId)] ?? '';
+      const db = lastChange[String(b.projectId)] ?? '';
+      return db.localeCompare(da); // most recent first
+    });
+  }, [projects, projectStatus, isSecretary, lastChange]);
+
+  // When visible projects change, select the first one
+  useEffect(() => {
+    if (visibleProjects.length > 0)
+      setSelectedProjectId(String(visibleProjects[0].projectId));
+    else
+      setSelectedProjectId('');
+  }, [visibleProjects]);
+
+  // Load logs when selected project changes (same for both roles)
   useEffect(() => {
     if (!selectedProjectId) { setLogs([]); return; }
     setLoadingLogs(true);
     setLogsError(false);
-    setCategory('all');
+    setCategory('financial');
     setSearch('');
     getAuditLogs(selectedProjectId)
-      .then(res => setLogs(res.data ?? []))
+      .then(res => setLogs(Array.isArray(res.data) ? res.data : []))
       .catch(() => { setLogs([]); setLogsError(true); })
       .finally(() => setLoadingLogs(false));
   }, [selectedProjectId]);
 
   const selectedProject = projects.find(p => String(p.projectId) === selectedProjectId);
 
-  // Category counts
-  const categoryCounts = useMemo(() => {
-    const counts = { all: logs.length };
-    for (const log of logs) {
-      const cat = getActionMeta(log.actionType).category;
-      counts[cat] = (counts[cat] ?? 0) + 1;
-    }
-    return counts;
+  // Apply project filter (secretary only — filtering already done server-side, this is for useMemo compatibility)
+  const projectFilteredLogs = useMemo(() => {
+    return Array.isArray(logs) ? logs : [];
   }, [logs]);
 
-  // Filter
+  // Category counts
+  const categoryCounts = useMemo(() => {
+    const counts = { all: projectFilteredLogs.length, financial: 0 };
+    for (const log of projectFilteredLogs) {
+      const cat = getActionMeta(log.actionType).category;
+      counts[cat] = (counts[cat] ?? 0) + 1;
+      if (cat === 'payment' || cat === 'budget') counts.financial += 1;
+    }
+    return counts;
+  }, [projectFilteredLogs]);
+
+  // Final filtered list
   const filteredLogs = useMemo(() => {
-    let result = logs;
-    if (category !== 'all')
-      result = result.filter(l => getActionMeta(l.actionType).category === category);
+    const base = Array.isArray(projectFilteredLogs) ? projectFilteredLogs : [];
+    let result = base;
+    const effectiveCategory = isSecretary ? 'financial' : category;
+    if (effectiveCategory === 'financial')
+      result = result.filter(l => ['payment', 'budget'].includes(getActionMeta(l.actionType).category));
+    else if (effectiveCategory !== 'all')
+      result = result.filter(l => getActionMeta(l.actionType).category === effectiveCategory);
     if (search.trim())
       result = result.filter(l =>
         l.actionDescription?.includes(search) ||
         l.performedByName?.includes(search) ||
-        l.performedByUserId?.includes(search)
+        l.performedByUserId?.includes(search) ||
+        l.projectNameHe?.includes(search)
       );
     return result;
-  }, [logs, category, search]);
+  }, [projectFilteredLogs, category, search]);
+
+  const safeLogs = Array.isArray(logs) ? logs : [];
+  const safeFiltered = Array.isArray(filteredLogs) ? filteredLogs : [];
 
   return (
     <Layout>
@@ -189,10 +260,9 @@ export default function HistoryPage() {
             <p className="text-sm text-gray-400 mt-0.5">מעקב אחר כלל הפעולות שבוצעו בכל מחקר</p>
           </div>
 
-          {/* Export button */}
-          {filteredLogs.length > 0 && (
+          {safeFiltered.length > 0 && (
             <button
-              onClick={() => exportToExcel(filteredLogs, selectedProject?.projectNameHe)}
+              onClick={() => exportToExcel(safeFiltered, selectedProject?.projectNameHe, isSecretary)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl border border-green-200 bg-green-50 text-green-700 text-sm font-semibold hover:bg-green-100 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,20 +276,74 @@ export default function HistoryPage() {
 
         {/* ── Project selector ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5">
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            בחר מחקר
-          </label>
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              בחר מחקר
+            </label>
+            {/* Active / Archived toggle — secretary only */}
+            {isSecretary && (
+              <div className="flex gap-1 bg-gray-100 p-0.5 rounded-lg">
+                {[{ v: 'active', l: 'פעילים' }, { v: 'archived', l: 'ארכיון' }].map(({ v, l }) => (
+                  <button
+                    key={v}
+                    onClick={() => setProjectStatus(v)}
+                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                      projectStatus === v
+                        ? 'bg-white text-primary shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           {loadingProjects ? (
             <div className="h-10 bg-gray-100 rounded-xl animate-pulse" />
-          ) : projects.length === 0 ? (
+          ) : visibleProjects.length === 0 ? (
             <p className="text-sm text-gray-400">לא נמצאו מחקרים</p>
+          ) : isSecretary ? (
+            <div className="max-h-56 overflow-y-auto flex flex-col gap-1 pr-0.5">
+              {visibleProjects.map(p => {
+                const pid = String(p.projectId);
+                const isActive = selectedProjectId === pid;
+                const changeDate = lastChange[pid];
+                const relDate = formatRelativeDate(changeDate);
+                const isRecent = changeDate && (new Date() - new Date(changeDate)) < 7 * 24 * 60 * 60 * 1000;
+                return (
+                  <button
+                    key={pid}
+                    onClick={() => setSelectedProjectId(pid)}
+                    className={`flex items-center justify-between gap-3 w-full text-right px-3.5 py-2.5 rounded-xl text-sm transition-all border ${
+                      isActive
+                        ? 'bg-primary text-white border-primary shadow-sm'
+                        : 'bg-white text-gray-800 border-gray-100 hover:border-primary/30 hover:bg-blue-50/40'
+                    }`}
+                  >
+                    <span className="font-medium truncate flex-1">{p.projectNameHe || p.projectNameEn || `מחקר #${pid}`}</span>
+                    {relDate && (
+                      <span className={`flex-shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : isRecent
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {relDate}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           ) : (
             <select
               value={selectedProjectId}
               onChange={e => setSelectedProjectId(e.target.value)}
               className="input-field"
             >
-              {projects.map(p => (
+              {visibleProjects.map(p => (
                 <option key={p.projectId} value={p.projectId}>
                   {p.projectNameHe || p.projectNameEn || `מחקר #${p.projectId}`}
                 </option>
@@ -228,8 +352,8 @@ export default function HistoryPage() {
           )}
         </div>
 
-        {/* ── Category filter chips ── */}
-        {!loadingLogs && logs.length > 0 && (
+        {/* ── Category filter chips — hidden for secretary (always shows financial) ── */}
+        {!isSecretary && !loadingLogs && safeLogs.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {CATEGORIES.map(cat => {
               const count = categoryCounts[cat.value] ?? 0;
@@ -261,7 +385,7 @@ export default function HistoryPage() {
         )}
 
         {/* ── Search ── */}
-        {!loadingLogs && logs.length > 0 && (
+        {!loadingLogs && safeLogs.length > 0 && (
           <div className="relative mb-4">
             <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -283,26 +407,25 @@ export default function HistoryPage() {
           <LoadingSkeleton />
         ) : logsError ? (
           <EmptyState icon="empty" message="שגיאה בטעינת ההיסטוריה — ודא שהשרת פועל ונסה שוב" />
-        ) : logs.length === 0 ? (
-          <EmptyState icon="empty" message="לא נמצאו רשומות עבור מחקר זה — בצע פעולות כלשהן ובדוק שוב" />
-        ) : filteredLogs.length === 0 ? (
+        ) : safeLogs.length === 0 ? (
+          <EmptyState icon="empty" message="לא נמצאו רשומות — בצע פעולות כלשהן ובדוק שוב" />
+        ) : safeFiltered.length === 0 ? (
           <EmptyState icon="search" message="לא נמצאו תוצאות לחיפוש" />
         ) : (
           <>
-            {/* Results count */}
             <p className="text-xs text-gray-400 mb-3">
-              מציג {filteredLogs.length} מתוך {logs.length} פעולות
+              מציג {safeFiltered.length} מתוך {safeLogs.length} פעולות
             </p>
-
-            {/* Timeline */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="divide-y divide-gray-50">
-                {filteredLogs.map((log, idx) => {
-                  const meta = getActionMeta(log.actionType);
-                  return (
-                    <LogRow key={log.id ?? idx} log={log} meta={meta} />
-                  );
-                })}
+                {safeFiltered.map((log, idx) => (
+                  <LogRow
+                    key={log.id ?? idx}
+                    log={log}
+                    meta={getActionMeta(log.actionType)}
+                    showProject={false}
+                  />
+                ))}
               </div>
             </div>
           </>
@@ -312,22 +435,17 @@ export default function HistoryPage() {
   );
 }
 
-function LogRow({ log, meta }) {
+function LogRow({ log, meta, showProject }) {
   return (
     <div className="flex items-start gap-4 px-5 py-4 hover:bg-gray-50/60 transition-colors">
-      {/* Dot */}
       <div className="flex-shrink-0 mt-1">
         <span className={`block w-2.5 h-2.5 rounded-full ring-2 ring-white ${meta.dot}`} />
       </div>
-
-      {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2 mb-1">
-          {/* Action type badge */}
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${meta.color}`}>
             {meta.label}
           </span>
-          {/* User badge */}
           <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -335,12 +453,14 @@ function LogRow({ log, meta }) {
             </svg>
             {log.performedByName || log.performedByUserId}
           </span>
+          {showProject && (log.projectNameHe || log.projectNameEn) && (
+            <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+              {log.projectNameHe || log.projectNameEn}
+            </span>
+          )}
         </div>
-        {/* Description */}
         <p className="text-sm text-gray-800 leading-relaxed">{log.actionDescription}</p>
       </div>
-
-      {/* Timestamp */}
       <div className="flex-shrink-0 text-left">
         <p className="text-xs text-gray-400 whitespace-nowrap">{formatDateShort(log.createdAt)}</p>
         <p className="text-xs text-gray-400 whitespace-nowrap text-left">

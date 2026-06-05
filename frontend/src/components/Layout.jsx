@@ -6,7 +6,7 @@ import Logo from './Logo';
 import {
   HiSquares2X2, HiCheckCircle, HiCalendarDays, HiDocumentChartBar,
   HiArrowRightOnRectangle, HiBars3, HiChartBar, HiArchiveBox,
-  HiSun, HiMoon, HiClock,
+  HiSun, HiMoon, HiClock, HiUserGroup, HiLightBulb,
 } from 'react-icons/hi2';
 import { getPendingPaymentRequests } from '../api/paymentRequestsApi';
 import { getPendingHourApprovals } from '../api/hourReportsApi';
@@ -24,17 +24,29 @@ export default function Layout({ children }) {
   const [mobileOpen, setMobileOpen]       = useState(false);
   const [pendingCount, setPendingCount]   = useState(0);
 
-  const isResearcher = user?.systemAuthorization !== 'עוזר מחקר';
+  const role = user?.systemAuthorization;
+  const isAssistant  = role === 'עוזר מחקר';
+  const isSecretary  = role === 'מזכירות';
+  const isResearcher = !isAssistant;
 
   const RESEARCHER_NAV = [
     { to: '/dashboard',   label: 'רשימת מחקרים',        icon: <HiSquares2X2  className="w-5 h-5 flex-shrink-0" /> },
-    { to: '/comparison',  label: 'השוואות בין מחקרים',   icon: <HiChartBar    className="w-5 h-5 flex-shrink-0" /> },
+    { to: '/comparison',  label: 'השוואות בין מחקרים',   icon: <HiChartBar    className="w-5 h-5 flex-shrink-0" />,
+      customActive: () => location.pathname === '/comparison' && !location.search.includes('mode=recommendations') },
+    { to: '/comparison?mode=recommendations', label: 'המלצות תקציב', icon: <HiLightBulb className="w-5 h-5 flex-shrink-0" />,
+      customActive: () => location.pathname === '/comparison' && location.search.includes('mode=recommendations') },
     { to: '/approvals',   label: 'אישורים ממתינים',      icon: <HiCheckCircle className="w-5 h-5 flex-shrink-0" />, badge: pendingCount },
     { to: '/archive',     label: 'ארכיון מחקרים',        icon: <HiArchiveBox  className="w-5 h-5 flex-shrink-0" /> },
     { to: '/history',     label: 'היסטוריית שינויים',    icon: <HiClock       className="w-5 h-5 flex-shrink-0" /> },
   ];
 
-  const navItems = isResearcher ? RESEARCHER_NAV : ASSISTANT_NAV;
+  const SECRETARY_NAV = [
+    { to: '/approvals',   label: 'אישורים ממתינים',      icon: <HiCheckCircle className="w-5 h-5 flex-shrink-0" />, badge: pendingCount },
+    { to: '/history',     label: 'היסטוריית שינויים',    icon: <HiClock       className="w-5 h-5 flex-shrink-0" /> },
+    { to: '/users',       label: 'ניהול משתמשים',        icon: <HiUserGroup   className="w-5 h-5 flex-shrink-0" /> },
+  ];
+
+  const navItems = isAssistant ? ASSISTANT_NAV : isSecretary ? SECRETARY_NAV : RESEARCHER_NAV;
 
   const profilePic = user?.userId ? localStorage.getItem(`profilePic_${user.userId}`) : null;
 
@@ -51,7 +63,7 @@ export default function Layout({ children }) {
 
   // Fetch pending approvals count — on mount, every 60s, and when window regains focus
   useEffect(() => {
-    if (!isResearcher || !user?.userId) return;
+    if (isAssistant || !user?.userId) return;
 
     const fetchCount = () => {
       if (location.pathname === '/approvals') return;
@@ -59,7 +71,8 @@ export default function Layout({ children }) {
         getPendingPaymentRequests().catch(() => ({ data: [] })),
         getPendingHourApprovals(user.userId).catch(() => ({ data: [] })),
       ]).then(([pRes, hRes]) => {
-        setPendingCount((pRes.data?.length ?? 0) + (hRes.data?.length ?? 0));
+        const pendingPayments = (pRes.data ?? []).filter(r => r.status === 'ממתין').length;
+        setPendingCount(pendingPayments + (hRes.data?.length ?? 0));
       });
     };
 
@@ -70,7 +83,7 @@ export default function Layout({ children }) {
       clearInterval(interval);
       window.removeEventListener('focus', fetchCount);
     };
-  }, [user, isResearcher, location.pathname]);
+  }, [user, isAssistant, location.pathname]);
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full" style={{ background: 'linear-gradient(180deg, #003478 0%, #001E50 100%)' }}>
@@ -83,16 +96,17 @@ export default function Layout({ children }) {
       <nav className="flex-1 px-3 py-5 space-y-0.5" dir="rtl">
         {navItems.map((item) => (
           <NavLink
-            key={item.to}
+            key={item.label}
             to={item.to}
             onClick={() => setMobileOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
-                isActive
+            className={({ isActive }) => {
+              const active = item.customActive ? item.customActive() : isActive;
+              return `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+                active
                   ? 'bg-accent text-white shadow-lg shadow-accent/30'
                   : 'text-white/65 hover:bg-white/10 hover:text-white'
-              }`
-            }
+              }`;
+            }}
           >
             {item.icon}
             <span className="flex-1">{item.label}</span>

@@ -22,7 +22,8 @@ export default function LoginPage() {
     try {
       const res = await loginApi(form);
       login(res.data);
-      navigate(res.data.systemAuthorization === 'עוזר מחקר' ? '/attendance' : '/dashboard');
+      const role = res.data.systemAuthorization;
+      navigate(role === 'עוזר מחקר' ? '/attendance' : role === 'מזכירות' ? '/approvals' : '/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'שם משתמש או סיסמה שגויים');
     } finally {

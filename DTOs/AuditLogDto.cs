@@ -11,5 +11,7 @@ namespace RupResearchAPI.DTOs
         public string? EntityType { get; set; }
         public string? EntityId { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string? ProjectNameHe { get; set; }
+        public string? ProjectNameEn { get; set; }
     }
 }

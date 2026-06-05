@@ -14,11 +14,13 @@ namespace RupResearchAPI.Controllers
     {
         private readonly IUserService _userService;
         private readonly AppDbContext _db;
+        private readonly IAuthService _authService;
 
-        public UsersController(IUserService userService, AppDbContext db)
+        public UsersController(IUserService userService, AppDbContext db, IAuthService authService)
         {
             _userService = userService;
             _db = db;
+            _authService = authService;
         }
 
         // GET /api/users?role=Researcher,Research manager
@@ -83,6 +85,76 @@ namespace RupResearchAPI.Controllers
             {
                 return NotFound(new { message = ex.Message });
             }
+        }
+
+        // POST /api/users — create a new user (secretary only); default password = userId
+        [HttpPost]
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
+        {
+            var callerRole = User.FindFirst("system_authorization")?.Value;
+            if (callerRole != "מזכירות")
+                return Forbid();
+
+            if (string.IsNullOrWhiteSpace(dto.UserId))
+                return BadRequest(new { message = "מזהה משתמש הוא שדה חובה" });
+
+            var password = string.IsNullOrWhiteSpace(dto.Password) ? dto.UserId : dto.Password;
+            if (password.Length < 6)
+                return BadRequest(new { message = "סיסמה חייבת להכיל לפחות 6 תווים" });
+
+            var registerDto = new RegisterDto
+            {
+                UserId = dto.UserId,
+                FirstName = dto.FirstName,
+                LastName = dto.LastName,
+                Email = dto.Email,
+                SystemAuthorization = dto.SystemAuthorization,
+                Password = password,
+            };
+
+            try
+            {
+                var result = await _authService.Register(registerDto);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+        }
+
+        // PUT /api/users/{userId}/role — update a user's role (secretary only)
+        [HttpPut("{userId}/role")]
+        public async Task<IActionResult> UpdateRole(string userId, [FromBody] UpdateUserRoleDto dto)
+        {
+            var callerRole = User.FindFirst("system_authorization")?.Value;
+            if (callerRole != "מזכירות")
+                return Forbid();
+
+            var roleExists = await _db.ResearchRoles.AnyAsync(r => r.RoleName == dto.SystemAuthorization);
+            if (!roleExists)
+                return BadRequest(new { message = $"התפקיד '{dto.SystemAuthorization}' אינו קיים במערכת." });
+
+            var updated = await _userService.UpdateUserRoleAsync(userId, dto.SystemAuthorization);
+            if (updated == null) return NotFound(new { message = "משתמש לא נמצא" });
+            return Ok(updated);
+        }
+
+        // DELETE /api/users/{userId} — delete a user (secretary only)
+        [HttpDelete("{userId}")]
+        public async Task<IActionResult> DeleteUser(string userId)
+        {
+            var callerRole = User.FindFirst("system_authorization")?.Value;
+            if (callerRole != "מזכירות")
+                return Forbid();
+
+            var callerId = User.FindFirst("user_id")?.Value;
+            if (callerId?.Trim() == userId.Trim())
+                return BadRequest(new { message = "לא ניתן למחוק את המשתמש הנוכחי" });
+
+            var ok = await _userService.DeleteUserAsync(userId);
+            if (!ok) return NotFound(new { message = "משתמש לא נמצא" });
+            return NoContent();
         }
 
         // POST /api/users/assistant — create a research assistant user account (saved permanently)

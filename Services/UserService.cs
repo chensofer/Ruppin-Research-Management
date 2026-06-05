@@ -86,5 +86,37 @@ namespace RupResearchAPI.Services
             user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
             await _db.SaveChangesAsync();
         }
+
+        public async Task<UserResponseDto?> UpdateUserRoleAsync(string userId, string newRole)
+        {
+            var trimmed = userId.Trim();
+            var users = await _db.ResearchUsers.ToListAsync();
+            var user = users.FirstOrDefault(x => x.UserId.Trim() == trimmed);
+            if (user == null) return null;
+
+            user.SystemAuthorization = newRole;
+            await _db.SaveChangesAsync();
+
+            return new UserResponseDto
+            {
+                UserId = user.UserId.Trim(),
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                SystemAuthorization = user.SystemAuthorization,
+            };
+        }
+
+        public async Task<bool> DeleteUserAsync(string userId)
+        {
+            var trimmed = userId.Trim();
+            var users = await _db.ResearchUsers.ToListAsync();
+            var user = users.FirstOrDefault(x => x.UserId.Trim() == trimmed);
+            if (user == null) return false;
+
+            _db.ResearchUsers.Remove(user);
+            await _db.SaveChangesAsync();
+            return true;
+        }
     }
 }

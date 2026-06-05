@@ -11,6 +11,7 @@ namespace RupResearchAPI.Services
             decimal amount,
             string? description,
             string? comments,
+            int requestId = 0,
             List<string>? filePaths = null);
     }
 }
