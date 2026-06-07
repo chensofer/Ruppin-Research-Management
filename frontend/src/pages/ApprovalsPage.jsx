@@ -396,7 +396,11 @@ export default function ApprovalsPage() {
     ? safeRequests.filter((r) => r.status === statusFilter)
     : safeRequests;
 
-  const visibleRequests    = filterProjectId ? statusFilteredRequests.filter((r) => r.projectId === filterProjectId) : statusFilteredRequests;
+  const visibleRequests    = highlightId
+    ? statusFilteredRequests.filter((r) => r.paymentRequestId === highlightId)
+    : filterProjectId
+      ? statusFilteredRequests.filter((r) => r.projectId === filterProjectId)
+      : statusFilteredRequests;
   const visibleHourRecords = filterProjectId ? hourRecords.filter((r) => r.projectId === filterProjectId) : hourRecords;
 
   const filterProjectName = filterProjectId

@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getCategories } from '../../api/categoriesApi';
 import HebrewDatePicker from '../HebrewDatePicker';
 import { getProviders, createProvider } from '../../api/providersApi';
 import { createPaymentRequest, uploadQuotationFile, notifyPaymentRequest, analyzeDocuments } from '../../api/paymentRequestsApi';
 import { celebrate } from '../../utils/celebrate';
-import { useEffect } from 'react';
+import MobileSelect from '../MobileSelect';
 
 const fmt = (n) =>
   n != null ? `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)}` : '—';
@@ -165,7 +165,13 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
         onCreated();
       }
       // Send email after files are uploaded (includes attachments)
-      try { await notifyPaymentRequest(newId); } catch { /* ignore */ }
+      try {
+        const notifyRes = await notifyPaymentRequest(newId);
+        if (notifyRes?.data?.success === false) {
+          setError('הבקשה נשמרה, אך שליחת המייל נכשלה: ' + (notifyRes.data.error ?? 'שגיאה לא ידועה'));
+          setShowForm(true);
+        }
+      } catch { /* ignore network errors */ }
     } catch (err) {
       setError(err.response?.data?.message || 'שגיאה בשמירת הבקשה');
     } finally {
@@ -224,12 +230,12 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">קטגורית הוצאה <span className="text-red-500">*</span></label>
-                  <select value={form.categoryName} onChange={set('categoryName')} className={inputCls}>
-                    <option value="">— בחר קטגורית הוצאה —</option>
-                    {categories.map((c) => (
-                      <option key={c.categoryName} value={c.categoryName}>{c.categoryName}</option>
-                    ))}
-                  </select>
+                  <MobileSelect
+                    value={form.categoryName}
+                    onChange={(v) => setForm((f) => ({ ...f, categoryName: v }))}
+                    placeholder="— בחר קטגורית הוצאה —"
+                    options={categories.map((c) => ({ value: c.categoryName, label: c.categoryName }))}
+                  />
                 </div>
 
                 <div>
@@ -281,15 +287,16 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                       </div>
                     </div>
                   ) : (
-                    <div className="flex gap-2">
-                      <select value={form.providerId} onChange={set('providerId')} className={`${inputCls} flex-1`}>
-                        <option value="">— ללא ספק —</option>
-                        {providers.map((p) => (
-                          <option key={p.providerId} value={p.providerId}>{p.providerName}</option>
-                        ))}
-                      </select>
+                    <div className="flex gap-2 items-start">
+                      <MobileSelect
+                        value={form.providerId}
+                        onChange={(v) => setForm((f) => ({ ...f, providerId: v }))}
+                        placeholder="— ללא ספק —"
+                        options={providers.map((p) => ({ value: String(p.providerId), label: p.providerName }))}
+                        className="flex-1"
+                      />
                       <button type="button" onClick={() => setShowNewProvider(true)}
-                        className="text-xs text-primary hover:text-primary-dark whitespace-nowrap px-2">+ ספק חדש</button>
+                        className="text-xs text-primary hover:text-primary-dark whitespace-nowrap px-2 py-2">+ ספק חדש</button>
                     </div>
                   )}
                 </div>

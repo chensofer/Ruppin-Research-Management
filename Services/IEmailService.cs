@@ -13,5 +13,13 @@ namespace RupResearchAPI.Services
             string? comments,
             int requestId = 0,
             List<string>? filePaths = null);
+
+        Task SendHourReportEmailAsync(
+            string assistantName,
+            string projectName,
+            int month,
+            int year,
+            decimal totalHours,
+            int approvalId);
     }
 }

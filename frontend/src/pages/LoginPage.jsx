@@ -1,17 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { login as loginApi } from '../api/authApi';
 import Logo from '../components/Logo';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { user, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const prefill = location.state ?? {};
+  const from = location.state?.from ?? null;
+  const prefill = typeof location.state === 'object' && !location.state?.from ? (location.state ?? {}) : {};
   const [form, setForm] = useState({ userId: prefill.userId ?? '', password: prefill.password ?? '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // אם כבר מחובר ויש כתובת לחזור אליה — עבור ישירות
+  useEffect(() => {
+    if (user) {
+      navigate(from ?? (user.systemAuthorization === 'עוזר מחקר' ? '/attendance' : user.systemAuthorization === 'מזכירות' ? '/approvals' : '/dashboard'), { replace: true });
+    }
+  }, [user]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -23,7 +31,7 @@ export default function LoginPage() {
       const res = await loginApi(form);
       login(res.data);
       const role = res.data.systemAuthorization;
-      navigate(role === 'עוזר מחקר' ? '/attendance' : role === 'מזכירות' ? '/approvals' : '/dashboard');
+      navigate(from ?? (role === 'עוזר מחקר' ? '/attendance' : role === 'מזכירות' ? '/approvals' : '/dashboard'), { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'שם משתמש או סיסמה שגויים');
     } finally {

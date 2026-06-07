@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
@@ -20,7 +20,8 @@ import UsersPage from './pages/UsersPage';
 // Redirects research assistants to their attendance page; secretaries stay in the app
 function RoleAwareRoute({ children }) {
   const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
+  const location = useLocation();
+  if (!user) return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />;
   if (user.systemAuthorization === 'עוזר מחקר') return <Navigate to="/attendance" replace />;
   return children;
 }

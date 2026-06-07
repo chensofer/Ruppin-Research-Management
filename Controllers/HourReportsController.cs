@@ -12,11 +12,13 @@ namespace RupResearchAPI.Controllers
     {
         private readonly IHourReportService _svc;
         private readonly IAuditLogService _audit;
+        private readonly IEmailService _email;
 
-        public HourReportsController(IHourReportService svc, IAuditLogService audit)
+        public HourReportsController(IHourReportService svc, IAuditLogService audit, IEmailService email)
         {
             _svc = svc;
             _audit = audit;
+            _email = email;
         }
 
         // GET /api/hour-reports?userId=&projectId=&month=&year=

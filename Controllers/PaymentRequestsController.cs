@@ -75,8 +75,15 @@ namespace RupResearchAPI.Controllers
         public async Task<IActionResult> Notify(int id)
         {
             var userId = User.FindFirst("user_id")?.Value ?? "";
-            await _service.NotifySecretariat(id, userId);
-            return Ok();
+            try
+            {
+                await _service.NotifySecretariat(id, userId);
+                return Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, error = ex.Message });
+            }
         }
 
         [HttpPut("api/payment-requests/{id}/status")]
@@ -99,6 +106,21 @@ namespace RupResearchAPI.Controllers
                     "payment", id.ToString());
             }
             return Ok(updated);
+        }
+
+        [HttpGet("api/test-email")]
+        [AllowAnonymous]
+        public async Task<IActionResult> TestEmail()
+        {
+            try
+            {
+                await _service.NotifySecretariat(1, "test");
+                return Ok(new { result = "✅ המייל נשלח בהצלחה!" });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { result = $"❌ שגיאה: {ex.Message}" });
+            }
         }
 
         [HttpPost("api/payment-requests/{id}/files")]
