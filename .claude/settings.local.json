@@ -29,7 +29,8 @@
       "Bash(dotnet add *)",
       "Bash(sed -i 's/absolute inset-0 flex items-center justify-center text-sm font-extrabold/absolute inset-0 flex items-center justify-center text-xs font-extrabold/' \"c:\\\\Users\\\\shach\\\\Desktop\\\\Ruppin-Research-Management\\\\frontend\\\\src\\\\components\\\\ProjectCard.jsx\")",
       "Bash(sed -i 's/text-\\\\[15px\\\\]/text-base/' \"c:\\\\Users\\\\shach\\\\Desktop\\\\Ruppin-Research-Management\\\\frontend\\\\src\\\\components\\\\ProjectCard.jsx\")",
-      "Bash(awk -F: '{print $1}')"
+      "Bash(awk -F: '{print $1}')",
+      "Bash(dotnet run *)"
     ]
   }
 }

@@ -144,7 +144,7 @@ namespace RupResearchAPI.Services
   <!-- Quick summary -->
   <tr><td style='background:#0f2d5e;padding:14px 28px;' dir='rtl'>
     <p style='color:rgba(255,255,255,0.6);font-size:12px;margin:0 0 4px;'>מחקר</p>
-    <p style='color:white;font-size:15px;font-weight:bold;margin:0;'>"{projectName}"</p>
+    <p style='color:white;font-size:15px;font-weight:bold;margin:0;'>""{projectName}""</p>
   </td></tr>
 
   <!-- Amount box -->
