@@ -40,7 +40,7 @@ function AddCategoryRow({ onAdd, remaining }) {
             className={`${inputCls} ${exceedsRemaining ? 'border-red-400 focus:ring-red-400' : ''}`}
           />
           {exceedsRemaining && (
-            <p className="text-xs text-red-500 mt-1">
+            <p className="text-sm text-red-500 mt-1">
               הסכום חורג מהתקציב הפנוי ({fmt(remaining)})
             </p>
           )}
@@ -104,7 +104,7 @@ export default function StepBudget({ data, onChange, totalBudget, errors = {} })
               ? `נותר לחלוקה: ${fmt(remaining)}`
               : `חריגה מהתקציב: ${fmt(Math.abs(remaining))}`}
           </span>
-          <span className="text-xs text-gray-500">מתוך {fmt(totalBudgetNum)}</span>
+          <span className="text-sm text-gray-500">מתוך {fmt(totalBudgetNum)}</span>
         </div>
       )}
 
@@ -123,7 +123,7 @@ export default function StepBudget({ data, onChange, totalBudget, errors = {} })
       {/* Category list */}
       {data.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-gray-500 mb-2">קטגוריות תקציב ({data.length})</p>
+          <p className="text-sm font-semibold text-gray-500 mb-2">קטגוריות תקציב ({data.length})</p>
           <div className="space-y-2">
             {data.map((row) => (
               <div key={row._key}
@@ -157,7 +157,7 @@ export default function StepBudget({ data, onChange, totalBudget, errors = {} })
           <span className="text-gray-500">:סה״כ קטגוריות</span>
         </div>
         {mismatch && totalBudgetNum > 0 && (
-          <p className="text-xs text-orange-600 pt-1 border-t border-orange-100">
+          <p className="text-sm text-orange-600 pt-1 border-t border-orange-100">
             יש לאזן את התקציב לפני המעבר לשלב הבא
           </p>
         )}

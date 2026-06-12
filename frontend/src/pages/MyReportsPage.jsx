@@ -24,7 +24,7 @@ function StatusBadge({ status }) {
   const style = STATUS_STYLES[status]?.badge ?? 'bg-gray-100 text-gray-600';
   const icon = STATUS_ICONS[status] ?? '';
   return (
-    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 ${style}`}>
+    <span className={`text-sm font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 ${style}`}>
       <span>{icon}</span>
       {status}
     </span>
@@ -63,7 +63,7 @@ function DayReportsTable({ userId, projectId, month, year }) {
     <div className="overflow-x-auto">
       <table className="w-full text-sm" dir="rtl">
         <thead>
-          <tr className="bg-gray-50 text-gray-500 text-xs">
+          <tr className="bg-gray-50 text-gray-500 text-sm">
             <th className="px-4 py-2 text-right font-medium">יום</th>
             <th className="px-4 py-2 text-right font-medium">משעה</th>
             <th className="px-4 py-2 text-right font-medium">עד שעה</th>
@@ -80,7 +80,7 @@ function DayReportsTable({ userId, projectId, month, year }) {
                 <td className="px-4 py-2.5 font-medium text-gray-800">
                   {day}
                   {dayOfWeek !== null && (
-                    <span className="text-gray-400 text-xs mr-1.5">({DAY_NAMES[dayOfWeek]})</span>
+                    <span className="text-gray-400 text-sm mr-1.5">({DAY_NAMES[dayOfWeek]})</span>
                   )}
                 </td>
                 <td className="px-4 py-2.5 text-gray-600 tabular-nums">
@@ -99,7 +99,7 @@ function DayReportsTable({ userId, projectId, month, year }) {
         </tbody>
         <tfoot>
           <tr className="bg-gray-50 font-semibold text-gray-700">
-            <td colSpan={3} className="px-4 py-2 text-right text-xs text-gray-500">סה"כ</td>
+            <td colSpan={3} className="px-4 py-2 text-right text-sm text-gray-500">סה"כ</td>
             <td className="px-4 py-2 tabular-nums">{total.toFixed(1)}</td>
             <td />
           </tr>
@@ -178,7 +178,7 @@ export default function MyReportsPage() {
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <button
             onClick={() => setStatusFilter('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${
               statusFilter === 'all'
                 ? 'bg-gray-800 text-white border-gray-800 shadow-sm'
                 : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
@@ -197,7 +197,7 @@ export default function MyReportsPage() {
                 key={status}
                 onClick={() => setStatusFilter((prev) => prev === status ? 'all' : status)}
                 style={{ background: bg }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${border} ${active ? `ring-2 ${ring} shadow-sm` : 'hover:shadow-sm'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-semibold transition-all ${border} ${active ? `ring-2 ${ring} shadow-sm` : 'hover:shadow-sm'}`}
               >
                 <span>{icon}</span>
                 <span className={num}>{counts[status] ?? 0}</span>
@@ -211,7 +211,7 @@ export default function MyReportsPage() {
             <select
               value={projectFilter}
               onChange={(e) => setProjectFilter(e.target.value)}
-              className="mr-auto border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary text-gray-700"
+              className="mr-auto border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary text-gray-700"
             >
               <option value="all">כל המחקרים</option>
               {projects.map((p) => (
@@ -258,7 +258,7 @@ export default function MyReportsPage() {
                       <p className="text-sm font-semibold text-gray-800">
                         {MONTH_NAMES[(s.month ?? 1) - 1]} {s.year}
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-sm text-gray-400 mt-0.5">
                         {s.projectNameHe || `מחקר ${s.projectId}`}
                       </p>
                     </div>
@@ -269,7 +269,7 @@ export default function MyReportsPage() {
                       {s.totalWorkedHours != null && (
                         <span className="text-sm font-bold text-gray-700 tabular-nums">
                           {Number(s.totalWorkedHours).toFixed(1)}
-                          <span className="text-xs font-normal text-gray-400 mr-0.5">שעות</span>
+                          <span className="text-sm font-normal text-gray-400 mr-0.5">שעות</span>
                         </span>
                       )}
                       <svg

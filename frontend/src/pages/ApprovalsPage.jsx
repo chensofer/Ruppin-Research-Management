@@ -115,7 +115,7 @@ function RequestCard({ request, onApprove, onReject, showProject, highlighted })
               {request.requestTitle || 'בקשה ללא כותרת'}
             </h4>
             {request.categoryName && (
-              <span className="inline-block mt-1.5 text-xs font-semibold bg-primary-light text-primary px-2.5 py-0.5 rounded-full">
+              <span className="inline-block mt-1.5 text-sm font-semibold bg-primary-light text-primary px-2.5 py-0.5 rounded-full">
                 {request.categoryName}
               </span>
             )}
@@ -129,7 +129,7 @@ function RequestCard({ request, onApprove, onReject, showProject, highlighted })
 
         {/* Project name (shown for secretary) */}
         {showProject && (request.projectNameHe || request.projectNameEn) && (
-          <div className="flex items-center gap-1 text-xs text-primary font-semibold bg-primary-light px-2.5 py-1 rounded-lg w-fit" dir="rtl">
+          <div className="flex items-center gap-1 text-sm text-primary font-semibold bg-primary-light px-2.5 py-1 rounded-lg w-fit" dir="rtl">
             <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
@@ -138,7 +138,7 @@ function RequestCard({ request, onApprove, onReject, showProject, highlighted })
         )}
 
         {/* Meta */}
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400" dir="rtl">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-400" dir="rtl">
           {(request.requestedByUserName || request.requestedByUserId) && (
             <span className="flex items-center gap-1">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,7 +161,7 @@ function RequestCard({ request, onApprove, onReject, showProject, highlighted })
         {hasDetails && (
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-primary transition-colors font-medium"
+            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary transition-colors font-medium"
           >
             <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
               fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,7 +173,7 @@ function RequestCard({ request, onApprove, onReject, showProject, highlighted })
 
         {/* Expanded details */}
         {expanded && (
-          <div className="bg-gray-50/80 border border-gray-100 rounded-xl p-3.5 space-y-2.5 text-xs" dir="rtl">
+          <div className="bg-gray-50/80 border border-gray-100 rounded-xl p-3.5 space-y-2.5 text-sm" dir="rtl">
             {request.providerName && (
               <div>
                 <p className="text-gray-400 font-medium mb-0.5">ספק</p>
@@ -192,7 +192,7 @@ function RequestCard({ request, onApprove, onReject, showProject, highlighted })
                 <div className="flex flex-wrap gap-1.5">
                   {quotationFiles.map((path, i) => (
                     <a key={i} href={`http://localhost:5269${path}`} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary bg-primary-light hover:bg-primary/20 px-2.5 py-1 rounded-lg transition-colors text-xs font-medium">
+                      className="inline-flex items-center gap-1 text-primary bg-primary-light hover:bg-primary/20 px-2.5 py-1 rounded-lg transition-colors text-sm font-medium">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                       </svg>
@@ -208,11 +208,11 @@ function RequestCard({ request, onApprove, onReject, showProject, highlighted })
         {/* Status badge (non-pending) or action buttons (pending) */}
         {request.status && request.status !== 'ממתין' ? (
           <div className="flex items-center gap-2 pt-1">
-            <span className={`text-xs font-semibold px-3 py-1 rounded-full ${STATUS_BADGE[request.status] ?? 'bg-gray-100 text-gray-600'}`}>
+            <span className={`text-sm font-semibold px-3 py-1 rounded-full ${STATUS_BADGE[request.status] ?? 'bg-gray-100 text-gray-600'}`}>
               {request.status}
             </span>
             {request.rejectionReason && (
-              <span className="text-xs text-gray-400 truncate">— {request.rejectionReason}</span>
+              <span className="text-sm text-gray-400 truncate">— {request.rejectionReason}</span>
             )}
           </div>
         ) : (
@@ -248,7 +248,7 @@ function HourApprovalCard({ record, onDecide }) {
             <h4 className="text-sm font-bold text-gray-900">
               {record.userName || record.userId}
             </h4>
-            <p className="text-xs text-gray-400 mt-0.5 font-medium">
+            <p className="text-sm text-gray-400 mt-0.5 font-medium">
               {MONTH_NAMES[record.month]} {record.year}
             </p>
           </div>
@@ -256,25 +256,25 @@ function HourApprovalCard({ record, onDecide }) {
             <p className="text-2xl font-extrabold text-gray-900 tabular-nums leading-none">
               {record.totalWorkedHours ?? '—'}
             </p>
-            <p className="text-xs text-gray-400 text-left">שעות</p>
+            <p className="text-sm text-gray-400 text-left">שעות</p>
             {paymentAmount != null && (
               <p className="text-sm font-bold text-accent-dark tabular-nums">{fmtCurrency(paymentAmount)}</p>
             )}
             {record.salaryPerHour != null && (
-              <p className="text-xs text-gray-400">{fmtCurrency(record.salaryPerHour)}/שע׳</p>
+              <p className="text-sm text-gray-400">{fmtCurrency(record.salaryPerHour)}/שע׳</p>
             )}
           </div>
         </div>
 
         {/* Budget error */}
         {budgetError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-xl" dir="rtl">
+          <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-xl" dir="rtl">
             {budgetError}
           </div>
         )}
 
         {record.comments && (
-          <p className="text-xs text-gray-500 bg-gray-50 rounded-xl px-3 py-2" dir="rtl">{record.comments}</p>
+          <p className="text-sm text-gray-500 bg-gray-50 rounded-xl px-3 py-2" dir="rtl">{record.comments}</p>
         )}
 
         {/* Actions */}
@@ -459,7 +459,7 @@ export default function ApprovalsPage() {
               מציג בקשות עבור: <span className="font-bold">{filterProjectName}</span>
             </p>
             <button onClick={clearFilter}
-              className="flex items-center gap-1 text-xs text-primary/70 hover:text-primary font-medium transition-colors">
+              className="flex items-center gap-1 text-sm text-primary/70 hover:text-primary font-medium transition-colors">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -475,14 +475,14 @@ export default function ApprovalsPage() {
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl border transition-colors ${
+                className={`px-3.5 py-1.5 text-sm font-semibold rounded-xl border transition-colors ${
                   statusFilter === s
                     ? 'bg-primary text-white border-primary'
                     : 'bg-white text-gray-500 border-gray-200 hover:border-primary hover:text-primary'
                 }`}
               >
                 {s === '' ? 'הכל' : s}
-                <span className="mr-1.5 text-xs opacity-70">
+                <span className="mr-1.5 text-sm opacity-70">
                   ({s === '' ? requests.length : requests.filter(r => r.status === s).length})
                 </span>
               </button>
@@ -505,7 +505,7 @@ export default function ApprovalsPage() {
             >
               {t.label}
               {t.count > 0 && (
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                <span className={`text-sm font-bold px-2 py-0.5 rounded-full ${
                   tab === t.id ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-200 text-gray-500'
                 }`}>
                   {t.count}

@@ -64,7 +64,7 @@ export default function StepTeam({ data, onChange, excludeIds = [] }) {
         </div>
 
         {loadError && (
-          <p className="text-xs text-red-500 mb-2">{loadError}</p>
+          <p className="text-sm text-red-500 mb-2">{loadError}</p>
         )}
 
         <div className="relative">
@@ -99,7 +99,7 @@ export default function StepTeam({ data, onChange, excludeIds = [] }) {
                       className="px-3 py-2.5 cursor-pointer hover:bg-primary-light text-sm flex justify-between items-center"
                     >
                       <span className="font-medium text-gray-800">{u.firstName} {u.lastName}</span>
-                      <span className="text-xs text-gray-400">ת"ז - {u.userId} · {u.systemAuthorization}</span>
+                      <span className="text-sm text-gray-400">ת"ז - {u.userId} · {u.systemAuthorization}</span>
                     </li>
                   ))}
                 </>
@@ -120,9 +120,9 @@ export default function StepTeam({ data, onChange, excludeIds = [] }) {
               <UserAvatar userId={m.userId} firstName={m.firstName} lastName={m.lastName} size="lg" className="bg-primary text-white" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-800">{m.firstName} {m.lastName}</p>
-                <p className="text-xs text-gray-400">ת"ז - {m.userId}</p>
+                <p className="text-sm text-gray-400">ת"ז - {m.userId}</p>
               </div>
-              <span className="text-xs text-gray-500 bg-gray-100 rounded-lg px-2 py-1">
+              <span className="text-sm text-gray-500 bg-gray-100 rounded-lg px-2 py-1">
                 {m.projectRole}
               </span>
               <button

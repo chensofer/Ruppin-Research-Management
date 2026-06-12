@@ -23,7 +23,7 @@ function Field({ label, value, span = 1, highlight }) {
   const spanClass = span === 3 ? 'col-span-1 sm:col-span-2 md:col-span-3' : span === 2 ? 'col-span-1 sm:col-span-2' : '';
   return (
     <div className={spanClass}>
-      <dt className="text-xs text-gray-400 mb-1">{label}</dt>
+      <dt className="text-sm text-gray-400 mb-1">{label}</dt>
       <dd className={`text-sm font-medium mt-0.5 ${highlight ?? 'text-gray-800'}`}>
         {display}
       </dd>
@@ -39,11 +39,11 @@ function EditField({ label, children, error, span = 1, required = false }) {
   const spanClass = span === 3 ? 'col-span-1 sm:col-span-2 md:col-span-3' : span === 2 ? 'col-span-1 sm:col-span-2' : '';
   return (
     <div className={spanClass}>
-      <label className="block text-xs text-gray-500 mb-1">
+      <label className="block text-sm text-gray-500 mb-1">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       {children}
-      {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}
+      {error && <p className="text-sm text-red-500 mt-0.5">{error}</p>}
     </div>
   );
 }
@@ -76,7 +76,7 @@ function PIPicker({ value, name: displayName, onChange, error, allUsers, loading
         <UserAvatar userId={value} firstName={displayName} size="sm" className="bg-primary text-white" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-primary truncate">{displayName}</p>
-          <p className="text-xs text-primary/60">{value}</p>
+          <p className="text-sm text-primary/60">{value}</p>
         </div>
         <button type="button" onClick={clear} className="text-primary/50 hover:text-primary transition-colors">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -105,7 +105,7 @@ function PIPicker({ value, name: displayName, onChange, error, allUsers, loading
             <li key={u.userId} onMouseDown={() => select(u)}
               className="px-3 py-2.5 cursor-pointer hover:bg-primary/5 text-sm flex justify-between items-center">
               <span className="font-medium text-gray-800">{u.firstName} {u.lastName}</span>
-              <span className="text-xs text-gray-400">{u.userId}</span>
+              <span className="text-sm text-gray-400">{u.userId}</span>
             </li>
           )) : (
             <li className="px-3 py-3 text-sm text-gray-400 text-center">לא נמצאו תוצאות</li>
@@ -251,7 +251,7 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
               />
             </EditField>
             <div>
-              <p className="text-xs text-gray-400 mb-1">מזהה מחקר</p>
+              <p className="text-sm text-gray-400 mb-1">מזהה מחקר</p>
               <p className="text-sm font-medium text-gray-400 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
                 #{detail.projectId}
               </p>
@@ -259,7 +259,7 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
 
             {/* Row 2: English name (full width, optional) */}
             <div className="col-span-3">
-              <label className="block text-xs text-gray-500 mb-1">שם מחקר (אנגלית)</label>
+              <label className="block text-sm text-gray-500 mb-1">שם מחקר (אנגלית)</label>
               <input
                 type="text"
                 value={form.projectNameEn}
@@ -372,7 +372,7 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
             <button
               type="button"
               onClick={enterEdit}
-              className="flex items-center gap-1.5 text-xs font-semibold text-primary border border-primary/30 bg-primary/5 px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-colors"
+              className="flex items-center gap-1.5 text-sm font-semibold text-primary border border-primary/30 bg-primary/5 px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -388,16 +388,16 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
           {/* Section: name + ID */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-6">
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">שם המחקר</p>
+              <p className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-1">שם המחקר</p>
               <p className="text-base font-bold text-gray-900 leading-snug">
                 {detail.projectNameHe || detail.projectNameEn || '—'}
               </p>
               {detail.projectNameEn && detail.projectNameHe && (
-                <p className="text-xs text-gray-400 mt-0.5 italic">{detail.projectNameEn}</p>
+                <p className="text-sm text-gray-400 mt-0.5 italic">{detail.projectNameEn}</p>
               )}
             </div>
             <div className="flex-shrink-0">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">מזהה</p>
+              <p className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-1">מזהה</p>
               <span className="inline-block bg-primary/8 text-primary font-bold text-sm px-3 py-1 rounded-lg">
                 #{detail.projectId}
               </span>
@@ -407,7 +407,7 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
           {/* Description */}
           {detail.projectDescription && (
             <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">תיאור</p>
+              <p className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-1.5">תיאור</p>
               <p className="text-sm text-gray-700 leading-relaxed">{detail.projectDescription}</p>
             </div>
           )}
@@ -469,7 +469,7 @@ function InfoChip({ icon, label, value, accent }) {
     <div className={`flex items-start gap-3 rounded-xl p-3.5 border ${accent ? 'bg-primary/5 border-primary/15' : 'bg-gray-50 border-gray-100'}`}>
       <div className={`mt-0.5 flex-shrink-0 ${accent ? 'text-primary' : 'text-gray-400'}`}>{icon}</div>
       <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">{label}</p>
+        <p className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-0.5">{label}</p>
         <p className={`text-sm font-semibold truncate ${accent ? 'text-primary' : 'text-gray-800'}`}>
           {value || '—'}
         </p>
@@ -485,7 +485,7 @@ function DateChip({ label, value, highlight }) {
     'text-gray-800';
   return (
     <div className="text-center">
-      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">{label}</p>
+      <p className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-1">{label}</p>
       <p className={`text-sm font-bold tabular-nums ${colors}`}>{value || '—'}</p>
     </div>
   );
@@ -517,14 +517,14 @@ function ResearchersCard({ detail }) {
                 {/* Name + ID */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-800">{fullName || m.userId}</p>
-                  <p className="text-xs text-gray-400">{m.userId}</p>
+                  <p className="text-sm text-gray-400">{m.userId}</p>
                 </div>
 
                 {/* Badges */}
                 <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
                   {/* Always show the project role */}
                   {m.projectRole && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                    <span className={`text-sm px-2 py-0.5 rounded-full font-semibold ${
                       isCreator
                         ? 'bg-primary text-white'
                         : 'bg-gray-100 text-gray-600'
@@ -534,13 +534,13 @@ function ResearchersCard({ detail }) {
                   )}
                   {/* PI badge shown in addition when the member is also PI */}
                   {isPI && (
-                    <span className="text-xs bg-accent-light text-accent-dark px-2 py-0.5 rounded-full font-semibold">
+                    <span className="text-sm bg-accent-light text-accent-dark px-2 py-0.5 rounded-full font-semibold">
                       חוקר ראשי
                     </span>
                   )}
                   {/* Creator indicator (small crown icon) */}
                   {isCreator && (
-                    <span className="text-xs text-primary/60 font-medium">יוצר המחקר</span>
+                    <span className="text-sm text-primary/60 font-medium">יוצר המחקר</span>
                   )}
                 </div>
               </div>
@@ -569,10 +569,10 @@ function AssistantsCard({ detail }) {
               <UserAvatar userId={a.assistantUserId} firstName={a.firstName} lastName={a.lastName} size="lg" className="bg-blue-50 text-primary" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-800">{a.firstName} {a.lastName}</p>
-                <p className="text-xs text-gray-400">{a.assistantUserId}</p>
+                <p className="text-sm text-gray-400">{a.assistantUserId}</p>
               </div>
               {a.salaryPerHour && (
-                <span className="text-xs text-gray-500 bg-gray-50 px-2.5 py-0.5 rounded-full border border-gray-200">
+                <span className="text-sm text-gray-500 bg-gray-50 px-2.5 py-0.5 rounded-full border border-gray-200">
                   {fmt(a.salaryPerHour)}/שעה
                 </span>
               )}

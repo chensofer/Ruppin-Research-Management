@@ -29,7 +29,7 @@ function statusBadge(status) {
     'נדחה':  'bg-red-50 text-red-600 border-red-200',
   };
   return (
-    <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full border ${map[status] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+    <span className={`inline-block text-sm font-semibold px-2 py-0.5 rounded-full border ${map[status] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>
       {status ?? '—'}
     </span>
   );
@@ -137,7 +137,7 @@ function CreateAssistantModal({ onClose, onCreated, projectId }) {
             placeholder="₪/שעה"
           />
 
-          <p className="text-xs text-primary/70 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+          <p className="text-sm text-primary/70 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
             הסיסמה הזמנית תהיה מספר הת"ז שהוזן — ניתן לשנותה לאחר מכן.
           </p>
 
@@ -167,7 +167,7 @@ function CreateAssistantModal({ onClose, onCreated, projectId }) {
 function Field({ label, name, value, onChange, error, type = 'text', placeholder, min, step, maxLength }) {
   return (
     <div>
-      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      <label className="block text-sm text-gray-500 mb-1">{label}</label>
       <input
         name={name}
         type={type}
@@ -181,7 +181,7 @@ function Field({ label, name, value, onChange, error, type = 'text', placeholder
           error ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'
         }`}
       />
-      {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}
+      {error && <p className="text-sm text-red-500 mt-0.5">{error}</p>}
     </div>
   );
 }
@@ -311,7 +311,7 @@ function TrackingModal({ assistant, projectId, onClose }) {
             <h2 className="text-sm font-semibold text-gray-800">
               מעקב עוזר מחקר — {assistant.firstName} {assistant.lastName}
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-sm text-gray-400 mt-0.5">
               {assistant.assistantUserId}
               {assistant.salaryPerHour ? ` · ${fmt(assistant.salaryPerHour)}/שעה` : ''}
             </p>
@@ -343,7 +343,7 @@ function TrackingModal({ assistant, projectId, onClose }) {
 
               {/* Monthly approvals */}
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
                   אישורים חודשיים ({data.monthlyApprovals.length})
                 </h3>
                 {data.monthlyApprovals.length === 0 ? (
@@ -351,7 +351,7 @@ function TrackingModal({ assistant, projectId, onClose }) {
                 ) : (
                   <div className="rounded-xl border border-gray-100 overflow-hidden">
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-50 text-xs text-gray-500">
+                      <thead className="bg-gray-50 text-sm text-gray-500">
                         <tr>
                           <th className="px-4 py-2.5 text-right font-medium">חודש</th>
                           <th className="px-4 py-2.5 text-right font-medium">שעות</th>
@@ -371,7 +371,7 @@ function TrackingModal({ assistant, projectId, onClose }) {
                             <td className="px-4 py-2.5 text-gray-700">{m.totalWorkedHours ?? '—'}</td>
                             <td className="px-4 py-2.5 text-gray-700">{fmt(m.totalPaymentAmount)}</td>
                             <td className="px-4 py-2.5">{statusBadge(m.approvalStatus)}</td>
-                            <td className="px-4 py-2.5 text-gray-400 text-xs">{m.approvalDate ?? '—'}</td>
+                            <td className="px-4 py-2.5 text-gray-400 text-sm">{m.approvalDate ?? '—'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -385,7 +385,7 @@ function TrackingModal({ assistant, projectId, onClose }) {
                 <button
                   type="button"
                   onClick={() => setShowReports((v) => !v)}
-                  className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wide hover:text-gray-700 transition-colors"
+                  className="flex items-center gap-2 text-sm font-semibold text-gray-500 uppercase tracking-wide hover:text-gray-700 transition-colors"
                 >
                   <svg
                     className={`w-4 h-4 transition-transform ${showReports ? 'rotate-90' : ''}`}
@@ -401,11 +401,11 @@ function TrackingModal({ assistant, projectId, onClose }) {
                     {data.hourReports.length === 0 ? (
                       <div className="py-6 text-center">
                         <p className="text-sm text-gray-400">אין דיווחי שעות ממתינים לשליחה</p>
-                        <p className="text-xs text-gray-300 mt-1">כל הדיווחים נשלחו לאישור או אושרו</p>
+                        <p className="text-sm text-gray-300 mt-1">כל הדיווחים נשלחו לאישור או אושרו</p>
                       </div>
                     ) : (
                       <table className="w-full text-sm">
-                        <thead className="bg-gray-50 text-xs text-gray-500">
+                        <thead className="bg-gray-50 text-sm text-gray-500">
                           <tr>
                             <th className="px-4 py-2.5 text-right font-medium">תאריך</th>
                             <th className="px-4 py-2.5 text-right font-medium">משעה</th>
@@ -421,7 +421,7 @@ function TrackingModal({ assistant, projectId, onClose }) {
                               <td className="px-4 py-2.5 text-gray-600">{r.fromHour ?? '—'}</td>
                               <td className="px-4 py-2.5 text-gray-600">{r.toHour ?? '—'}</td>
                               <td className="px-4 py-2.5 text-gray-700">{r.workedHours ?? '—'}</td>
-                              <td className="px-4 py-2.5 text-gray-400 text-xs truncate max-w-[140px]">
+                              <td className="px-4 py-2.5 text-gray-400 text-sm truncate max-w-[140px]">
                                 {r.comments || '—'}
                               </td>
                             </tr>
@@ -453,9 +453,9 @@ function TrackingModal({ assistant, projectId, onClose }) {
 function StatCard({ label, value, color = 'text-gray-900', sub }) {
   return (
     <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-      <p className="text-xs text-gray-400 mb-1">{label}</p>
+      <p className="text-sm text-gray-400 mb-1">{label}</p>
       <p className={`text-lg font-bold ${color}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      {sub && <p className="text-sm text-gray-400 mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -553,7 +553,7 @@ export default function TabAssistants({ projectId, assistants, onChanged, readOn
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-xs font-semibold rounded-lg hover:bg-primary/20 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-sm font-semibold rounded-lg hover:bg-primary/20 transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -568,7 +568,7 @@ export default function TabAssistants({ projectId, assistants, onChanged, readOn
             <UserAvatar userId={stagedUser.userId} firstName={stagedUser.firstName} lastName={stagedUser.lastName} size="md" className="bg-primary text-white" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-primary truncate">{stagedUser.firstName} {stagedUser.lastName}</p>
-              <p className="text-xs text-primary/60">{stagedUser.userId}</p>
+              <p className="text-sm text-primary/60">{stagedUser.userId}</p>
             </div>
             <button type="button" onClick={() => { setStagedUser(null); setQuery(''); setSalary(''); setError(''); }}
               className="text-primary/40 hover:text-primary transition-colors p-1">
@@ -596,7 +596,7 @@ export default function TabAssistants({ projectId, assistants, onChanged, readOn
                   <li key={u.userId} onMouseDown={() => stageUser(u)}
                     className="px-3 py-2.5 cursor-pointer hover:bg-primary/5 text-sm flex justify-between items-center">
                     <span className="font-medium text-gray-800">{u.firstName} {u.lastName}</span>
-                    <span className="text-xs text-gray-400">{u.userId}</span>
+                    <span className="text-sm text-gray-400">{u.userId}</span>
                   </li>
                 )) : (
                   <li className="px-3 py-3 text-sm text-gray-400 text-center">לא נמצאו עוזרי מחקר</li>
@@ -609,7 +609,7 @@ export default function TabAssistants({ projectId, assistants, onChanged, readOn
         {/* Salary input — shown only after user is selected */}
         {stagedUser && (
           <div>
-            <label className="block text-xs text-gray-500 mb-1">שכר לשעה (₪) <span className="text-red-500">*</span></label>
+            <label className="block text-sm text-gray-500 mb-1">שכר לשעה (₪) <span className="text-red-500">*</span></label>
             <input
               type="number"
               min={0}
@@ -662,10 +662,10 @@ export default function TabAssistants({ projectId, assistants, onChanged, readOn
                 <UserAvatar userId={a.assistantUserId} firstName={a.firstName} lastName={a.lastName} size="lg" className="bg-blue-100 text-primary" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-800">{a.firstName} {a.lastName}</p>
-                  <p className="text-xs text-gray-400">{a.assistantUserId} · {a.role}</p>
+                  <p className="text-sm text-gray-400">{a.assistantUserId} · {a.role}</p>
                 </div>
                 {a.salaryPerHour && (
-                  <span className="text-xs text-gray-500 bg-gray-50 border border-gray-100 px-2 py-1 rounded-lg">
+                  <span className="text-sm text-gray-500 bg-gray-50 border border-gray-100 px-2 py-1 rounded-lg">
                     {fmt(a.salaryPerHour)}/שעה
                   </span>
                 )}

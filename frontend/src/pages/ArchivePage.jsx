@@ -94,15 +94,15 @@ export default function ArchivePage() {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="text-xs text-gray-300 tabular-nums">#{p.projectId}</span>
+                    <span className="text-sm text-gray-300 tabular-nums">#{p.projectId}</span>
                   </div>
                   <h2 className="text-base font-bold text-gray-800 leading-snug">
                     {p.projectNameHe || p.projectNameEn || `מחקר #${p.projectId}`}
                   </h2>
                   {p.projectNameEn && p.projectNameHe && (
-                    <p className="text-xs text-gray-400">{p.projectNameEn}</p>
+                    <p className="text-sm text-gray-400">{p.projectNameEn}</p>
                   )}
-                  <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-500">
+                  <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
                     {p.totalBudget != null && (
                       <span>תקציב: <strong className="text-gray-700">{fmt(p.totalBudget)}</strong></span>
                     )}
@@ -119,14 +119,14 @@ export default function ArchivePage() {
                 <div className="flex gap-2 flex-shrink-0">
                   <button
                     onClick={() => navigate(`/projects/${p.projectId}`)}
-                    className="px-3 py-2 text-xs border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors font-medium"
+                    className="px-3 py-2 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors font-medium"
                   >
                     צפה
                   </button>
                   <button
                     onClick={() => setConfirmProject(p)}
                     disabled={restoring === p.projectId}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded-xl disabled:opacity-60 transition-colors"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded-xl disabled:opacity-60 transition-colors"
                   >
                     {restoring === p.projectId ? (
                       <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -159,7 +159,7 @@ export default function ArchivePage() {
             <p className="text-sm font-semibold text-gray-800 mb-5">
               "{confirmProject.projectNameHe || confirmProject.projectNameEn}"?
             </p>
-            <p className="text-xs text-gray-400 mb-5">המחקר יועבר חזרה לרשימה הפעילה</p>
+            <p className="text-sm text-gray-400 mb-5">המחקר יועבר חזרה לרשימה הפעילה</p>
             <div className="flex gap-2 justify-center">
               <button
                 onClick={() => setConfirmProject(null)}

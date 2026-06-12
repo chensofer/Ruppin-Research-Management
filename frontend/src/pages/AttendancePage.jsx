@@ -294,7 +294,7 @@ export default function AttendancePage() {
         <div className="card p-5 mb-5 sticky top-16 md:top-0 z-20 shadow-md bg-white">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5 font-semibold">מחקר</label>
+              <label className="block text-sm text-gray-500 mb-1.5 font-semibold">מחקר</label>
               {projects.length === 0 ? (
                 <p className="text-sm text-gray-400 py-2">לא משויך למחקרים</p>
               ) : (
@@ -316,7 +316,7 @@ export default function AttendancePage() {
               )}
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5 font-semibold">חודש</label>
+              <label className="block text-sm text-gray-500 mb-1.5 font-semibold">חודש</label>
               <select value={month} onChange={(e) => setMonth(Number(e.target.value))} className="input-field">
                 {MONTH_NAMES.map((name, i) => (
                   <option key={i + 1} value={i + 1}>{name}</option>
@@ -324,7 +324,7 @@ export default function AttendancePage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5 font-semibold">שנה</label>
+              <label className="block text-sm text-gray-500 mb-1.5 font-semibold">שנה</label>
               <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="input-field">
                 {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
@@ -406,12 +406,12 @@ export default function AttendancePage() {
                   </span>
                   <div className="flex items-center gap-2">
                     {saving && !submitting && (
-                      <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                      <span className="flex items-center gap-1.5 text-sm text-gray-400">
                         <span className="inline-block w-3 h-3 border-2 border-primary/50 border-t-primary rounded-full animate-spin" />
                         שומר...
                       </span>
                     )}
-                    <span className="text-xs bg-primary text-white px-3 py-1.5 rounded-full font-bold shadow-sm">
+                    <span className="text-sm bg-primary text-white px-3 py-1.5 rounded-full font-bold shadow-sm">
                       ⏱ סה"כ: {totalHoursFromDrafts.toFixed(1)} שע'
                     </span>
                   </div>
@@ -429,10 +429,10 @@ export default function AttendancePage() {
                     const StatusIndicator = () => (
                       <div className="flex items-center gap-1 flex-shrink-0">
                         {dayErrors[day] && (
-                          <span className="text-xs text-red-500 font-semibold whitespace-nowrap" title={dayErrors[day]}>שגיאה</span>
+                          <span className="text-sm text-red-500 font-semibold whitespace-nowrap" title={dayErrors[day]}>שגיאה</span>
                         )}
                         {!dayErrors[day] && isSaved && !isDirty && (
-                          <span className="text-xs text-accent font-bold flex items-center gap-0.5">
+                          <span className="text-sm text-accent font-bold flex items-center gap-0.5">
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                             </svg>
@@ -443,7 +443,7 @@ export default function AttendancePage() {
                           <span className="inline-block w-3 h-3 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
                         )}
                         {!dayErrors[day] && isDirty && !saving && (
-                          <span className="text-xs text-amber-500 font-semibold">ממתין</span>
+                          <span className="text-sm text-amber-500 font-semibold">ממתין</span>
                         )}
                         {isSaved && !locked && (
                           <button
@@ -472,30 +472,30 @@ export default function AttendancePage() {
                         <div className="flex sm:hidden items-center gap-2 px-3 pt-2.5 pb-1">
                           <div className="w-10 flex-shrink-0 text-center">
                             <p className={`text-sm font-bold leading-none ${isWeekend ? 'text-gray-400' : 'text-gray-800'}`}>{day}</p>
-                            <p className={`text-xs font-medium mt-0.5 ${isWeekend ? 'text-orange-400' : 'text-gray-400'}`}>{DAY_NAMES[dayOfWeek]}</p>
+                            <p className={`text-sm font-medium mt-0.5 ${isWeekend ? 'text-orange-400' : 'text-gray-400'}`}>{DAY_NAMES[dayOfWeek]}</p>
                           </div>
                           <div className="flex flex-1 items-center gap-1.5 flex-wrap">
                             <div className="flex items-center gap-1">
-                              <label className="text-xs text-gray-400 whitespace-nowrap">משעה</label>
+                              <label className="text-sm text-gray-400 whitespace-nowrap">משעה</label>
                               <input type="time" value={draft?.fromHour || ''} onChange={(e) => setDayField(day, 'fromHour', e.target.value)}
                                 disabled={locked}
-                                className="border border-gray-200 rounded-md px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-[90px]" />
+                                className="border border-gray-200 rounded-md px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-[90px]" />
                             </div>
                             <div className="flex items-center gap-1">
-                              <label className="text-xs text-gray-400 whitespace-nowrap">עד</label>
+                              <label className="text-sm text-gray-400 whitespace-nowrap">עד</label>
                               <input type="time" value={draft?.toHour || ''} onChange={(e) => setDayField(day, 'toHour', e.target.value)}
                                 disabled={locked}
-                                className="border border-gray-200 rounded-md px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-[90px]" />
+                                className="border border-gray-200 rounded-md px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-[90px]" />
                             </div>
                             <div className="flex items-center gap-1">
-                              <label className="text-xs text-gray-400 whitespace-nowrap">שעות</label>
+                              <label className="text-sm text-gray-400 whitespace-nowrap">שעות</label>
                               <input type="number" step="0.5" min="0" max="24" value={draft?.workedHours || ''} onChange={(e) => setDayField(day, 'workedHours', e.target.value)}
                                 placeholder="0" disabled={locked}
-                                className="border border-gray-200 rounded-md px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-12" />
+                                className="border border-gray-200 rounded-md px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-12" />
                             </div>
                             <input type="text" value={draft?.comments || ''} onChange={(e) => setDayField(day, 'comments', e.target.value)}
                               placeholder="הערות..." disabled={locked}
-                              className="flex-1 min-w-[80px] border border-gray-200 rounded-md px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white placeholder-gray-300" />
+                              className="flex-1 min-w-[80px] border border-gray-200 rounded-md px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white placeholder-gray-300" />
                           </div>
                           <StatusIndicator />
                         </div>
@@ -504,30 +504,30 @@ export default function AttendancePage() {
                         <div className="hidden sm:flex items-center gap-3 px-5 py-2.5">
                           <div className="w-14 flex-shrink-0 text-center">
                             <p className={`text-sm font-bold ${isWeekend ? 'text-gray-400' : 'text-gray-800'}`}>{day}</p>
-                            <p className={`text-xs font-medium ${isWeekend ? 'text-orange-400' : 'text-gray-400'}`}>{DAY_NAMES[dayOfWeek]}</p>
+                            <p className={`text-sm font-medium ${isWeekend ? 'text-orange-400' : 'text-gray-400'}`}>{DAY_NAMES[dayOfWeek]}</p>
                           </div>
                           <div className="flex flex-1 items-center gap-2 flex-wrap">
                             <div className="flex items-center gap-1">
-                              <label className="text-xs text-gray-400 whitespace-nowrap font-medium">משעה</label>
+                              <label className="text-sm text-gray-400 whitespace-nowrap font-medium">משעה</label>
                               <input type="time" value={draft?.fromHour || ''} onChange={(e) => setDayField(day, 'fromHour', e.target.value)}
                                 disabled={locked}
-                                className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-24 bg-white" />
+                                className="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-24 bg-white" />
                             </div>
                             <div className="flex items-center gap-1">
-                              <label className="text-xs text-gray-400 whitespace-nowrap font-medium">עד שעה</label>
+                              <label className="text-sm text-gray-400 whitespace-nowrap font-medium">עד שעה</label>
                               <input type="time" value={draft?.toHour || ''} onChange={(e) => setDayField(day, 'toHour', e.target.value)}
                                 disabled={locked}
-                                className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-24 bg-white" />
+                                className="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-24 bg-white" />
                             </div>
                             <div className="flex items-center gap-1">
-                              <label className="text-xs text-gray-400 whitespace-nowrap font-medium">שעות</label>
+                              <label className="text-sm text-gray-400 whitespace-nowrap font-medium">שעות</label>
                               <input type="number" step="0.5" min="0" max="24" value={draft?.workedHours || ''} onChange={(e) => setDayField(day, 'workedHours', e.target.value)}
                                 placeholder="0" disabled={locked}
-                                className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-16 bg-white" />
+                                className="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 w-16 bg-white" />
                             </div>
                             <input type="text" value={draft?.comments || ''} onChange={(e) => setDayField(day, 'comments', e.target.value)}
                               placeholder="הערות..." disabled={locked}
-                              className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white placeholder-gray-300" />
+                              className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white placeholder-gray-300" />
                           </div>
                           <StatusIndicator />
                         </div>
@@ -541,7 +541,7 @@ export default function AttendancePage() {
             {/* Action bar */}
             {!locked && (
               <div className="flex items-center justify-between gap-4 flex-wrap bg-white border border-gray-100 rounded-2xl px-5 py-4 shadow-sm">
-                <p className="text-xs text-gray-400 flex items-center gap-2">
+                <p className="text-sm text-gray-400 flex items-center gap-2">
                   {saving && !submitting ? (
                     <>
                       <span className="inline-block w-3 h-3 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
@@ -584,7 +584,7 @@ export default function AttendancePage() {
               </svg>
             </div>
             <p className="text-sm font-semibold text-gray-700">בחר מחקר להתחלת הדיווח</p>
-            <p className="text-xs text-gray-400 mt-1">בחר מחקר וחודש מהתפריטים למעלה</p>
+            <p className="text-sm text-gray-400 mt-1">בחר מחקר וחודש מהתפריטים למעלה</p>
           </div>
         )}
 

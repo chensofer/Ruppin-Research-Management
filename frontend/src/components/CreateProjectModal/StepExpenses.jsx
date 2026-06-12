@@ -193,7 +193,7 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
           onChange={(v) => setDraft((d) => ({ ...d, categoryName: v }))}
           placeholder="בחר קטגוריית הוצאה *"
         />
-        {errors.categoryName && <p className="text-xs text-red-500 mt-1">{errors.categoryName}</p>}
+        {errors.categoryName && <p className="text-sm text-red-500 mt-1">{errors.categoryName}</p>}
       </div>
 
       {/* Description */}
@@ -215,7 +215,7 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
             placeholder="סכום (₪) *"
             className={`${inputCls} ${errors.requestedAmount ? errorCls : ''}`}
           />
-          {errors.requestedAmount && <p className="text-xs text-red-500 mt-1">{errors.requestedAmount}</p>}
+          {errors.requestedAmount && <p className="text-sm text-red-500 mt-1">{errors.requestedAmount}</p>}
         </div>
         <HebrewDatePicker
           value={draft.requestDate}
@@ -230,10 +230,10 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
       {/* Supplier section */}
       <div className="border border-gray-200 rounded-xl p-3 bg-white space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-gray-600">ספק</span>
+          <span className="text-sm font-semibold text-gray-600">ספק</span>
           {providerMode !== 'none' && (
             <button type="button" onClick={clearProvider}
-              className="text-xs text-gray-400 hover:text-red-500 transition-colors">ביטול</button>
+              className="text-sm text-gray-400 hover:text-red-500 transition-colors">ביטול</button>
           )}
         </div>
 
@@ -290,7 +290,7 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
                       <li key={p.providerId} onMouseDown={() => selectProvider(p)}
                         className="px-3 py-2 cursor-pointer hover:bg-primary-light text-sm text-gray-800">
                         {p.providerName}
-                        {p.phone && <span className="text-xs text-gray-400 mr-2">{p.phone}</span>}
+                        {p.phone && <span className="text-sm text-gray-400 mr-2">{p.phone}</span>}
                       </li>
                     )) : (
                       <li className="px-3 py-2 text-sm text-gray-400 text-center">לא נמצאו ספקים</li>
@@ -309,7 +309,7 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
                 <input type="text" placeholder="שם הספק *" value={draft.newProvider.providerName}
                   onChange={setNp('providerName')}
                   className={`${inputCls} ${errors.providerName ? errorCls : ''}`} />
-                {errors.providerName && <p className="text-xs text-red-500 mt-0.5">{errors.providerName}</p>}
+                {errors.providerName && <p className="text-sm text-red-500 mt-0.5">{errors.providerName}</p>}
               </div>
               <input type="text" placeholder="טלפון" value={draft.newProvider.phone}
                 onChange={setNp('phone')} className={inputCls} />
@@ -318,12 +318,12 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
               <input type="text" placeholder="תיאור" value={draft.newProvider.notes}
                 onChange={setNp('notes')} className={`${inputCls} col-span-2`} />
             </div>
-            {providerSaveError && <p className="text-xs text-red-500">{providerSaveError}</p>}
+            {providerSaveError && <p className="text-sm text-red-500">{providerSaveError}</p>}
             <button
               type="button"
               onClick={saveNewProvider}
               disabled={savingProvider || !draft.newProvider.providerName.trim()}
-              className="w-full px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-dark disabled:opacity-50 transition-colors"
+              className="w-full px-3 py-1.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-dark disabled:opacity-50 transition-colors"
             >
               {savingProvider ? 'שומר...' : 'הוסף ספק'}
             </button>
@@ -334,17 +334,17 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
       {/* File attachments */}
       <div className="border border-gray-200 rounded-xl p-3 bg-white space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold text-gray-600">מסמכים מצורפים</span>
+          <span className="text-sm font-semibold text-gray-600">מסמכים מצורפים</span>
           <div className="flex items-center gap-2">
             {draft.files.length > 0 && (
               <button type="button" onClick={handleScan} disabled={scanning}
-                className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/5 border border-primary/20 px-2.5 py-1 rounded-lg hover:bg-primary/10 transition-colors disabled:opacity-50">
+                className="flex items-center gap-1 text-sm font-semibold text-primary bg-primary/5 border border-primary/20 px-2.5 py-1 rounded-lg hover:bg-primary/10 transition-colors disabled:opacity-50">
                 {scanning ? <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : '🤖'}
                 {scanning ? 'סורק...' : 'מלא אוטומטית'}
               </button>
             )}
             <button type="button" onClick={() => fileRef.current?.click()}
-              className="text-xs text-primary hover:text-primary-dark transition-colors font-medium">
+              className="text-sm text-primary hover:text-primary-dark transition-colors font-medium">
               + הוסף קובץ
             </button>
           </div>
@@ -353,7 +353,7 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
         {draft.files.length > 0 ? (
           <ul className="space-y-1">
             {draft.files.map((f, i) => (
-              <li key={i} className="flex items-center justify-between text-xs text-gray-700 bg-gray-50 rounded-lg px-2 py-1.5">
+              <li key={i} className="flex items-center justify-between text-sm text-gray-700 bg-gray-50 rounded-lg px-2 py-1.5">
                 <a href={URL.createObjectURL(f.file)} target="_blank" rel="noopener noreferrer"
                   className="truncate text-blue-600 hover:underline">{f.name}</a>
                 <button type="button" onClick={() => removeFile(i)}
@@ -362,7 +362,7 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
             ))}
           </ul>
         ) : (
-          <p className="text-xs text-gray-400">לא נבחרו קבצים</p>
+          <p className="text-sm text-gray-400">לא נבחרו קבצים</p>
         )}
       </div>
 
@@ -388,7 +388,7 @@ export default function StepExpenses({ data, onChange, totalBudget = 0 }) {
     <div className="space-y-4">
       {/* Budget remaining indicator */}
       {totalBudget > 0 && (
-        <div className={`flex justify-between text-xs px-3 py-2 rounded-lg ${
+        <div className={`flex justify-between text-sm px-3 py-2 rounded-lg ${
           total > totalBudget ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-700'
         }`}>
           <span className="font-semibold">{fmt(totalBudget - total)}</span>
@@ -411,7 +411,7 @@ export default function StepExpenses({ data, onChange, totalBudget = 0 }) {
       {/* Expense list */}
       {data.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-gray-500 mb-2">הוצאות שנוספו ({data.length})</p>
+          <p className="text-sm font-semibold text-gray-500 mb-2">הוצאות שנוספו ({data.length})</p>
           <div className="space-y-2">
             {data.map((row) => (
               <div key={row._key}
@@ -420,22 +420,22 @@ export default function StepExpenses({ data, onChange, totalBudget = 0 }) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-800">{row.categoryName}</p>
                     {row.requestDescription && (
-                      <p className="text-xs text-gray-400 mt-0.5 truncate">{row.requestDescription}</p>
+                      <p className="text-sm text-gray-400 mt-0.5 truncate">{row.requestDescription}</p>
                     )}
                     {row.providerName && (
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-sm text-gray-500 mt-0.5">
                         ספק: {row.providerName}
                         {row.isNewProvider && <span className="text-amber-600 mr-1">(חדש)</span>}
                       </p>
                     )}
                     {row.requestDate && (
-                      <p className="text-xs text-gray-400">{fmtDate(row.requestDate)}</p>
+                      <p className="text-sm text-gray-400">{fmtDate(row.requestDate)}</p>
                     )}
                     {row.files?.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-0.5">
                         {row.files.map((f, i) => (
                           <a key={i} href={URL.createObjectURL(f.file)} target="_blank" rel="noopener noreferrer"
-                            className="text-xs text-blue-500 hover:text-blue-700 hover:underline max-w-[150px] truncate inline-block">
+                            className="text-sm text-blue-500 hover:text-blue-700 hover:underline max-w-[150px] truncate inline-block">
                             {f.name}
                           </a>
                         ))}

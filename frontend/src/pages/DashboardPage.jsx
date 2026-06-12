@@ -197,14 +197,14 @@ export default function DashboardPage() {
                     d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
                 {totalAlerts > 0 && !alertsSeen && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-sm font-bold rounded-full flex items-center justify-center px-1">
                     {totalAlerts}
                   </span>
                 )}
               </button>
               <button
                 onClick={() => setShowExport(true)}
-                className="flex items-center gap-1.5 text-xs font-semibold text-green-600 border border-green-200 px-3 py-2 rounded-xl hover:bg-green-50 transition-colors"
+                className="flex items-center gap-1.5 text-sm font-semibold text-green-600 border border-green-200 px-3 py-2 rounded-xl hover:bg-green-50 transition-colors"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -265,14 +265,14 @@ export default function DashboardPage() {
                   <button
                     key={opt.value}
                     onClick={() => setStatusFilter(opt.value)}
-                    className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 ${
+                    className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-sm font-semibold rounded-lg transition-all duration-150 ${
                       statusFilter === opt.value
                         ? 'bg-white text-gray-900 shadow-sm'
                         : 'text-gray-400 hover:text-gray-600'
                     }`}
                   >
                     {opt.label}
-                    <span className={`text-xs tabular-nums ${
+                    <span className={`text-sm tabular-nums ${
                       statusFilter === opt.value ? 'text-gray-500' : 'text-gray-300'
                     }`}>
                       {opt.count}
@@ -284,7 +284,7 @@ export default function DashboardPage() {
               {hasActiveFilters && (
                 <button
                   onClick={resetFilters}
-                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary transition-colors"
+                  className="flex items-center gap-1 text-sm text-gray-400 hover:text-primary transition-colors"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -296,12 +296,12 @@ export default function DashboardPage() {
 
             {/* Sort */}
             <div className="flex items-center gap-2 self-start sm:self-auto">
-              <span className="text-xs text-gray-400 whitespace-nowrap">מיון:</span>
+              <span className="text-sm text-gray-400 whitespace-nowrap">מיון:</span>
               <div className="relative">
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className={`border rounded-xl pr-3 pl-7 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all appearance-none ${
+                  className={`border rounded-xl pr-3 pl-7 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all appearance-none ${
                     sortBy !== 'default' ? 'border-primary text-primary font-semibold' : 'border-gray-200 text-gray-600'
                   }`}
                   dir="rtl"
@@ -327,7 +327,7 @@ export default function DashboardPage() {
           ) : (
             <>
               {/* Results label */}
-              <p className="text-xs text-gray-400 mb-3 font-medium">
+              <p className="text-sm text-gray-400 mb-3 font-medium">
                 {hasActiveFilters
                   ? `מציג ${displayed.length} מתוך ${projects.length} מחקרים`
                   : `${projects.length} מחקרים`}
@@ -343,7 +343,7 @@ export default function DashboardPage() {
                   </div>
                   <p className="text-sm font-semibold text-gray-500">לא נמצאו מחקרים</p>
                   {hasActiveFilters && (
-                    <button onClick={resetFilters} className="mt-3 text-xs text-primary hover:underline font-medium">
+                    <button onClick={resetFilters} className="mt-3 text-sm text-primary hover:underline font-medium">
                       נקה סינון
                     </button>
                   )}

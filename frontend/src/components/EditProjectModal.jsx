@@ -23,7 +23,7 @@ function Field({ label, required, error, children }) {
         {label}{required && <span className="text-red-500 mr-1">*</span>}
       </label>
       {children}
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
     </div>
   );
 }
@@ -80,10 +80,10 @@ function DetailsTab({ form, setForm, errors, allUsers, usersLoading, centers }) 
             <UserAvatar userId={form.principalResearcherId} firstName={form.principalResearcherName} size="md" className="bg-primary text-white" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-primary truncate">{form.principalResearcherName}</p>
-              <p className="text-xs text-primary/60">ת"ז - {form.principalResearcherId}</p>
+              <p className="text-sm text-primary/60">ת"ז - {form.principalResearcherId}</p>
             </div>
             {form.principalResearcherRole && (
-              <span className="text-xs bg-primary/10 text-primary font-medium px-2 py-1 rounded-full flex-shrink-0">
+              <span className="text-sm bg-primary/10 text-primary font-medium px-2 py-1 rounded-full flex-shrink-0">
                 {form.principalResearcherRole}
               </span>
             )}
@@ -109,9 +109,9 @@ function DetailsTab({ form, setForm, errors, allUsers, usersLoading, centers }) 
                     className="px-3 py-2.5 cursor-pointer hover:bg-primary-light text-sm flex items-center justify-between gap-2">
                     <div>
                       <p className="font-medium text-gray-800">{u.firstName} {u.lastName}</p>
-                      <p className="text-xs text-gray-400">ת"ז - {u.userId}</p>
+                      <p className="text-sm text-gray-400">ת"ז - {u.userId}</p>
                     </div>
-                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                    <span className="text-sm text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
                       {u.systemAuthorization}
                     </span>
                   </li>
@@ -223,7 +223,7 @@ function BudgetTab({ categories, setCategories, totalBudget, errors }) {
              remaining > 0 ? `נותר לחלוקה: ${fmt(remaining)}` :
              `חריגה מהתקציב: ${fmt(Math.abs(remaining))}`}
           </span>
-          <span className="text-xs text-gray-500">מתוך {fmt(totalBudgetNum)}</span>
+          <span className="text-sm text-gray-500">מתוך {fmt(totalBudgetNum)}</span>
         </div>
       )}
 
@@ -242,7 +242,7 @@ function BudgetTab({ categories, setCategories, totalBudget, errors }) {
               placeholder="סכום מוקצה (₪)"
               className={`${inputCls} ${exceedsDraft ? errorCls : ''}`} />
             {exceedsDraft && (
-              <p className="text-xs text-red-500 mt-1">הסכום חורג מהתקציב הפנוי ({fmt(remaining)})</p>
+              <p className="text-sm text-red-500 mt-1">הסכום חורג מהתקציב הפנוי ({fmt(remaining)})</p>
             )}
           </div>
           <button type="button" onClick={addRow}
@@ -256,7 +256,7 @@ function BudgetTab({ categories, setCategories, totalBudget, errors }) {
       {/* Category list */}
       {categories.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-gray-500">קטגוריות ({categories.length})</p>
+          <p className="text-sm font-semibold text-gray-500">קטגוריות ({categories.length})</p>
           {categories.map((c) => (
             <div key={c._key ?? c.researchBudgetCategoryId}
               className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-4 py-3 shadow-sm">
@@ -456,7 +456,7 @@ export default function EditProjectModal({ projectId, onClose, onSaved }) {
           <div className="text-right">
             <h2 className="text-lg font-bold text-gray-900">עריכת מחקר</h2>
             {form.projectNameHe && (
-              <p className="text-xs text-gray-500 mt-0.5">{form.projectNameHe}</p>
+              <p className="text-sm text-gray-500 mt-0.5">{form.projectNameHe}</p>
             )}
           </div>
         </div>

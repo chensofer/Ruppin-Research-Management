@@ -112,7 +112,7 @@ export default function Layout({ children }) {
             <span className="flex-1">{item.label}</span>
             {/* Pending badge */}
             {item.badge > 0 && (
-              <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
+              <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-sm font-bold rounded-full flex items-center justify-center leading-none">
                 {item.badge > 99 ? '99+' : item.badge}
               </span>
             )}
@@ -132,7 +132,7 @@ export default function Layout({ children }) {
             {profilePic ? (
               <img src={profilePic} alt="פרופיל" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full bg-accent flex items-center justify-center text-white font-bold text-xs">
+              <div className="w-full h-full bg-accent flex items-center justify-center text-white font-bold text-sm">
                 {initials}
               </div>
             )}
@@ -147,7 +147,7 @@ export default function Layout({ children }) {
             <p className="text-sm font-semibold text-white leading-tight truncate">
               {user?.firstName} {user?.lastName}
             </p>
-            <p className="text-xs text-white/45 truncate mt-0.5">{user?.userId}</p>
+            <p className="text-sm text-white/45 truncate mt-0.5">{user?.userId}</p>
           </button>
 
           {/* Theme toggle */}

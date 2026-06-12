@@ -47,7 +47,7 @@ export default function ExportReportModal({ type = 'project', onExport, onClose 
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm text-gray-500">בחרי מה לכלול:</p>
-            <button onClick={toggleAll} className="text-xs text-primary font-semibold hover:underline">
+            <button onClick={toggleAll} className="text-sm text-primary font-semibold hover:underline">
               {allOn ? 'בטל הכל' : 'בחר הכל'}
             </button>
           </div>

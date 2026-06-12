@@ -23,7 +23,7 @@ const EMPTY_FORM = { userId: '', firstName: '', lastName: '', email: '', systemA
 function RoleBadge({ role }) {
   const cls = ROLE_COLORS[role] ?? 'bg-gray-100 text-gray-600';
   return (
-    <span className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full ${cls}`}>
+    <span className={`inline-block text-sm font-semibold px-2.5 py-0.5 rounded-full ${cls}`}>
       {role || '—'}
     </span>
   );
@@ -78,32 +78,32 @@ function CreateUserModal({ onClose, onCreated, allRoles }) {
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">שם פרטי *</label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">שם פרטי *</label>
               <input value={form.firstName} onChange={(e) => set('firstName', e.target.value)}
                 className={inputCls} placeholder="ישראל" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">שם משפחה *</label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">שם משפחה *</label>
               <input value={form.lastName} onChange={(e) => set('lastName', e.target.value)}
                 className={inputCls} placeholder="ישראלי" />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">מזהה משתמש (ת.ז.) *</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1">מזהה משתמש (ת.ז.) *</label>
             <input value={form.userId} onChange={(e) => set('userId', e.target.value)}
               className={inputCls} placeholder="123456789" maxLength={10} />
-            <p className="text-xs text-gray-400 mt-1">ברירת מחדל: הסיסמה תהיה מזהה המשתמש</p>
+            <p className="text-sm text-gray-400 mt-1">ברירת מחדל: הסיסמה תהיה מזהה המשתמש</p>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">דוא״ל</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1">דוא״ל</label>
             <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)}
               className={inputCls} placeholder="user@example.com" />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">תפקיד *</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1">תפקיד *</label>
             <select value={form.systemAuthorization} onChange={(e) => set('systemAuthorization', e.target.value)}
               className={inputCls}>
               {(allRoles.length > 0 ? allRoles : ALL_ROLES).map((r) => (
@@ -113,7 +113,7 @@ function CreateUserModal({ onClose, onCreated, allRoles }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">סיסמה ראשונית</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1">סיסמה ראשונית</label>
             <input type="password" value={form.password} onChange={(e) => set('password', e.target.value)}
               className={inputCls} placeholder="ריק = מזהה המשתמש" />
           </div>
@@ -173,7 +173,7 @@ function EditRoleModal({ user, onClose, onUpdated, allRoles }) {
             עדכון תפקיד עבור: <span className="font-semibold">{user.firstName} {user.lastName}</span>
           </p>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">תפקיד חדש</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1">תפקיד חדש</label>
             <select value={role} onChange={(e) => setRole(e.target.value)}
               className="w-full bg-white text-gray-800 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
               {(allRoles.length > 0 ? allRoles : ALL_ROLES).map((r) => (
@@ -306,10 +306,10 @@ export default function UsersPage() {
               <table className="w-full min-w-[500px]">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/60">
-                    <th className="text-right text-xs font-semibold text-gray-500 px-5 py-3">שם</th>
-                    <th className="text-right text-xs font-semibold text-gray-500 px-5 py-3">ת.ז.</th>
-                    <th className="text-right text-xs font-semibold text-gray-500 px-5 py-3 hidden sm:table-cell">דוא״ל</th>
-                    <th className="text-right text-xs font-semibold text-gray-500 px-5 py-3">תפקיד</th>
+                    <th className="text-right text-sm font-semibold text-gray-500 px-5 py-3">שם</th>
+                    <th className="text-right text-sm font-semibold text-gray-500 px-5 py-3">ת.ז.</th>
+                    <th className="text-right text-sm font-semibold text-gray-500 px-5 py-3 hidden sm:table-cell">דוא״ל</th>
+                    <th className="text-right text-sm font-semibold text-gray-500 px-5 py-3">תפקיד</th>
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
@@ -321,12 +321,12 @@ export default function UsersPage() {
                       <tr key={u.userId} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors last:border-0">
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-primary-light text-primary flex items-center justify-center text-xs font-bold flex-shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-primary-light text-primary flex items-center justify-center text-sm font-bold flex-shrink-0">
                               {((u.firstName?.[0] ?? '') + (u.lastName?.[0] ?? '')).toUpperCase() || '?'}
                             </div>
                             <span className="text-sm font-semibold text-gray-800">
                               {u.firstName} {u.lastName}
-                              {isSelf && <span className="mr-1.5 text-xs text-primary font-medium">(אני)</span>}
+                              {isSelf && <span className="mr-1.5 text-sm text-primary font-medium">(אני)</span>}
                             </span>
                           </div>
                         </td>

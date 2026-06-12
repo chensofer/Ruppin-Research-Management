@@ -76,20 +76,20 @@ export default function CategoryPicker({ value, onChange, placeholder = 'בחר 
             maxLength={50}
             className={inputCls}
           />
-          {saveError && <p className="text-xs text-red-500">{saveError}</p>}
+          {saveError && <p className="text-sm text-red-500">{saveError}</p>}
           <div className="flex gap-2">
             <button
               type="button"
               onClick={saveNew}
               disabled={saving || !newName.trim()}
-              className="px-3 py-1.5 bg-primary hover:bg-primary-dark text-white text-xs font-medium rounded-lg disabled:opacity-50 transition-colors"
+              className="px-3 py-1.5 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors"
             >
               {saving ? 'שומר...' : 'שמור קטגוריה'}
             </button>
             <button
               type="button"
               onClick={() => { setShowNew(false); setNewName(''); }}
-              className="px-3 py-1.5 text-gray-500 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-3 py-1.5 text-gray-500 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
               ביטול
             </button>

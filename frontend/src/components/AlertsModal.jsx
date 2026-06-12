@@ -65,7 +65,7 @@ export default function AlertsModal({ budgetAlerts, timeAlerts, onClose }) {
                       <div className="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
                         <HiExclamationTriangle className="w-3.5 h-3.5 text-red-600" />
                       </div>
-                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">התראות תקציב</h3>
+                      <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">התראות תקציב</h3>
                     </div>
                     <div className="space-y-2">
                       {budgetAlerts.map((a) => (
@@ -77,13 +77,13 @@ export default function AlertsModal({ budgetAlerts, timeAlerts, onClose }) {
                             <p className="text-sm font-semibold text-gray-800 truncate flex-1">{a.name}</p>
                             <button
                               onClick={() => { navigate(`/projects/${a.projectId}`); onClose(); }}
-                              className="flex items-center gap-1 text-xs text-red-600 hover:text-red-800 font-semibold transition-colors flex-shrink-0 whitespace-nowrap"
+                              className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800 font-semibold transition-colors flex-shrink-0 whitespace-nowrap"
                             >
                               כניסה
                               <HiArrowRight className="w-3 h-3" />
                             </button>
                           </div>
-                          <p className="text-xs text-red-500 mt-1">
+                          <p className="text-sm text-red-500 mt-1">
                             נותרו <span className="font-bold text-red-700">{fmt(a.available)}</span> מתוך {fmt(a.budget)}
                             <span className="font-bold text-red-700 mr-1.5">· {a.pct}% יתרה</span>
                           </p>
@@ -100,7 +100,7 @@ export default function AlertsModal({ budgetAlerts, timeAlerts, onClose }) {
                       <div className="w-6 h-6 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
                         <HiClock className="w-3.5 h-3.5 text-orange-600" />
                       </div>
-                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">התראות זמן</h3>
+                      <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">התראות זמן</h3>
                     </div>
                     <div className="space-y-2">
                       {timeAlerts.map((a) => (
@@ -112,13 +112,13 @@ export default function AlertsModal({ budgetAlerts, timeAlerts, onClose }) {
                             <p className="text-sm font-semibold text-gray-800 truncate flex-1">{a.name}</p>
                             <button
                               onClick={() => { navigate(`/projects/${a.projectId}`); onClose(); }}
-                              className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 font-semibold transition-colors flex-shrink-0 whitespace-nowrap"
+                              className="flex items-center gap-1 text-sm text-orange-600 hover:text-orange-800 font-semibold transition-colors flex-shrink-0 whitespace-nowrap"
                             >
                               כניסה
                               <HiArrowRight className="w-3 h-3" />
                             </button>
                           </div>
-                          <p className="text-xs text-orange-500 mt-1">
+                          <p className="text-sm text-orange-500 mt-1">
                             מסתיים ב־{a.endDate}
                             <span className="font-bold text-orange-700 mr-1.5">· {a.daysLeft} ימים נותרו</span>
                           </p>
@@ -128,7 +128,7 @@ export default function AlertsModal({ budgetAlerts, timeAlerts, onClose }) {
                               style={{ width: `${a.elapsedPct}%` }}
                             />
                           </div>
-                          <p className="text-xs text-orange-400 mt-1">{a.elapsedPct}% מהתקופה חלף</p>
+                          <p className="text-sm text-orange-400 mt-1">{a.elapsedPct}% מהתקופה חלף</p>
                         </div>
                       ))}
                     </div>

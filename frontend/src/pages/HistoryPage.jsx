@@ -139,6 +139,7 @@ export default function HistoryPage() {
   const [projects, setProjects]         = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [projectStatus, setProjectStatus] = useState('active'); // 'active' | 'archived'
+  const [projectSearch, setProjectSearch] = useState('');
   const [logs, setLogs]                 = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [loadingLogs, setLoadingLogs]   = useState(false);
@@ -178,16 +179,23 @@ export default function HistoryPage() {
       .catch(() => {});
   }, [isSecretary]);
 
-  // Filtered projects by active/archived status (secretary only), sorted by last financial change
+  // Filtered projects by active/archived status + search (secretary only), sorted by last financial change
   const visibleProjects = useMemo(() => {
     if (!isSecretary) return projects;
-    const filtered = projects.filter(p => projectStatus === 'archived' ? p.isArchived : !p.isArchived);
+    const q = projectSearch.trim().toLowerCase();
+    const filtered = projects.filter(p => {
+      if (projectStatus === 'archived' ? !p.isArchived : p.isArchived) return false;
+      if (!q) return true;
+      const name = (p.projectNameHe || p.projectNameEn || '').toLowerCase();
+      const researcher = (p.principalResearcherName || p.principalResearcherId || '').toLowerCase();
+      return name.includes(q) || researcher.includes(q);
+    });
     return [...filtered].sort((a, b) => {
       const da = lastChange[String(a.projectId)] ?? '';
       const db = lastChange[String(b.projectId)] ?? '';
-      return db.localeCompare(da); // most recent first
+      return db.localeCompare(da);
     });
-  }, [projects, projectStatus, isSecretary, lastChange]);
+  }, [projects, projectStatus, isSecretary, lastChange, projectSearch]);
 
   // When visible projects change, select the first one
   useEffect(() => {
@@ -277,7 +285,7 @@ export default function HistoryPage() {
         {/* ── Project selector ── */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5">
           <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
               בחר מחקר
             </label>
             {/* Active / Archived toggle — secretary only */}
@@ -287,7 +295,7 @@ export default function HistoryPage() {
                   <button
                     key={v}
                     onClick={() => setProjectStatus(v)}
-                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                    className={`px-3 py-1 text-sm font-semibold rounded-md transition-all ${
                       projectStatus === v
                         ? 'bg-white text-primary shadow-sm'
                         : 'text-gray-500 hover:text-gray-700'
@@ -299,10 +307,25 @@ export default function HistoryPage() {
               </div>
             )}
           </div>
+          {isSecretary && (
+            <div className="relative mb-2">
+              <input
+                type="text"
+                value={projectSearch}
+                onChange={e => setProjectSearch(e.target.value)}
+                placeholder="חיפוש לפי שם מחקר או חוקר..."
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm pr-9 focus:outline-none focus:ring-2 focus:ring-primary bg-white"
+                dir="rtl"
+              />
+              <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          )}
           {loadingProjects ? (
             <div className="h-10 bg-gray-100 rounded-xl animate-pulse" />
           ) : visibleProjects.length === 0 ? (
-            <p className="text-sm text-gray-400">לא נמצאו מחקרים</p>
+            <p className="text-sm text-gray-400">{projectSearch ? 'לא נמצאו תוצאות לחיפוש' : 'לא נמצאו מחקרים'}</p>
           ) : isSecretary ? (
             <div className="max-h-56 overflow-y-auto flex flex-col gap-1 pr-0.5">
               {visibleProjects.map(p => {
@@ -321,9 +344,14 @@ export default function HistoryPage() {
                         : 'bg-white text-gray-800 border-gray-100 hover:border-primary/30 hover:bg-blue-50/40'
                     }`}
                   >
-                    <span className="font-medium truncate flex-1">{p.projectNameHe || p.projectNameEn || `מחקר #${pid}`}</span>
+                    <span className="flex-1 min-w-0 text-right">
+                      <span className="block font-medium truncate">{p.projectNameHe || p.projectNameEn || `מחקר #${pid}`}</span>
+                      {p.principalResearcherName && (
+                        <span className={`block text-sm truncate ${isActive ? 'text-white/70' : 'text-gray-400'}`}>👤 {p.principalResearcherName}</span>
+                      )}
+                    </span>
                     {relDate && (
-                      <span className={`flex-shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                      <span className={`flex-shrink-0 text-sm font-semibold px-2 py-0.5 rounded-full ${
                         isActive
                           ? 'bg-white/20 text-white'
                           : isRecent
@@ -363,7 +391,7 @@ export default function HistoryPage() {
                 <button
                   key={cat.value}
                   onClick={() => setCategory(cat.value)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${
                     isActive
                       ? `${CATEGORY_COLORS[cat.value] ?? 'bg-gray-100 text-gray-700 border-gray-200'} shadow-sm`
                       : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700'
@@ -372,7 +400,7 @@ export default function HistoryPage() {
                   {CatIcon && <CatIcon />}
                   {cat.label}
                   {count > 0 && (
-                    <span className={`mr-0.5 px-1.5 py-0.5 rounded-full text-[10px] leading-none ${
+                    <span className={`mr-0.5 px-1.5 py-0.5 rounded-full text-sm leading-none ${
                       isActive ? 'bg-white/60' : 'bg-gray-100'
                     }`}>
                       {count}
@@ -413,7 +441,7 @@ export default function HistoryPage() {
           <EmptyState icon="search" message="לא נמצאו תוצאות לחיפוש" />
         ) : (
           <>
-            <p className="text-xs text-gray-400 mb-3">
+            <p className="text-sm text-gray-400 mb-3">
               מציג {safeFiltered.length} מתוך {safeLogs.length} פעולות
             </p>
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -443,10 +471,10 @@ function LogRow({ log, meta, showProject }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2 mb-1">
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${meta.color}`}>
+          <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${meta.color}`}>
             {meta.label}
           </span>
-          <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+          <span className="flex items-center gap-1 text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -454,7 +482,7 @@ function LogRow({ log, meta, showProject }) {
             {log.performedByName || log.performedByUserId}
           </span>
           {showProject && (log.projectNameHe || log.projectNameEn) && (
-            <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+            <span className="flex items-center gap-1 text-sm text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
               {log.projectNameHe || log.projectNameEn}
             </span>
           )}
@@ -462,8 +490,8 @@ function LogRow({ log, meta, showProject }) {
         <p className="text-sm text-gray-800 leading-relaxed">{log.actionDescription}</p>
       </div>
       <div className="flex-shrink-0 text-left">
-        <p className="text-xs text-gray-400 whitespace-nowrap">{formatDateShort(log.createdAt)}</p>
-        <p className="text-xs text-gray-400 whitespace-nowrap text-left">
+        <p className="text-sm text-gray-400 whitespace-nowrap">{formatDateShort(log.createdAt)}</p>
+        <p className="text-sm text-gray-400 whitespace-nowrap text-left">
           {new Date(log.createdAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
         </p>
       </div>

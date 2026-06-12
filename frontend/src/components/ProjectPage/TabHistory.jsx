@@ -136,7 +136,7 @@ export default function TabHistory({ projectId, projectName }) {
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-bold text-gray-800">היסטוריית שינויים</h2>
-          <p className="text-xs text-gray-400 mt-0.5">כלל הפעולות שבוצעו במחקר זה</p>
+          <p className="text-sm text-gray-400 mt-0.5">כלל הפעולות שבוצעו במחקר זה</p>
         </div>
         {filteredLogs.length > 0 && (
           <button
@@ -162,7 +162,7 @@ export default function TabHistory({ projectId, projectName }) {
               <button
                 key={cat.value}
                 onClick={() => setCategory(cat.value)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${
                   isActive
                     ? `${CATEGORY_COLORS[cat.value] ?? 'bg-gray-100 text-gray-700 border-gray-200'} shadow-sm`
                     : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700'
@@ -170,7 +170,7 @@ export default function TabHistory({ projectId, projectName }) {
               >
                 {cat.label}
                 {count > 0 && (
-                  <span className={`mr-0.5 px-1.5 py-0.5 rounded-full text-[10px] leading-none ${
+                  <span className={`mr-0.5 px-1.5 py-0.5 rounded-full text-sm leading-none ${
                     isActive ? 'bg-white/60' : 'bg-gray-100'
                   }`}>
                     {count}
@@ -209,7 +209,7 @@ export default function TabHistory({ projectId, projectName }) {
         <EmptyState icon="search" message="לא נמצאו תוצאות לחיפוש" />
       ) : (
         <>
-          <p className="text-xs text-gray-400 mb-3">
+          <p className="text-sm text-gray-400 mb-3">
             מציג {filteredLogs.length} מתוך {logs.length} פעולות
           </p>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -233,10 +233,10 @@ function LogRow({ log, meta }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2 mb-1">
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${meta.color}`}>
+          <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${meta.color}`}>
             {meta.label}
           </span>
-          <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+          <span className="flex items-center gap-1 text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -247,8 +247,8 @@ function LogRow({ log, meta }) {
         <p className="text-sm text-gray-800 leading-relaxed">{log.actionDescription}</p>
       </div>
       <div className="flex-shrink-0 text-left">
-        <p className="text-xs text-gray-400 whitespace-nowrap">{formatDateShort(log.createdAt)}</p>
-        <p className="text-xs text-gray-300 whitespace-nowrap">
+        <p className="text-sm text-gray-400 whitespace-nowrap">{formatDateShort(log.createdAt)}</p>
+        <p className="text-sm text-gray-300 whitespace-nowrap">
           {new Date(log.createdAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
         </p>
       </div>

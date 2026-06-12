@@ -43,7 +43,8 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
       .finally(() => setLoadingProjects(false));
   }, [projectId]);
 
-  const selectedProject = allProjects.find((p) => p.projectId === Number(form.targetProjectId));
+  const selectedProject = allProjects.find((p) => String(p.projectId) === form.targetProjectId);
+  const preFilledNotFound = !loadingProjects && initialTargetId && !selectedProject && form.targetProjectId === String(initialTargetId);
   const parsedAmount = parseFloat(form.amount);
 
   const isProjectActive = (p) => {
@@ -59,7 +60,7 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
 
   const validate = () => {
     if (!form.targetProjectId) return 'יש לבחור מחקר יעד';
-    const target = allProjects.find((p) => p.projectId === Number(form.targetProjectId));
+    const target = allProjects.find((p) => String(p.projectId) === form.targetProjectId);
     if (target && !isProjectActive(target))
       return 'לא ניתן להעביר כספים למחקר שאינו פעיל או למחקר בארכיון';
     if (!form.amount || isNaN(parsedAmount) || parsedAmount <= 0) return 'יש להזין סכום תקין';
@@ -113,7 +114,7 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
         {initialTargetId && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-right flex items-center gap-2">
             <span className="text-lg">💡</span>
-            <p className="text-xs text-amber-800 leading-relaxed">
+            <p className="text-sm text-amber-800 leading-relaxed">
               <span className="font-bold">הפרטים מולאו אוטומטית</span> לפי המלצת המערכת — ניתן לשנות לפני האישור
             </p>
           </div>
@@ -121,7 +122,7 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
 
         {/* Available balance info */}
         <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-6 text-right">
-          <p className="text-xs text-blue-500 mb-0.5">יתרה זמינה במחקר הנוכחי</p>
+          <p className="text-sm text-blue-500 mb-0.5">יתרה זמינה במחקר הנוכחי</p>
           <p className={`text-xl font-bold ${availableBalance < 0 ? 'text-red-600' : 'text-blue-700'}`}>
             {fmt(availableBalance)}
           </p>
@@ -137,6 +138,22 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
                   <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   טוען מחקרים...
                 </div>
+              ) : preFilledNotFound ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-800">
+                  ⚠️ מחקר היעד אינו זמין להעברה (ייתכן שהוא בארכיון או הסתיים). בחר מחקר אחר.
+                  <select
+                    value=""
+                    onChange={(e) => { setForm((f) => ({ ...f, targetProjectId: e.target.value })); setError(''); }}
+                    className="mt-2 w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
+                  >
+                    <option value="">-- בחר מחקר --</option>
+                    {allProjects.map((p) => (
+                      <option key={p.projectId} value={String(p.projectId)}>
+                        {p.projectNameHe || p.projectNameEn || `מחקר #${p.projectId}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               ) : (
                 <select
                   value={form.targetProjectId}
@@ -145,7 +162,7 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
                 >
                   <option value="">-- בחר מחקר --</option>
                   {allProjects.map((p) => (
-                    <option key={p.projectId} value={p.projectId}>
+                    <option key={p.projectId} value={String(p.projectId)}>
                       {p.projectNameHe || p.projectNameEn || `מחקר #${p.projectId}`}
                     </option>
                   ))}
@@ -210,7 +227,7 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
 
               <hr className="border-amber-200" />
 
-              <p className="text-xs text-amber-700">
+              <p className="text-sm text-amber-700">
                 לאחר האישור, הפעולה תירשם בריכוז התנועות של שני המחקרים ולא ניתן לבטלה.
               </p>
             </div>

@@ -25,21 +25,42 @@ namespace RupResearchAPI.Services
             return (host, port, user, pass, fromName, toEmail, siteUrl);
         }
 
-        private async Task SendAsync(string toEmail, string subject, string htmlBody)
+        private async Task SendAsync(string toEmail, string subject, string htmlBody, List<string>? attachmentPaths = null)
         {
             var (host, port, user, pass, fromName, _, _) = ReadConfig();
+
+            Console.WriteLine($"[EMAIL] Connecting to {host}:{port} as {user} → {toEmail}");
 
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(fromName, user));
             message.To.Add(new MailboxAddress("", toEmail));
             message.Subject = subject;
-            message.Body = new TextPart("html") { Text = htmlBody };
+
+            var builder = new BodyBuilder { HtmlBody = htmlBody };
+            if (attachmentPaths != null)
+            {
+                foreach (var path in attachmentPaths.Where(File.Exists))
+                {
+                    builder.Attachments.Add(path);
+                    Console.WriteLine($"[EMAIL] Attaching: {Path.GetFileName(path)}");
+                }
+            }
+            message.Body = builder.ToMessageBody();
 
             using var client = new SmtpClient();
-            await client.ConnectAsync(host, port, SecureSocketOptions.StartTls);
-            await client.AuthenticateAsync(user, pass);
-            await client.SendAsync(message);
-            await client.DisconnectAsync(true);
+            try
+            {
+                await client.ConnectAsync(host, port, SecureSocketOptions.StartTls);
+                await client.AuthenticateAsync(user, pass);
+                await client.SendAsync(message);
+                await client.DisconnectAsync(true);
+                Console.WriteLine($"[EMAIL] Sent successfully to {toEmail}");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[EMAIL ERROR] {ex.GetType().Name}: {ex.Message}");
+                throw new Exception($"שגיאה בשליחת מייל: {ex.Message}", ex);
+            }
         }
 
         public async Task SendPaymentRequestEmailAsync(
@@ -52,72 +73,117 @@ namespace RupResearchAPI.Services
             string? description,
             string? comments,
             int requestId = 0,
-            List<string>? filePaths = null)
+            List<string>? filePaths = null,
+            decimal projectBudget = 0,
+            decimal projectAvailable = 0,
+            int projectUsagePct = 0)
         {
             var (_, _, _, _, _, toEmail, siteUrl) = ReadConfig();
             var date = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
 
-            var hasFiles = filePaths != null && filePaths.Count > 0;
+            // Amount color coding
+            string amountColor, amountBg, amountBadge;
+            if (amount <= 5000)      { amountColor = "#16a34a"; amountBg = "#f0fdf4"; amountBadge = "🟢 סכום רגיל"; }
+            else if (amount <= 20000){ amountColor = "#d97706"; amountBg = "#fffbeb"; amountBadge = "🟡 סכום בינוני"; }
+            else                     { amountColor = "#dc2626"; amountBg = "#fef2f2"; amountBadge = "🔴 סכום גבוה"; }
+
+            // Budget status
+            string budgetIcon, budgetLabel, budgetBg, budgetColor;
+            if (projectBudget == 0)           { budgetIcon = "ℹ️"; budgetLabel = "לא הוגדר תקציב"; budgetBg = "#f8fafc"; budgetColor = "#64748b"; }
+            else if (projectAvailable < 0)    { budgetIcon = "🔴"; budgetLabel = $"גירעון תקציבי ({projectUsagePct}% נוצל)"; budgetBg = "#fef2f2"; budgetColor = "#dc2626"; }
+            else if (projectUsagePct >= 80)   { budgetIcon = "🟡"; budgetLabel = $"ניצול גבוה ({projectUsagePct}% נוצל)"; budgetBg = "#fffbeb"; budgetColor = "#d97706"; }
+            else                               { budgetIcon = "🟢"; budgetLabel = $"תקציב תקין ({projectUsagePct}% נוצל)"; budgetBg = "#f0fdf4"; budgetColor = "#16a34a"; }
+
+            // Extra rows
             var extraRows = "";
             if (!string.IsNullOrWhiteSpace(description))
-                extraRows += $@"<tr><td style='padding:12px 16px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right;'>📝 תיאור</td><td style='padding:12px 16px;color:#1e293b;border-bottom:1px solid #f1f5f9;text-align:left;'>{description}</td></tr>";
+                extraRows += $@"<tr><td style='padding:11px 16px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right;white-space:nowrap;'>📝 תיאור</td><td style='padding:11px 16px;color:#1e293b;border-bottom:1px solid #f1f5f9;text-align:right;'>{description}</td></tr>";
             if (!string.IsNullOrWhiteSpace(comments))
-                extraRows += $@"<tr><td style='padding:12px 16px;color:#64748b;font-size:13px;text-align:right;'>💬 הערות</td><td style='padding:12px 16px;color:#1e293b;text-align:left;'>{comments}</td></tr>";
-            if (hasFiles)
-            {
-                var fileNames = string.Join(", ", filePaths!.Select(p => System.IO.Path.GetFileName(p)));
-                extraRows += $@"<tr style='background:#f8fafc;'><td style='padding:12px 16px;color:#64748b;font-size:13px;text-align:right;'>📎 קבצים מצורפים</td><td style='padding:12px 16px;color:#1e293b;text-align:left;'>{filePaths!.Count} קבצים: {fileNames}</td></tr>";
-            }
+                extraRows += $@"<tr style='background:#f8fafc;'><td style='padding:11px 16px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right;white-space:nowrap;'>💬 הערות</td><td style='padding:11px 16px;color:#1e293b;border-bottom:1px solid #f1f5f9;text-align:right;'>{comments}</td></tr>";
+
+            var fileCount = filePaths?.Count ?? 0;
+            var filesRow = fileCount > 0
+                ? $@"<tr><td style='padding:11px 16px;color:#64748b;font-size:13px;text-align:right;white-space:nowrap;'>📎 קבצים מצורפים</td><td style='padding:11px 16px;color:#1e293b;text-align:right;'>{fileCount} קבצים</td></tr>"
+                : "";
+
+            var budgetRow = projectBudget > 0
+                ? $@"<tr style='background:{budgetBg};'><td style='padding:11px 16px;color:#64748b;font-size:13px;border-top:2px solid #f1f5f9;text-align:right;white-space:nowrap;'>📊 מצב תקציב המחקר</td><td style='padding:11px 16px;font-weight:bold;color:{budgetColor};border-top:2px solid #f1f5f9;text-align:right;'>{budgetIcon} {budgetLabel} · יתרה: ₪{projectAvailable:N0}</td></tr>"
+                : "";
 
             var html = $@"<!DOCTYPE html>
 <html dir='rtl' lang='he'>
-<head><meta charset='UTF-8'></head>
-<body style='margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif;'>
-<table width='100%' cellpadding='0' cellspacing='0' style='background:#f1f5f9;padding:32px 16px;'>
-  <tr><td align='center'>
-    <table width='600' cellpadding='0' cellspacing='0' style='max-width:600px;width:100%;'>
-      <tr><td style='background:linear-gradient(135deg,#003478 0%,#1B4080 100%);padding:32px 28px;border-radius:16px 16px 0 0;text-align:center;'>
-        <p style='color:#5CB800;font-size:13px;margin:0 0 6px;letter-spacing:1px;font-weight:bold;'>RUPRESEARCH</p>
-        <h1 style='color:white;margin:0;font-size:26px;font-weight:bold;'>📄 בקשת תשלום חדשה</h1>
-        <p style='color:rgba(255,255,255,0.7);margin:8px 0 0;font-size:14px;'>נשלחה ב-{date}</p>
-      </td></tr>
-      <tr><td style='background:#003478;padding:16px 28px;'>
-        <table width='100%' cellpadding='0' cellspacing='0' dir='rtl'>
-          <tr>
-            <td style='text-align:right;'>
-              <p style='color:rgba(255,255,255,0.6);font-size:11px;margin:0 0 2px;'>הוגש על ידי</p>
-              <p style='color:white;font-size:17px;font-weight:bold;margin:0;'>{submitterName}</p>
-              {(!string.IsNullOrWhiteSpace(submitterEmail) ? $"<p style='color:#93c5fd;font-size:13px;margin:2px 0 0;'>{submitterEmail}</p>" : "")}
-            </td>
-            <td style='text-align:left;'>
-              <span style='background:rgba(92,184,0,0.25);color:#5CB800;font-size:12px;font-weight:bold;padding:6px 14px;border-radius:20px;border:1px solid rgba(92,184,0,0.4);'>ממתין לאישור</span>
-            </td>
-          </tr>
-        </table>
-      </td></tr>
-      <tr><td style='background:white;padding:0;'>
-        <table width='100%' cellpadding='0' cellspacing='0' dir='rtl'>
-          <tr style='background:#f8fafc;'><td style='padding:12px 16px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right;white-space:nowrap;'>📁 מחקר</td><td style='padding:12px 16px;font-weight:bold;color:#1e293b;border-bottom:1px solid #f1f5f9;text-align:left;'>{projectName}</td></tr>
-          <tr><td style='padding:12px 16px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right;white-space:nowrap;'>📋 כותרת</td><td style='padding:12px 16px;font-weight:bold;color:#1e293b;border-bottom:1px solid #f1f5f9;text-align:left;'>{requestTitle}</td></tr>
-          <tr style='background:#f8fafc;'><td style='padding:12px 16px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right;white-space:nowrap;'>💼 קטגוריה</td><td style='padding:12px 16px;color:#1e293b;border-bottom:1px solid #f1f5f9;text-align:left;'>{category}</td></tr>
-          <tr><td style='padding:12px 16px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right;white-space:nowrap;'>💰 סכום</td><td style='padding:12px 16px;font-size:22px;font-weight:bold;color:#003478;border-bottom:1px solid #f1f5f9;text-align:left;'>₪{amount:N0}</td></tr>
-          <tr style='background:#f8fafc;'><td style='padding:12px 16px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right;white-space:nowrap;'>📅 תאריך</td><td style='padding:12px 16px;color:#1e293b;border-bottom:1px solid #f1f5f9;text-align:left;'>{date}</td></tr>
-          {extraRows}
-        </table>
-      </td></tr>
-      <tr><td style='background:white;padding:24px 28px;border-top:2px solid #f1f5f9;text-align:center;'>
-        <a href='{siteUrl}/approvals?requestId={requestId}' style='display:inline-block;background:#003478;color:white;padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:bold;font-size:15px;'>🔐 מעבר לאישור הבקשה</a>
-      </td></tr>
-      <tr><td style='background:#1e293b;padding:16px 28px;border-radius:0 0 16px 16px;text-align:center;'>
-        <p style='color:#64748b;font-size:11px;margin:0;'>מערכת ניהול מחקרים · המכללה האקדמית רופין · RupResearch System</p>
-      </td></tr>
+<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'></head>
+<body style='margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;'>
+<table width='100%' cellpadding='0' cellspacing='0' style='background:#f1f5f9;padding:24px 16px;'>
+<tr><td align='center'>
+<table width='600' cellpadding='0' cellspacing='0' style='max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);'>
+
+  <!-- Status bar -->
+  <tr><td style='background:#1e40af;padding:12px 24px;text-align:center;'>
+    <span style='color:white;font-size:15px;font-weight:bold;letter-spacing:0.3px;'>🔔 בקשת תשלום חדשה ממתינה לטיפול</span>
+  </td></tr>
+
+  <!-- Header -->
+  <tr><td style='background:linear-gradient(135deg,#003478 0%,#1B4080 100%);padding:28px 28px 20px;text-align:center;'>
+    <p style='color:#93c5fd;font-size:12px;margin:0 0 8px;letter-spacing:2px;font-weight:bold;'>RUPRESEARCH · מערכת ניהול מחקרים</p>
+    <h1 style='color:white;margin:0 0 12px;font-size:24px;font-weight:bold;'>📄 בקשת תשלום חדשה</h1>
+    <table width='100%' cellpadding='0' cellspacing='0' dir='rtl' style='margin-top:8px;'>
+      <tr>
+        <td style='text-align:right;'>
+          <p style='color:rgba(255,255,255,0.55);font-size:12px;margin:0 0 3px;'>הוגשה על ידי</p>
+          <p style='color:white;font-size:17px;font-weight:bold;margin:0;'>{submitterName}</p>
+          {(!string.IsNullOrWhiteSpace(submitterEmail) ? $"<p style='color:#93c5fd;font-size:13px;margin:3px 0 0;'>{submitterEmail}</p>" : "")}
+        </td>
+        <td style='text-align:left;vertical-align:top;padding-top:4px;'>
+          <span style='background:rgba(253,224,71,0.2);color:#fde047;font-size:12px;font-weight:bold;padding:5px 14px;border-radius:20px;border:1px solid rgba(253,224,71,0.35);white-space:nowrap;'>⏳ ממתין לאישור</span>
+        </td>
+      </tr>
     </table>
   </td></tr>
+
+  <!-- Quick summary -->
+  <tr><td style='background:#0f2d5e;padding:14px 28px;' dir='rtl'>
+    <p style='color:rgba(255,255,255,0.6);font-size:12px;margin:0 0 4px;'>מחקר</p>
+    <p style='color:white;font-size:15px;font-weight:bold;margin:0;'>"{projectName}"</p>
+  </td></tr>
+
+  <!-- Amount box -->
+  <tr><td style='background:{amountBg};padding:24px 28px;text-align:center;border-bottom:3px solid {amountColor}20;'>
+    <p style='color:#64748b;font-size:13px;margin:0 0 6px;'>💰 סכום מבוקש</p>
+    <p style='color:{amountColor};font-size:42px;font-weight:bold;margin:0 0 10px;line-height:1;'>₪{amount:N0}</p>
+    <span style='background:{amountColor}18;color:{amountColor};font-size:13px;font-weight:bold;padding:5px 18px;border-radius:20px;border:1px solid {amountColor}30;'>{amountBadge}</span>
+  </td></tr>
+
+  <!-- Details table -->
+  <tr><td style='background:white;padding:0;'>
+    <table width='100%' cellpadding='0' cellspacing='0' dir='rtl' style='border-collapse:collapse;'>
+      <tr><td colspan='2' style='padding:16px 20px 8px;font-size:13px;font-weight:bold;color:#374151;letter-spacing:0.3px;'>פרטי הבקשה</td></tr>
+      <tr style='background:#f8fafc;'><td style='padding:11px 20px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;white-space:nowrap;width:38%;'>📁 מחקר</td><td style='padding:11px 20px;font-weight:bold;color:#1e293b;border-bottom:1px solid #f1f5f9;font-size:14px;'>{projectName}</td></tr>
+      <tr><td style='padding:11px 20px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;white-space:nowrap;'>📋 כותרת הבקשה</td><td style='padding:11px 20px;color:#1e293b;border-bottom:1px solid #f1f5f9;font-size:14px;'>{requestTitle}</td></tr>
+      <tr style='background:#f8fafc;'><td style='padding:11px 20px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;white-space:nowrap;'>💼 קטגוריה</td><td style='padding:11px 20px;color:#1e293b;border-bottom:1px solid #f1f5f9;font-size:14px;'>{category}</td></tr>
+      <tr><td style='padding:11px 20px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;white-space:nowrap;'>👤 מגיש הבקשה</td><td style='padding:11px 20px;color:#1e293b;border-bottom:1px solid #f1f5f9;font-size:14px;'>{submitterName}</td></tr>
+      <tr style='background:#f8fafc;'><td style='padding:11px 20px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;white-space:nowrap;'>📅 תאריך הגשה</td><td style='padding:11px 20px;color:#1e293b;border-bottom:1px solid #f1f5f9;font-size:14px;'>{date}</td></tr>
+      {extraRows}{filesRow}{budgetRow}
+    </table>
+  </td></tr>
+
+  <!-- CTA -->
+  <tr><td style='background:white;padding:24px 28px 28px;text-align:center;'>
+    <a href='{siteUrl}/approvals?requestId={requestId}' style='display:inline-block;background:#003478;color:white;padding:15px 40px;border-radius:10px;text-decoration:none;font-weight:bold;font-size:16px;letter-spacing:0.3px;'>🔍 פתח את הבקשה במערכת</a>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style='background:#1e293b;padding:16px 28px;text-align:center;'>
+    <p style='color:#64748b;font-size:12px;margin:0;'>מערכת ניהול מחקרים · המכללה האקדמית רופין · RupResearch System</p>
+  </td></tr>
+
+</table>
+</td></tr>
 </table>
 </body>
 </html>";
 
-            await SendAsync(toEmail, $"📄 בקשת תשלום חדשה — {projectName} | ₪{amount:N0}", html);
+            await SendAsync(toEmail, $"🔔 בקשת תשלום חדשה ממתינה לטיפול — {projectName} | ₪{amount:N0}", html, filePaths);
         }
 
         public async Task SendHourReportEmailAsync(

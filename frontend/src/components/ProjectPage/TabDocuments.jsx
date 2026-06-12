@@ -23,7 +23,7 @@ function FileIcon({ fileType }) {
   if (isExcel) { label = 'XLS';  cls = 'bg-green-100 text-green-600'; }
 
   return (
-    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold ${cls}`}>
+    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold ${cls}`}>
       {label}
     </div>
   );
@@ -133,7 +133,7 @@ export default function TabDocuments({ projectId, files, onChanged, readOnly = f
           <button
             type="button"
             onClick={() => setShowNewFolder((v) => !v)}
-            className="flex items-center gap-1.5 text-xs font-medium text-primary border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary/5 transition-colors"
+            className="flex items-center gap-1.5 text-sm font-medium text-primary border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary/5 transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -149,7 +149,7 @@ export default function TabDocuments({ projectId, files, onChanged, readOnly = f
             <button
               type="button"
               onClick={() => { setShowNewFolder(false); setNewFolderInput(''); }}
-              className="text-gray-400 hover:text-gray-600 text-xs"
+              className="text-gray-400 hover:text-gray-600 text-sm"
             >
               ✕
             </button>
@@ -157,7 +157,7 @@ export default function TabDocuments({ projectId, files, onChanged, readOnly = f
               type="button"
               onClick={handleCreateFolder}
               disabled={!newFolderInput.trim()}
-              className="px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg disabled:opacity-40 transition-colors"
+              className="px-3 py-1.5 bg-primary text-white text-sm font-medium rounded-lg disabled:opacity-40 transition-colors"
             >
               צור
             </button>
@@ -180,7 +180,7 @@ export default function TabDocuments({ projectId, files, onChanged, readOnly = f
         {/* Folder + file selectors */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">תיקייה</label>
+            <label className="block text-sm text-gray-500 mb-1">תיקייה</label>
             <select
               value={selectedFolder}
               onChange={(e) => setSelectedFolder(e.target.value)}
@@ -193,7 +193,7 @@ export default function TabDocuments({ projectId, files, onChanged, readOnly = f
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">קובץ</label>
+            <label className="block text-sm text-gray-500 mb-1">קובץ</label>
             <label className="flex items-center gap-2 cursor-pointer">
               <div className="flex-1 flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white hover:bg-gray-50 transition-colors min-w-0">
                 <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,7 +216,7 @@ export default function TabDocuments({ projectId, files, onChanged, readOnly = f
         <div className="flex items-center justify-between pt-1">
           {selectedFile && (
             <button type="button" onClick={() => setSelectedFile(null)}
-              className="text-xs text-gray-400 hover:text-gray-600">
+              className="text-sm text-gray-400 hover:text-gray-600">
               בטל בחירה
             </button>
           )}
@@ -258,7 +258,7 @@ export default function TabDocuments({ projectId, files, onChanged, readOnly = f
                     d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
                 </svg>
                 <span className="text-sm font-semibold text-gray-700">{folderName}</span>
-                <span className="text-xs text-gray-400">
+                <span className="text-sm text-gray-400">
                   ({folderFiles.length} {folderFiles.length === 1 ? 'קובץ' : 'קבצים'})
                 </span>
               </div>
@@ -274,7 +274,7 @@ export default function TabDocuments({ projectId, files, onChanged, readOnly = f
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-800 truncate">{f.fileName}</p>
                         {f.createdDate && (
-                          <p className="text-xs text-gray-400">{fmtDate(f.createdDate)}</p>
+                          <p className="text-sm text-gray-400">{fmtDate(f.createdDate)}</p>
                         )}
                       </div>
 
@@ -283,7 +283,7 @@ export default function TabDocuments({ projectId, files, onChanged, readOnly = f
                         href={f.path}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-1 text-xs text-primary hover:text-primary-dark font-medium whitespace-nowrap px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+                        className="flex items-center gap-1 text-sm text-primary hover:text-primary-dark font-medium whitespace-nowrap px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -296,7 +296,7 @@ export default function TabDocuments({ projectId, files, onChanged, readOnly = f
                       <a
                         href={f.path}
                         download={f.fileName}
-                        className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
+                        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

@@ -16,7 +16,7 @@ function ExpandedDetails({ row }) {
     return (
       <tr className="bg-blue-50/30">
         <td colSpan={6} className="px-10 py-3">
-          <div className="text-xs">
+          <div className="text-sm">
             <dt className="text-gray-400 mb-0.5">עוזר מחקר שקיבל תשלום</dt>
             <dd className="text-gray-700 font-medium">
               {row.requestedByUserName || row.requestedByUserId || '—'}
@@ -34,7 +34,7 @@ function ExpandedDetails({ row }) {
   return (
     <tr className="bg-blue-50/30">
       <td colSpan={6} className="px-10 py-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           {row.providerName && (
             <div>
               <dt className="text-gray-400 mb-0.5">שם ספק</dt>
@@ -256,13 +256,13 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
           ריכוז תנועות ({rows.length})
         </span>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-400">הוצאות שאושרו + העברות תקציב</span>
+          <span className="text-sm text-gray-400">הוצאות שאושרו + העברות תקציב</span>
           {/* Export button */}
           <button
             type="button"
             onClick={exportToExcel}
             disabled={rows.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             title="ייצוא לאקסל"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -276,30 +276,30 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
 
       {/* Date range filter */}
       <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap bg-gray-50/60">
-        <span className="text-xs text-gray-500 font-medium">סינון לפי תאריך:</span>
+        <span className="text-sm text-gray-500 font-medium">סינון לפי תאריך:</span>
         <div className="flex items-center gap-1.5">
-          <label className="text-xs text-gray-400">מ-</label>
+          <label className="text-sm text-gray-400">מ-</label>
           <HebrewDatePicker
             value={fromDate}
             onChange={setFromDate}
             placeholder="מ-"
-            className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+            className="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-white"
             wrapperClassName=""
           />
         </div>
         <div className="flex items-center gap-1.5">
-          <label className="text-xs text-gray-400">עד</label>
+          <label className="text-sm text-gray-400">עד</label>
           <HebrewDatePicker
             value={toDate}
             onChange={setToDate}
             placeholder="עד"
-            className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+            className="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-white"
             wrapperClassName=""
           />
         </div>
         {(fromDate || toDate) && (
           <button onClick={() => { setFromDate(''); setToDate(''); }}
-            className="text-xs text-gray-400 hover:text-gray-600 underline">נקה</button>
+            className="text-sm text-gray-400 hover:text-gray-600 underline">נקה</button>
         )}
       </div>
 
@@ -310,7 +310,7 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-xs">
+            <thead className="bg-gray-50 text-gray-500 text-sm">
               <tr>
                 <th className="px-5 py-3 text-right font-medium w-8" />
                 <th className="px-5 py-3 text-right font-medium">תאריך</th>

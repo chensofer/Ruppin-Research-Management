@@ -13,7 +13,7 @@ function getProjectRole(systemAuthorization) {
 }
 
 const PI_BADGE = (
-  <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+  <span className="inline-flex items-center gap-1 text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
     <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
     </svg>
@@ -114,7 +114,7 @@ export default function TabTeam({ projectId, teamMembers, principalResearcherId,
             <UserAvatar userId={selectedUser.userId} firstName={selectedUser.firstName} lastName={selectedUser.lastName} size="md" className="bg-primary text-white" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-primary truncate">{selectedUser.firstName} {selectedUser.lastName}</p>
-              <p className="text-xs text-primary/60">{selectedUser.userId} · {selectedUser.systemAuthorization}</p>
+              <p className="text-sm text-primary/60">{selectedUser.userId} · {selectedUser.systemAuthorization}</p>
             </div>
             <button type="button" onClick={handleClearSelection} className="text-primary/40 hover:text-primary transition-colors p-1">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,7 +140,7 @@ export default function TabTeam({ projectId, teamMembers, principalResearcherId,
                   <li key={u.userId} onMouseDown={() => handleSelect(u)}
                     className="px-3 py-2.5 cursor-pointer hover:bg-primary/5 text-sm flex justify-between items-center">
                     <span className="font-medium text-gray-800">{u.firstName} {u.lastName}</span>
-                    <span className="text-xs text-gray-400">{u.userId} · {u.systemAuthorization}</span>
+                    <span className="text-sm text-gray-400">{u.userId} · {u.systemAuthorization}</span>
                   </li>
                 )) : (
                   <li className="px-3 py-3 text-sm text-gray-400 text-center">לא נמצאו תוצאות</li>
@@ -216,7 +216,7 @@ export default function TabTeam({ projectId, teamMembers, principalResearcherId,
                   <UserAvatar userId={m.userId} firstName={m.firstName} lastName={m.lastName} size="lg" className="bg-primary text-white" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800">{m.firstName} {m.lastName}</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-sm text-gray-400">
                       {norm(m.userId)}
                       {m.projectRole ? ` · ${m.projectRole}` : ''}
                     </p>

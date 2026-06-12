@@ -165,7 +165,7 @@ export default function StepAssistants({ data, onChange }) {
       {/* --- Tab: Existing --- */}
       {tab === 'existing' && (
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
-          {loadError && <p className="text-xs text-red-500">{loadError}</p>}
+          {loadError && <p className="text-sm text-red-500">{loadError}</p>}
 
           <div className="relative">
             <input
@@ -199,11 +199,11 @@ export default function StepAssistants({ data, onChange }) {
                         className="px-3 py-2.5 cursor-pointer hover:bg-primary-light text-sm">
                         <div className="flex items-center justify-between">
                           <span className="font-medium text-gray-800">{u.firstName} {u.lastName}</span>
-                          <span className="text-xs text-gray-400">
+                          <span className="text-sm text-gray-400">
                             {u.salaryPerHour != null ? `₪${u.salaryPerHour}/שעה` : ''}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-400">ת"ז - {u.userId}</p>
+                        <p className="text-sm text-gray-400">ת"ז - {u.userId}</p>
                       </li>
                     ))}
                   </>
@@ -225,7 +225,7 @@ export default function StepAssistants({ data, onChange }) {
                 <UserAvatar userId={stagedUser.userId} firstName={stagedUser.firstName} lastName={stagedUser.lastName} size="lg" className="bg-blue-100 text-primary" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-800">{stagedUser.firstName} {stagedUser.lastName}</p>
-                  <p className="text-xs text-gray-400">ת"ז - {stagedUser.userId}</p>
+                  <p className="text-sm text-gray-400">ת"ז - {stagedUser.userId}</p>
                 </div>
                 <button type="button"
                   onClick={() => { setStagedUser(null); setQuery(''); setStagedSalaryError(''); }}
@@ -244,10 +244,10 @@ export default function StepAssistants({ data, onChange }) {
                     placeholder="שכר לשעה (₪) *"
                     className={`w-full border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary ${stagedSalaryError ? errorCls : 'border-gray-200'}`}
                   />
-                  {stagedSalaryError && <p className="text-xs text-red-500 mt-1">{stagedSalaryError}</p>}
+                  {stagedSalaryError && <p className="text-sm text-red-500 mt-1">{stagedSalaryError}</p>}
                 </div>
                 <button type="button" onClick={commitStaged}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-dark transition-colors whitespace-nowrap">
+                  className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-dark transition-colors whitespace-nowrap">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
@@ -262,7 +262,7 @@ export default function StepAssistants({ data, onChange }) {
       {/* --- Tab: New user --- */}
       {tab === 'new' && (
         <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
-          <p className="text-xs text-primary/70 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+          <p className="text-sm text-primary/70 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
             הסיסמה הזמנית של העוזר תהיה מספר הת"ז שהוזן — ניתן לשנותה לאחר מכן.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -270,31 +270,31 @@ export default function StepAssistants({ data, onChange }) {
               <input type="text" placeholder="ת.ז. (9 ספרות) *" value={newForm.assistantUserId}
                 onChange={setNf('assistantUserId')} maxLength={9}
                 className={`${inputCls} ${newFormErrors.assistantUserId ? errorCls : ''}`} />
-              {newFormErrors.assistantUserId && <p className="text-xs text-red-500 mt-0.5">{newFormErrors.assistantUserId}</p>}
+              {newFormErrors.assistantUserId && <p className="text-sm text-red-500 mt-0.5">{newFormErrors.assistantUserId}</p>}
             </div>
             <div>
               <input type="text" placeholder="שם פרטי *" value={newForm.firstName}
                 onChange={setNf('firstName')}
                 className={`${inputCls} ${newFormErrors.firstName ? errorCls : ''}`} />
-              {newFormErrors.firstName && <p className="text-xs text-red-500 mt-0.5">{newFormErrors.firstName}</p>}
+              {newFormErrors.firstName && <p className="text-sm text-red-500 mt-0.5">{newFormErrors.firstName}</p>}
             </div>
             <div>
               <input type="text" placeholder="שם משפחה *" value={newForm.lastName}
                 onChange={setNf('lastName')}
                 className={`${inputCls} ${newFormErrors.lastName ? errorCls : ''}`} />
-              {newFormErrors.lastName && <p className="text-xs text-red-500 mt-0.5">{newFormErrors.lastName}</p>}
+              {newFormErrors.lastName && <p className="text-sm text-red-500 mt-0.5">{newFormErrors.lastName}</p>}
             </div>
             <div>
               <input type="email" placeholder="אימייל *" value={newForm.email}
                 onChange={setNf('email')}
                 className={`${inputCls} ${newFormErrors.email ? errorCls : ''}`} />
-              {newFormErrors.email && <p className="text-xs text-red-500 mt-0.5">{newFormErrors.email}</p>}
+              {newFormErrors.email && <p className="text-sm text-red-500 mt-0.5">{newFormErrors.email}</p>}
             </div>
             <div className="sm:col-span-2">
               <input type="number" placeholder="שכר לשעה (₪) *" value={newForm.salaryPerHour}
                 onChange={setNf('salaryPerHour')}
                 className={`${inputCls} ${newFormErrors.salaryPerHour ? errorCls : ''}`} />
-              {newFormErrors.salaryPerHour && <p className="text-xs text-red-500 mt-0.5">{newFormErrors.salaryPerHour}</p>}
+              {newFormErrors.salaryPerHour && <p className="text-sm text-red-500 mt-0.5">{newFormErrors.salaryPerHour}</p>}
             </div>
           </div>
           <button type="button" onClick={commitNew} disabled={savingNew}
@@ -314,7 +314,7 @@ export default function StepAssistants({ data, onChange }) {
       {/* --- Unified selected assistants list --- */}
       {data.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-gray-500 mb-2">עוזרי מחקר שנוספו ({data.length})</p>
+          <p className="text-sm font-semibold text-gray-500 mb-2">עוזרי מחקר שנוספו ({data.length})</p>
           <div className="space-y-2 max-h-60 overflow-y-auto pr-0.5">
           {data.map((a, idx) => (
             <div key={a.assistantUserId ?? idx}
@@ -324,21 +324,21 @@ export default function StepAssistants({ data, onChange }) {
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium text-gray-800">{a.firstName} {a.lastName}</p>
                   {a.isNewUser && (
-                    <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">חדש</span>
+                    <span className="text-sm bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">חדש</span>
                   )}
                 </div>
-                <p className="text-xs text-gray-400">ת"ז - {a.assistantUserId}</p>
+                <p className="text-sm text-gray-400">ת"ז - {a.assistantUserId}</p>
               </div>
-              <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full font-medium flex-shrink-0">
+              <span className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded-full font-medium flex-shrink-0">
                 עוזר מחקר
               </span>
-              <div className="flex items-center gap-1 text-xs text-gray-500 flex-shrink-0">
+              <div className="flex items-center gap-1 text-sm text-gray-500 flex-shrink-0">
                 <input
                   type="number" min={0}
                   value={a.salaryPerHour}
                   onChange={(e) => updateSalary(a, e.target.value)}
                   placeholder="₪/שעה"
-                  className="w-24 border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-24 border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
               <button type="button" onClick={() => removeAssistant(a)}

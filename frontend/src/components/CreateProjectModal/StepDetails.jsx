@@ -12,7 +12,7 @@ function Field({ label, required, children, error }) {
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       {children}
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
     </div>
   );
 }
@@ -98,10 +98,10 @@ export default function StepDetails({ data, onChange, errors }) {
             <UserAvatar userId={data.principalResearcherId} firstName={data.principalResearcherName} size="md" className="bg-primary text-white" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-primary truncate">{data.principalResearcherName}</p>
-              <p className="text-xs text-primary/60">ת"ז - {data.principalResearcherId}</p>
+              <p className="text-sm text-primary/60">ת"ז - {data.principalResearcherId}</p>
             </div>
             {data.principalResearcherRole && (
-              <span className="text-xs bg-primary/10 text-primary font-medium px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0">
+              <span className="text-sm bg-primary/10 text-primary font-medium px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0">
                 {data.principalResearcherRole}
               </span>
             )}
@@ -140,9 +140,9 @@ export default function StepDetails({ data, onChange, errors }) {
                     className="px-3 py-2.5 cursor-pointer hover:bg-primary-light text-sm flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-medium text-gray-800 truncate">{u.firstName} {u.lastName}</p>
-                      <p className="text-xs text-gray-400">ת"ז - {u.userId}</p>
+                      <p className="text-sm text-gray-400">ת"ז - {u.userId}</p>
                     </div>
-                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                    <span className="text-sm text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
                       {u.systemAuthorization}
                     </span>
                   </li>

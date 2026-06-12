@@ -48,10 +48,10 @@ function StatCard({ label, value, valueClass = 'text-gray-900', sub, icon, bg = 
         <div className="w-8 h-8 rounded-xl bg-gray-100/80 flex items-center justify-center text-gray-500 flex-shrink-0">
           {icon}
         </div>
-        <p className="text-xs text-gray-400 font-semibold text-right leading-tight">{label}</p>
+        <p className="text-sm text-gray-400 font-semibold text-right leading-tight">{label}</p>
       </div>
       <p className={`text-2xl font-extrabold tabular-nums text-right leading-none ${valueClass}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 text-right">{sub}</p>}
+      {sub && <p className="text-sm text-gray-400 text-right">{sub}</p>}
     </div>
   );
 }
@@ -59,7 +59,7 @@ function StatCard({ label, value, valueClass = 'text-gray-900', sub, icon, bg = 
 function StatusBadge({ status }) {
   const isActive = status === 'פעיל' || status === 'Active' || status === 'active';
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${
+    <span className={`inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-full ${
       isActive ? 'bg-accent-light text-accent-dark' : 'bg-gray-100 text-gray-500'
     }`}>
       <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? 'bg-accent' : 'bg-gray-400'}`} />
@@ -220,7 +220,7 @@ export default function ProjectPage() {
           </button>
             <button
               onClick={() => setShowExport(true)}
-              className="flex items-center gap-1.5 text-xs font-semibold text-green-600 border border-green-200 px-2.5 py-1.5 rounded-xl hover:bg-green-50 transition-colors"
+              className="flex items-center gap-1.5 text-sm font-semibold text-green-600 border border-green-200 px-2.5 py-1.5 rounded-xl hover:bg-green-50 transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -233,7 +233,7 @@ export default function ProjectPage() {
             <button
               onClick={handleRestore}
               disabled={restoring}
-              className="flex items-center gap-1.5 text-xs font-semibold text-green-600 border border-green-200 p-2 sm:px-3 sm:py-2 rounded-xl hover:bg-green-50 hover:border-green-300 transition-all flex-shrink-0 disabled:opacity-50"
+              className="flex items-center gap-1.5 text-sm font-semibold text-green-600 border border-green-200 p-2 sm:px-3 sm:py-2 rounded-xl hover:bg-green-50 hover:border-green-300 transition-all flex-shrink-0 disabled:opacity-50"
               title="שחזר מחקר"
             >
               {restoring ? (
@@ -248,7 +248,7 @@ export default function ProjectPage() {
           ) : (
             <button
               onClick={() => setShowDeleteModal(true)}
-              className="flex items-center gap-1.5 text-xs font-semibold text-red-500 border border-red-200 p-2 sm:px-3 sm:py-2 rounded-xl hover:bg-red-50 hover:border-red-300 transition-all flex-shrink-0"
+              className="flex items-center gap-1.5 text-sm font-semibold text-red-500 border border-red-200 p-2 sm:px-3 sm:py-2 rounded-xl hover:bg-red-50 hover:border-red-300 transition-all flex-shrink-0"
               title="העבר לארכיון"
             >
               <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -268,7 +268,7 @@ export default function ProjectPage() {
             <StatusBadge status={detail.status} />
           </div>
           {detail.projectNameEn && detail.projectNameHe && (
-            <p className="text-xs text-gray-400 font-medium">{detail.projectNameEn}</p>
+            <p className="text-sm text-gray-400 font-medium">{detail.projectNameEn}</p>
           )}
         </div>
       </div>
@@ -304,7 +304,7 @@ export default function ProjectPage() {
             <p className="text-sm font-semibold text-gray-800 text-center mb-3">
               "{detail.projectNameHe}"?
             </p>
-            <p className="text-xs text-gray-400 text-center mb-5">
+            <p className="text-sm text-gray-400 text-center mb-5">
               המחקר יועבר לארכיון ויוסר מרשימת המחקרים הראשית. ניתן לשחזר אותו בכל עת דרך עמוד הארכיון.
             </p>
             <div className="flex gap-3">
@@ -486,7 +486,7 @@ export default function ProjectPage() {
 
       {/* Budget usage bar */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-card px-5 py-4 mb-6" dir="rtl">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-xs text-gray-500 mb-2.5 gap-0.5">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-sm text-gray-500 mb-2.5 gap-0.5">
           <span className="font-semibold text-gray-700">{usagePercent}% ניצול מתוך {fmt(budget)}</span>
           <span className="text-gray-400">{fmt(totalPaid)} הוצא</span>
         </div>
@@ -504,7 +504,7 @@ export default function ProjectPage() {
           />
         </div>
         {totalFuture > 0 && (
-          <div className="flex justify-between text-xs mt-2">
+          <div className="flex justify-between text-sm mt-2">
             <span className="text-amber-500 font-medium">{fmt(totalFuture)} התחייבויות</span>
             <span className="text-accent-dark font-medium">{fmt(available)} זמין</span>
           </div>

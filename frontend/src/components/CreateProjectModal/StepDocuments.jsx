@@ -89,7 +89,7 @@ export default function StepDocuments({ files, folders, onFilesChange, onFolders
             <span
               key={folder}
               onClick={() => setSelectedFolder(folder)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium cursor-pointer transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-colors ${
                 selectedFolder === folder
                   ? 'bg-primary text-white'
                   : 'bg-white border border-gray-200 text-gray-600 hover:border-primary hover:text-primary'
@@ -119,7 +119,7 @@ export default function StepDocuments({ files, folders, onFilesChange, onFolders
         <p className="text-sm text-gray-500">
           לחץ להעלאת קבצים לתיקייה: <span className="font-semibold text-primary">{selectedFolder}</span>
         </p>
-        <p className="text-xs text-gray-400 mt-1">PDF, Word, Excel, תמונות</p>
+        <p className="text-sm text-gray-400 mt-1">PDF, Word, Excel, תמונות</p>
         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFilePick} />
       </div>
 
@@ -142,7 +142,7 @@ export default function StepDocuments({ files, folders, onFilesChange, onFolders
               </svg>
               <span className="text-sm">📁</span>
               <span className="text-sm font-medium text-gray-700">{folder}</span>
-              <span className="text-xs text-gray-400 mr-auto">{folderFiles.length} קבצים</span>
+              <span className="text-sm text-gray-400 mr-auto">{folderFiles.length} קבצים</span>
             </button>
 
             {isOpen && (
@@ -159,7 +159,7 @@ export default function StepDocuments({ files, folders, onFilesChange, onFolders
                       rel="noopener noreferrer"
                       className="text-sm text-primary hover:underline flex-1 truncate"
                     >{f.fileName}</a>
-                    <span className="text-xs text-gray-400">{formatSize(f.file.size)}</span>
+                    <span className="text-sm text-gray-400">{formatSize(f.file.size)}</span>
                     <button type="button" onClick={() => removeFile(f._key)}
                       className="p-1 text-gray-300 hover:text-red-500 transition-colors">
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

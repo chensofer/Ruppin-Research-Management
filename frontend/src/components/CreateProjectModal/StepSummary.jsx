@@ -52,7 +52,7 @@ export default function StepSummary({ details, budgetCategories, teamMembers, as
         <Row label="תאריך סיום משוער"     value={fmtDate(details.endDate)} />
         {details.projectDescription?.trim() && (
           <div className="pt-2 mt-1 border-t border-gray-50">
-            <p className="text-xs text-gray-500 mb-1">תיאור המחקר</p>
+            <p className="text-sm text-gray-500 mb-1">תיאור המחקר</p>
             <p className="text-sm text-gray-700 leading-relaxed">{details.projectDescription}</p>
           </div>
         )}
@@ -86,10 +86,10 @@ export default function StepSummary({ details, budgetCategories, teamMembers, as
                   <UserAvatar userId={m.userId} firstName={m.firstName} lastName={m.lastName} size="sm" className="bg-primary text-white" />
                   <div>
                     <p className="font-medium text-gray-800">{m.firstName} {m.lastName}</p>
-                    <p className="text-xs text-gray-400">ת"ז - {m.userId}</p>
+                    <p className="text-sm text-gray-400">ת"ז - {m.userId}</p>
                   </div>
                 </div>
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{m.projectRole}</span>
+                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{m.projectRole}</span>
               </div>
             ))}
           </div>
@@ -107,14 +107,14 @@ export default function StepSummary({ details, budgetCategories, teamMembers, as
                   <div>
                     <div className="flex items-center gap-1.5">
                       <p className="font-medium text-gray-800">{a.firstName} {a.lastName}</p>
-                      {a.isNewUser && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">חדש</span>}
+                      {a.isNewUser && <span className="text-sm bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">חדש</span>}
                     </div>
-                    <p className="text-xs text-gray-400">ת"ז - {a.assistantUserId}</p>
+                    <p className="text-sm text-gray-400">ת"ז - {a.assistantUserId}</p>
                   </div>
                 </div>
                 <div className="text-left">
-                  <p className="text-xs text-blue-600 font-medium">עוזר מחקר</p>
-                  {a.salaryPerHour && <p className="text-xs text-gray-400">{fmt(a.salaryPerHour)}/שעה</p>}
+                  <p className="text-sm text-blue-600 font-medium">עוזר מחקר</p>
+                  {a.salaryPerHour && <p className="text-sm text-gray-400">{fmt(a.salaryPerHour)}/שעה</p>}
                 </div>
               </div>
             ))}
@@ -131,9 +131,9 @@ export default function StepSummary({ details, budgetCategories, teamMembers, as
                 <div className="flex justify-between text-sm">
                   <div>
                     <p className="font-medium text-gray-800">{e.categoryName}</p>
-                    {e.requestDescription && <p className="text-xs text-gray-400">{e.requestDescription}</p>}
+                    {e.requestDescription && <p className="text-sm text-gray-400">{e.requestDescription}</p>}
                     {e.providerName && (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm text-gray-500">
                         ספק: {e.providerName}
                         {e.isNewProvider && <span className="text-amber-600 mr-1"> (חדש)</span>}
                       </p>
@@ -142,7 +142,7 @@ export default function StepSummary({ details, budgetCategories, teamMembers, as
                       <div className="flex flex-wrap gap-1.5 mt-0.5">
                         {e.files.map((f, i) => (
                           <a key={i} href={URL.createObjectURL(f.file)} target="_blank" rel="noopener noreferrer"
-                            className="text-xs text-blue-500 hover:underline max-w-[120px] truncate inline-block">
+                            className="text-sm text-blue-500 hover:underline max-w-[120px] truncate inline-block">
                             {f.name}
                           </a>
                         ))}
@@ -167,7 +167,7 @@ export default function StepSummary({ details, budgetCategories, teamMembers, as
           <div className="space-y-1">
             {documents.map((d) => (
               <div key={d._key} className="flex items-center gap-2 text-sm text-gray-700 py-0.5">
-                <span className="text-gray-400 text-xs">📁 {d.folder} /</span>
+                <span className="text-gray-400 text-sm">📁 {d.folder} /</span>
                 <a href={URL.createObjectURL(d.file)} target="_blank" rel="noopener noreferrer"
                   className="truncate text-blue-600 hover:underline">{d.fileName}</a>
               </div>

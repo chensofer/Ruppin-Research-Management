@@ -130,7 +130,7 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
       {/* Balance banner */}
       <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm text-blue-700 font-medium">יתרה זמינה להתחייבויות: {fmt(availableBalance)}</span>
-        <span className="text-xs text-blue-500">לאחר ניכוי הוצאות שאושרו</span>
+        <span className="text-sm text-blue-500">לאחר ניכוי הוצאות שאושרו</span>
       </div>
 
       {/* Trigger button */}
@@ -164,11 +164,11 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-              {error && <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
+              {error && <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">קטגוריה</label>
+                  <label className="block text-sm text-gray-500 mb-1">קטגוריה</label>
                   <select value={form.categoryName} onChange={set('categoryName')} className={inputCls}>
                     <option value="">— בחר קטגוריה —</option>
                     {categories.map((c) => (
@@ -177,12 +177,12 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">סכום (₪) <span className="text-red-500">*</span></label>
+                  <label className="block text-sm text-gray-500 mb-1">סכום (₪) <span className="text-red-500">*</span></label>
                   <input type="number" min={0} value={form.expectedAmount} onChange={set('expectedAmount')}
                     placeholder="0" className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">תאריך צפוי <span className="text-red-500">*</span></label>
+                  <label className="block text-sm text-gray-500 mb-1">תאריך צפוי <span className="text-red-500">*</span></label>
                   <HebrewDatePicker
                     value={form.expectedDate}
                     onChange={(iso) => setForm((f) => ({ ...f, expectedDate: iso }))}
@@ -192,21 +192,21 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">תיאור</label>
+                  <label className="block text-sm text-gray-500 mb-1">תיאור</label>
                   <input type="text" value={form.commitmentDescription} onChange={set('commitmentDescription')}
                     placeholder="תיאור קצר" className={inputCls} />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs text-gray-500 mb-1">הערות</label>
+                <label className="block text-sm text-gray-500 mb-1">הערות</label>
                 <textarea rows={3} value={form.notes} onChange={set('notes')}
                   placeholder="הערות נוספות..." className={`${inputCls} resize-none`} />
               </div>
 
               {/* File upload */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1">קבצים מצורפים (לא חובה)</label>
+                <label className="block text-sm text-gray-500 mb-1">קבצים מצורפים (לא חובה)</label>
                 <input
                   type="file"
                   multiple
@@ -219,12 +219,12 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
                     });
                     e.target.value = '';
                   }}
-                  className="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-primary file:text-white hover:file:bg-primary-dark cursor-pointer"
+                  className="w-full text-sm text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:bg-primary file:text-white hover:file:bg-primary-dark cursor-pointer"
                 />
                 {selectedFiles.length > 0 && (
                   <ul className="mt-1.5 space-y-1">
                     {selectedFiles.map((f, i) => (
-                      <li key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded px-2 py-1">
+                      <li key={i} className="flex items-center justify-between text-sm bg-gray-50 rounded px-2 py-1">
                         <span className="text-gray-600 truncate">{f.name}</span>
                         <button type="button"
                           onClick={() => setSelectedFiles((prev) => prev.filter((_, idx) => idx !== i))}
@@ -263,7 +263,7 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-500 text-xs">
+              <thead className="bg-gray-50 text-gray-500 text-sm">
                 <tr>
                   <th className="px-5 py-3 text-right font-medium">קטגוריה</th>
                   <th className="px-5 py-3 text-right font-medium">תיאור</th>
@@ -282,7 +282,7 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
                     <td className="px-5 py-3.5 text-gray-500">{fmtDate(c.expectedDate)}</td>
                     <td className="px-5 py-3.5 font-medium text-orange-600">{fmt(c.expectedAmount)}</td>
                     <td className="px-5 py-3.5">
-                      <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{c.status}</span>
+                      <span className="text-sm bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{c.status}</span>
                     </td>
                     <td className="px-5 py-3.5">
                       {c.filePath ? (
@@ -294,7 +294,7 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
                                 href={`http://localhost:5269${path}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-primary bg-primary/10 hover:bg-primary/20 text-xs px-2 py-0.5 rounded-lg transition-colors"
+                                className="inline-flex items-center gap-1 text-primary bg-primary/10 hover:bg-primary/20 text-sm px-2 py-0.5 rounded-lg transition-colors"
                                 title={name}
                               >
                                 <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -307,7 +307,7 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
                           })}
                         </div>
                       ) : (
-                        <span className="text-xs text-gray-300">—</span>
+                        <span className="text-sm text-gray-300">—</span>
                       )}
                     </td>
                     <td className="px-5 py-3.5 text-left">

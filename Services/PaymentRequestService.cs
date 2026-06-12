@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using RupResearchAPI.Data;
 using RupResearchAPI.DTOs;
@@ -10,12 +11,14 @@ namespace RupResearchAPI.Services
         private readonly AppDbContext _db;
         private readonly IEmailService _email;
         private readonly IActivityLogService _log;
+        private readonly IWebHostEnvironment _env;
 
-        public PaymentRequestService(AppDbContext db, IEmailService email, IActivityLogService log)
+        public PaymentRequestService(AppDbContext db, IEmailService email, IActivityLogService log, IWebHostEnvironment env)
         {
             _db = db;
             _email = email;
             _log = log;
+            _env = env;
         }
 
         public async Task<List<PaymentRequestResponseDto>> GetByProject(int projectId)
@@ -299,22 +302,39 @@ namespace RupResearchAPI.Services
             var submitterEmail = user?.Email ?? "";
             var projectName    = project?.ProjectNameHe ?? $"מחקר #{req.ProjectId}";
 
-            // Collect file paths
+            // Budget stats for email
+            var projectBudget    = project?.TotalBudget ?? 0;
+            var paidForProject   = await _db.ResearchPaymentRequests
+                .Where(r => r.ProjectId == req.ProjectId && (r.Status == "אושר" || r.Status == "שולם"))
+                .SumAsync(r => r.RequestedAmount ?? 0);
+            var projectAvailable = projectBudget - paidForProject;
+            var projectUsagePct  = projectBudget > 0 ? (int)Math.Round((paidForProject / projectBudget) * 100) : 0;
+
+            // Resolve absolute file paths for email attachment
+            var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
             var filePaths = string.IsNullOrWhiteSpace(req.QuotationFilePath)
                 ? new List<string>()
-                : req.QuotationFilePath.Split(';').Where(p => !string.IsNullOrWhiteSpace(p)).ToList();
+                : req.QuotationFilePath
+                    .Split(';')
+                    .Where(p => !string.IsNullOrWhiteSpace(p))
+                    .Select(p => Path.Combine(webRoot, p.TrimStart('/')))
+                    .Where(File.Exists)
+                    .ToList();
 
             await _email.SendPaymentRequestEmailAsync(
-                submitterName:  submitterName,
-                submitterEmail: submitterEmail,
-                projectName:    projectName,
-                requestTitle:   req.RequestTitle ?? "",
-                category:       req.CategoryName ?? "",
-                amount:         req.RequestedAmount ?? 0,
-                description:    req.RequestDescription,
-                comments:       req.Comments,
-                requestId:      requestId,
-                filePaths:      filePaths);
+                submitterName:    submitterName,
+                submitterEmail:   submitterEmail,
+                projectName:      projectName,
+                requestTitle:     req.RequestTitle ?? "",
+                category:         req.CategoryName ?? "",
+                amount:           req.RequestedAmount ?? 0,
+                description:      req.RequestDescription,
+                comments:         req.Comments,
+                requestId:        requestId,
+                filePaths:        filePaths,
+                projectBudget:    projectBudget,
+                projectAvailable: projectAvailable,
+                projectUsagePct:  projectUsagePct);
         }
 
         private static PaymentRequestResponseDto ToDto(ResearchPaymentRequest r, string? providerName = null, string? requestedByUserName = null) => new()
