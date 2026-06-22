@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using RupResearchAPI.DTOs;
 using RupResearchAPI.Services;
 
@@ -13,12 +15,14 @@ namespace RupResearchAPI.Controllers
         private readonly IProjectService _projectService;
         private readonly IWebHostEnvironment _env;
         private readonly IAuditLogService _audit;
+        private readonly IMemoryCache _cache;
 
-        public ProjectsController(IProjectService projectService, IWebHostEnvironment env, IAuditLogService audit)
+        public ProjectsController(IProjectService projectService, IWebHostEnvironment env, IAuditLogService audit, IMemoryCache cache)
         {
             _projectService = projectService;
             _env = env;
             _audit = audit;
+            _cache = cache;
         }
 
         [HttpGet]
@@ -415,6 +419,47 @@ namespace RupResearchAPI.Controllers
         {
             var projects = await _projectService.GetAllProjects();
             return Ok(projects);
+        }
+
+        // GET /api/projects/ml-insights — תוצרי הרכיב החכם (Python):
+        // ציון סיכון תקציבי לפי פרויקט (Classification) ושיוך לקבוצת
+        // "פרופיל הוצאות" (Clustering). מורץ דרך ml_component/ml_insights.py
+        // ומוטמן ל-10 דקות כדי לא להריץ אימון מודלים בכל בקשה.
+        [HttpGet("ml-insights")]
+        public async Task<IActionResult> GetMlInsights()
+        {
+            const string cacheKey = "ml-insights";
+            if (_cache.TryGetValue(cacheKey, out string? cachedJson) && cachedJson != null)
+                return Content(cachedJson, "application/json");
+
+            var scriptDir = Path.Combine(_env.ContentRootPath, "ml_component");
+            var psi = new ProcessStartInfo
+            {
+                FileName = "py",
+                Arguments = "ml_insights.py",
+                WorkingDirectory = scriptDir,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                StandardOutputEncoding = System.Text.Encoding.UTF8,
+                StandardErrorEncoding = System.Text.Encoding.UTF8,
+            };
+            psi.EnvironmentVariables["PYTHONUTF8"] = "1";
+
+            using var process = Process.Start(psi);
+            if (process == null)
+                return StatusCode(500, new { message = "לא ניתן להריץ את הרכיב החכם (Python)" });
+
+            var stdout = await process.StandardOutput.ReadToEndAsync();
+            var stderr = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(stdout))
+                return StatusCode(500, new { message = "שגיאה בהרצת הרכיב החכם", details = stderr });
+
+            var json = stdout.Trim();
+            _cache.Set(cacheKey, json, TimeSpan.FromMinutes(10));
+            return Content(json, "application/json");
         }
 
         // POST /api/projects/{sourceId}/transfer-budget

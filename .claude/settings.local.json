@@ -30,7 +30,23 @@
       "Bash(sed -i 's/absolute inset-0 flex items-center justify-center text-sm font-extrabold/absolute inset-0 flex items-center justify-center text-xs font-extrabold/' \"c:\\\\Users\\\\shach\\\\Desktop\\\\Ruppin-Research-Management\\\\frontend\\\\src\\\\components\\\\ProjectCard.jsx\")",
       "Bash(sed -i 's/text-\\\\[15px\\\\]/text-base/' \"c:\\\\Users\\\\shach\\\\Desktop\\\\Ruppin-Research-Management\\\\frontend\\\\src\\\\components\\\\ProjectCard.jsx\")",
       "Bash(awk -F: '{print $1}')",
-      "Bash(dotnet run *)"
+      "Bash(dotnet run *)",
+      "Bash(sqlcmd -S media.ruppin.ac.il -U bgroup11 -P bgroup11_79466 -d bgroup11_test2 -C -Q ' *)",
+      "Bash(python -m pip --version)",
+      "Bash(python -m pip install pandas scikit-learn pyodbc matplotlib seaborn)",
+      "PowerShell(python -m pip install pandas scikit-learn pyodbc matplotlib seaborn 2>&1)",
+      "PowerShell(Get-Command python)",
+      "PowerShell(py --version)",
+      "PowerShell(py -m pip --version)",
+      "PowerShell(py -m pip install pandas scikit-learn pyodbc matplotlib seaborn 2>&1)",
+      "PowerShell(py -c \"import pyodbc; print\\(pyodbc.drivers\\(\\)\\)\")",
+      "Bash(sqlcmd -S media.ruppin.ac.il -U bgroup11 -P 'bgroup11_79466' -d bgroup11_test2 -C -Q \"SET NOCOUNT ON; SELECT TOP 10 payment_request_id, project_id, category_name, requested_amount, request_date, due_date, status, decision_date FROM research_payment_requests ORDER BY payment_request_id\" -W -f 65001)",
+      "PowerShell($env:PYTHONUTF8=1; py ml_component\\\\_inspect.py > ml_component\\\\_inspect_out.txt 2>$null; Get-Content ml_component\\\\_inspect_out.txt -Encoding utf8)",
+      "PowerShell(pwd; $env:PYTHONUTF8=1; py _inspect.py > _inspect_out.txt 2>$null; Get-Content _inspect_out.txt -Encoding utf8)",
+      "Bash(pwd && find / -maxdepth 6 -iname \"ml_component\" -type d 2>/dev/null)",
+      "Read(//c//**)",
+      "PowerShell($env:PYTHONUTF8=1; py data_prep.py 2>&1 | Select-Object -Last 25)",
+      "PowerShell($env:PYTHONUTF8=1; py approval_classifier.py 2>&1 | Select-String -NotMatch \"UserWarning|read_sql\")"
     ]
   }
 }

@@ -67,3 +67,6 @@ export const uploadCommitmentFile = (projectId, commitmentId, file) => {
 export const getAllProjects = () => axiosInstance.get('/projects/all');
 export const transferBudget = (sourceId, data) =>
   axiosInstance.post(`/projects/${sourceId}/transfer-budget`, data);
+
+// Smart component (Python ML) insights - risk score + clustering per project
+export const getMlInsights = () => axiosInstance.get('/projects/ml-insights');

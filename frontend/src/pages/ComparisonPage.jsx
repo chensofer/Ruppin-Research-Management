@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, LineChart, Line,
 } from 'recharts';
-import { getAllProjects, getProjects, getCommitments } from '../api/projectsApi';
+import { getAllProjects, getProjects, getCommitments, getMlInsights } from '../api/projectsApi';
 import { getPaymentRequestsByProject } from '../api/paymentRequestsApi';
 import Layout from '../components/Layout';
 
@@ -161,7 +161,13 @@ function buildMetrics(selectedProjects, compareData) {
 }
 
 // ── Transfer recommendations ──────────────────────────────────────────────────
-function buildTransferRecommendations(projects, myProjectIds) {
+// בחירת "מקורות" (givers) ו"יעדים" (receivers) להעברת תקציב מתבססת על
+// ציון הסיכון התקציבי (risk_score) שמחזיר מודל Random Forest שאומן ב-
+// ml_component/budget_risk_classifier.py (ראו /api/projects/ml-insights),
+// במקום סף burn-rate קשיח.
+function buildTransferRecommendations(projects, myProjectIds, mlInsights) {
+  const projectInsights = mlInsights?.projects ?? {};
+
   const enriched = projects.map(p => {
     const timePct  = calcTimePct(p);
     const budget   = p.totalBudget ?? 0;
@@ -171,22 +177,24 @@ function buildTransferRecommendations(projects, myProjectIds) {
     const burnRate = (timePct && timePct > 0) ? usagePct / timePct : null;
     const daysLeft = calcDaysLeft(p);
     const isMine   = myProjectIds.has(p.projectId);
+    const insight  = projectInsights[p.projectId] ?? projectInsights[String(p.projectId)];
+    const riskScore = insight?.risk_score ?? null;
 
     const isGiver =
       isMine &&
       avail > Math.max(budget * 0.15, 5000) &&
-      (burnRate === null || burnRate < 0.80) &&
+      (riskScore === null || riskScore < 0.3) &&
       (daysLeft === null || daysLeft > 45);
 
     const isReceiver =
       avail < 0 ||
-      (budget > 0 && usagePct > 78 && (burnRate === null || burnRate > 1.1));
+      (riskScore !== null && riskScore >= 0.5);
 
-    return { ...p, timePct, budget, paid, avail, usagePct, burnRate, daysLeft, isGiver, isReceiver };
+    return { ...p, timePct, budget, paid, avail, usagePct, burnRate, daysLeft, riskScore, isGiver, isReceiver };
   });
 
   const givers    = enriched.filter(p => p.isGiver).sort((a, b) => b.avail - a.avail);
-  const receivers = enriched.filter(p => p.isReceiver).sort((a, b) => a.avail - b.avail);
+  const receivers = enriched.filter(p => p.isReceiver).sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0));
 
   const recs = [];
   const usedGivers = new Set();
@@ -202,14 +210,14 @@ function buildTransferRecommendations(projects, myProjectIds) {
     usedGivers.add(giver.projectId);
 
     const tags = [];
-    if (giver.burnRate !== null && giver.burnRate < 0.80)
-      tags.push(`קצב שריפה נמוך (×${giver.burnRate.toFixed(2)})`);
+    if (giver.riskScore !== null)
+      tags.push(`ציון סיכון תקציבי נמוך (${Math.round(giver.riskScore * 100)}%) — מודל ML`);
     if (giver.daysLeft !== null && giver.daysLeft > 45)
       tags.push(`${giver.daysLeft} ימים נותרו למקור`);
     if (recv.avail < 0)
       tags.push(`גירעון ${fmt(Math.abs(recv.avail))}`);
-    if (recv.burnRate !== null && recv.burnRate > 1.1)
-      tags.push(`קצב שריפה גבוה (×${recv.burnRate.toFixed(2)})`);
+    if (recv.riskScore !== null && recv.riskScore >= 0.5)
+      tags.push(`ציון סיכון תקציבי גבוה (${Math.round(recv.riskScore * 100)}%) — מודל ML`);
 
     recs.push({ giver, receiver: recv, amount, tags });
   }
@@ -286,88 +294,40 @@ function buildTopicGroups(projects) {
   return clusters;
 }
 
-// ── Budget / behavior similarity groups ───────────────────────────────────────
-function buildSimilarityGroups(projects) {
-  const cat = (p) => {
-    const budget   = p.totalBudget ?? 0;
-    const paid     = p.totalPaid   ?? 0;
-    const timePct  = calcTimePct(p);
-    const usagePct = budget > 0 ? (paid / budget) * 100 : 0;
-    const burnRate = (timePct && timePct > 0) ? usagePct / timePct : null;
-    const daysLeft = calcDaysLeft(p);
-    return {
-      budgetTier: budget < 60000 ? 'small' : budget < 350000 ? 'medium' : 'large',
-      burnTier:   burnRate === null ? null : burnRate < 0.75 ? 'slow' : burnRate > 1.25 ? 'fast' : 'normal',
-      timeTier:   daysLeft === null ? null : daysLeft < 30 ? 'urgent' : daysLeft < 180 ? 'mid' : 'long',
-      usagePct, burnRate, daysLeft,
-    };
-  };
+// ── Budget / behavior groups - מבוסס על מודל Clustering (K-Means) ─────────────
+// הקיבוץ מתבסס על התוצאה של ml_component/project_clustering.py (Unsupervised
+// Learning - K-Means על מאפייני "פרופיל הוצאות" של כל פרויקט), המוחזרת
+// מה-API דרך /api/projects/ml-insights, ולא על ספי-תקציב קשיחים.
+function buildClusterGroups(projects, mlInsights) {
+  const clusters = mlInsights?.clusters;
+  const projectInsights = mlInsights?.projects;
+  if (!clusters || !projectInsights) return [];
 
-  const enriched = projects.map(p => ({ ...p, _cat: cat(p) }));
-  const groups   = [];
+  const groups = [];
+  for (const [clusterId, info] of Object.entries(clusters)) {
+    const items = projects.filter(p => info.project_ids.includes(p.projectId));
+    if (items.length === 0) continue;
 
-  const budgetMeta = {
-    small:  { icon: '🪙', label: 'תקציב קטן (עד ₪60k)',        statusLabel: 'נדרשת תשומת לב' },
-    medium: { icon: '💵', label: 'תקציב בינוני (₪60k–₪350k)',   statusLabel: 'מצב יציב' },
-    large:  { icon: '💰', label: 'תקציב גדול (מעל ₪350k)',       statusLabel: 'פוטנציאל גבוה' },
-  };
+    const danger = items.filter(p => {
+      const insight = projectInsights[p.projectId] ?? projectInsights[String(p.projectId)];
+      return (p.availableBalance ?? 0) < 0 || insight?.risk_label === 'בסיכון';
+    }).length;
 
-  for (const tier of ['small','medium','large']) {
-    const items = enriched.filter(p => p._cat.budgetTier === tier);
-    if (items.length < 2) continue;
-    const danger  = items.filter(p => (p.availableBalance ?? 0) < 0 || p._cat.usagePct >= 90).length;
-    const warning = items.filter(p => { const a = p.availableBalance ?? 0; return a >= 0 && p._cat.usagePct >= 70 && p._cat.usagePct < 90; }).length;
-    const { icon, label, statusLabel } = budgetMeta[tier];
-    const healthNote = danger > 0 ? ` — ${danger} מחקרים בסיכון` : warning > 0 ? ` — ${warning} דורשים מעקב` : ' — ביצועים תקינים';
+    const icon = info.label.includes('בסיכון') ? '🔥' : info.label.includes('חסכוני') ? '🐢' : '💵';
+    const utilizationPct = Math.round(info.avg_budget_utilization * 100);
+
     groups.push({
-      icon, alert: danger > 0,
-      title: `${label} — ${statusLabel}`,
-      insight: `${items.length} מחקרים בטווח תקציב דומה${healthNote}`,
+      icon,
+      alert: danger > 0,
+      title: `${info.label} (קבוצה ${Number(clusterId) + 1})`,
+      insight: `${items.length} מחקרים, ניצול תקציב ממוצע בקבוצה: ${utilizationPct}% — קיבוץ ע״י מודל K-Means (Machine Learning)`
+        + (danger > 0 ? ` — ${danger} מחקרים בסיכון תקציבי` : ''),
       projects: items,
     });
   }
 
-  const fast = enriched.filter(p => p._cat.burnTier === 'fast');
-  if (fast.length >= 1)
-    groups.push({ icon: '🔥', title: 'שריפת תקציב מהירה — דורש טיפול', alert: true, projects: fast,
-      insight: `${fast.length} מחקרים מוציאים מהר מהצפוי — מועמדים לקבל העברת תקציב` });
-
-  const slow = enriched.filter(p => p._cat.burnTier === 'slow');
-  if (slow.length >= 1)
-    groups.push({ icon: '🐢', title: 'שריפת תקציב איטית — יתרה צפויה', alert: false, projects: slow,
-      insight: `${slow.length} מחקרים צפויים לסיים עם יתרה עודפת — מועמדים לתת העברת תקציב` });
-
-  const urgent = enriched.filter(p => p._cat.timeTier === 'urgent');
-  if (urgent.length >= 1)
-    groups.push({ icon: '⚠️', title: 'קרובים לסיום — פחות מ-30 יום', alert: true, projects: urgent,
-      insight: 'יש לטפל ביתרות עודפות בדחיפות לפני סגירת המחקר' });
-
-  return groups;
-}
-
-function buildExplanation(giver, receiver) {
-  const giverUsage = Math.round(giver.usagePct ?? 0);
-  const recvUsage  = Math.round(receiver.usagePct ?? 0);
-
-  // --- Why the giver has surplus ---
-  let giverReason;
-  if (giver.daysLeft !== null && giver.daysLeft <= 90)
-    giverReason = `ניצל רק ${giverUsage}% מהתקציב ונותרו לו רק ${giver.daysLeft} ימים — כנראה לא ישתמש ביתרת ${fmt(giver.avail)}`;
-  else if (giver.burnRate !== null && giver.burnRate < 0.75)
-    giverReason = `ניצל רק ${giverUsage}% מהתקציב וקצב ההוצאות שלו נמוך מהצפוי (×${giver.burnRate.toFixed(2)}) — צפויה יתרה עודפת של ${fmt(giver.avail)}`;
-  else
-    giverReason = `ניצל ${giverUsage}% מהתקציב ויתרה זמינה של ${fmt(giver.avail)}`;
-
-  // --- Why the receiver needs funds ---
-  let recvReason;
-  if (receiver.avail < 0)
-    recvReason = `נמצא בגירעון של ${fmt(Math.abs(receiver.avail))} (ניצל ${recvUsage}% מהתקציב)`;
-  else if (receiver.burnRate !== null && receiver.burnRate > 1.1)
-    recvReason = `ניצל כבר ${recvUsage}% מהתקציב וקצב ההוצאות שלו גבוה מהצפוי (×${receiver.burnRate.toFixed(2)}) — צפוי לחרוג`;
-  else
-    recvReason = `ניצל ${recvUsage}% מהתקציב ועלול להגיע למחסור`;
-
-  return `המקור ${giverReason}. היעד ${recvReason}.`;
+  // קבוצות "בסיכון" קודם, אחר כך לפי גודל
+  return groups.sort((a, b) => (b.alert - a.alert) || (b.projects.length - a.projects.length));
 }
 
 function StatBadge({ color, children }) {
@@ -395,16 +355,18 @@ function BudgetBar({ pct, color }) {
   );
 }
 
+// ניקוד "התאמה" מבוסס בעיקר על ציוני הסיכון התקציבי (risk_score) שמחזיר
+// מודל ה-ML (Random Forest), בנוסף ליתרה הזמינה ולוח הזמנים.
 function calcConfidence(giver, receiver) {
   let score = 0, max = 0;
   max += 2;
   if (giver.avail > (giver.budget || 0) * 0.25) score += 2;
   else if (giver.avail > (giver.budget || 0) * 0.15) score += 1;
-  if (giver.burnRate !== null) { max += 2; if (giver.burnRate < 0.5) score += 2; else if (giver.burnRate < 0.75) score += 1; }
+  if (giver.riskScore !== null) { max += 2; if (giver.riskScore < 0.15) score += 2; else if (giver.riskScore < 0.3) score += 1; }
   if (giver.daysLeft !== null) { max += 2; if (giver.daysLeft > 90) score += 2; else if (giver.daysLeft > 45) score += 1; }
   max += 3;
   if (receiver.avail < 0) score += 3;
-  else if (receiver.burnRate !== null && receiver.burnRate > 1.3) score += 2;
+  else if (receiver.riskScore !== null && receiver.riskScore > 0.75) score += 2;
   else score += 1;
   return Math.round((score / max) * 100);
 }
@@ -482,8 +444,8 @@ function RecommendationCard({ rec, onTransfer }) {
             <div className="space-y-1 pt-1.5 border-t border-green-200 text-sm">
               <p>✅ יתרה: <span className="font-bold text-green-700">{fmt(giver.avail)}</span></p>
               <p>✅ ניצול: <span className="font-bold text-green-700">{giverUsage}% בלבד</span></p>
-              {giver.burnRate !== null && giver.burnRate < 0.75 && (
-                <p>✅ קצב הוצאות: <span className="font-bold text-green-700">נמוך מהצפוי (×{giver.burnRate.toFixed(2)})</span></p>
+              {giver.riskScore !== null && (
+                <p>✅ ציון סיכון (מודל ML): <span className="font-bold text-green-700">{Math.round(giver.riskScore * 100)}% — נמוך</span></p>
               )}
               {giver.daysLeft !== null && (
                 <p className={giver.daysLeft <= 60 ? 'text-amber-700' : 'text-gray-600'}>
@@ -509,8 +471,8 @@ function RecommendationCard({ rec, onTransfer }) {
                 ? <p>🚨 גירעון: <span className="font-bold text-red-700">−{fmt(Math.abs(receiver.avail))}</span></p>
                 : <p>⚠️ ניצול: <span className="font-bold text-amber-700">{recvUsage}%</span></p>
               }
-              {receiver.burnRate !== null && receiver.burnRate > 1.1 && (
-                <p>🔥 קצב הוצאות: <span className="font-bold text-red-700">גבוה מהצפוי (×{receiver.burnRate.toFixed(2)})</span></p>
+              {receiver.riskScore !== null && receiver.riskScore >= 0.5 && (
+                <p>🔥 ציון סיכון (מודל ML): <span className="font-bold text-red-700">{Math.round(receiver.riskScore * 100)}% — גבוה</span></p>
               )}
               {receiver.daysLeft !== null && (
                 <p className={receiver.daysLeft <= 60 ? 'text-red-600' : 'text-gray-600'}>
@@ -537,15 +499,15 @@ function RecommendationCard({ rec, onTransfer }) {
         <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 space-y-1">
           <p className="text-sm font-bold text-blue-800 mb-1.5">🔍 למה קיבלתי את ההמלצה?</p>
           <p className="text-sm text-blue-700">• המקור מחזיק יתרה זמינה של {fmt(giver.avail)} ({giverUsage}% ניצול מתוך התקציב)</p>
-          {giver.burnRate !== null && giver.burnRate < 0.75 && (
-            <p className="text-sm text-blue-700">• קצב ההוצאות של המקור נמוך ב-{Math.round((1 - giver.burnRate) * 100)}% מהצפוי — צפויה יתרה עודפת</p>
+          {giver.riskScore !== null && (
+            <p className="text-sm text-blue-700">• מודל ה-ML מעריך את סיכון התקציב של המקור ב-{Math.round(giver.riskScore * 100)}% בלבד — צפויה יתרה עודפת</p>
           )}
           {receiver.avail < 0
             ? <p className="text-sm text-blue-700">• היעד בגירעון של {fmt(Math.abs(receiver.avail))} — נדרש תגבור מיידי</p>
             : <p className="text-sm text-blue-700">• היעד ניצל {recvUsage}% מהתקציב וצפוי לחרוג ממנו</p>
           }
-          {receiver.burnRate !== null && receiver.burnRate > 1.1 && (
-            <p className="text-sm text-blue-700">• קצב ההוצאות של היעד גבוה ב-{Math.round((receiver.burnRate - 1) * 100)}% מהצפוי</p>
+          {receiver.riskScore !== null && receiver.riskScore >= 0.5 && (
+            <p className="text-sm text-blue-700">• מודל ה-ML מעריך את סיכון התקציב של היעד ב-{Math.round(receiver.riskScore * 100)}% — חריגה צפויה</p>
           )}
         </div>
 
@@ -830,6 +792,7 @@ export default function ComparisonPage() {
   const barChartHeight = typeof window !== 'undefined' && window.innerWidth < 640 ? 260 : 420;
   const [projects,      setProjects]      = useState([]);
   const [myProjectIds,  setMyProjectIds]  = useState(new Set());
+  const [mlInsights,    setMlInsights]    = useState(null);
   const [loading,       setLoading]       = useState(true);
   const [metric,      setMetric]      = useState('all');
   const urlMode = searchParams.get('mode');
@@ -858,6 +821,11 @@ export default function ComparisonPage() {
       })
       .catch(() => toast.error('שגיאה בטעינת הנתונים'))
       .finally(() => setLoading(false));
+
+    // תוצרי הרכיב החכם (Python) - ציון סיכון תקציבי + פילוח לקבוצות (Clustering)
+    getMlInsights()
+      .then((res) => setMlInsights(res.data))
+      .catch(() => setMlInsights(null));
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -907,8 +875,8 @@ export default function ComparisonPage() {
   ];
 
   const selectedProjects  = selectedIds.map(id => projects.find(p => p.projectId === id)).filter(Boolean);
-  const recommendations   = useMemo(() => buildTransferRecommendations(projects, myProjectIds), [projects, myProjectIds]);
-  const similarityGroups  = useMemo(() => buildSimilarityGroups(projects), [projects]);
+  const recommendations   = useMemo(() => buildTransferRecommendations(projects, myProjectIds, mlInsights), [projects, myProjectIds, mlInsights]);
+  const clusterGroups     = useMemo(() => buildClusterGroups(projects, mlInsights), [projects, mlInsights]);
   const topicGroups       = useMemo(() => buildTopicGroups(projects), [projects]);
 
   // Projects shown in the picker (active only, filtered by search query)
@@ -1125,13 +1093,13 @@ export default function ComparisonPage() {
               </div>
             )}
 
-            {/* קיבוץ לפי תקציב והתנהגות */}
+            {/* קיבוץ לפי פרופיל הוצאות - Clustering (K-Means) */}
             <div>
               <div className="flex items-start gap-3 mb-4">
                 <span className="text-2xl mt-0.5">🔗</span>
                 <div>
-                  <h2 className="text-base font-extrabold text-gray-800">קיבוץ לפי תקציב והתנהגות פיננסית</h2>
-                  <p className="text-sm text-gray-400 mt-0.5">גודל תקציב, קצב הוצאות ולוח זמנים — לזיהוי דפוסים משותפים</p>
+                  <h2 className="text-base font-extrabold text-gray-800">קיבוץ לפי פרופיל הוצאות</h2>
+                  <p className="text-sm text-gray-400 mt-0.5">קיבוץ אוטומטי ע״י מודל K-Means (Machine Learning) על בסיס תקציב, קצב הוצאות, ניצול וחריגים</p>
                 </div>
               </div>
 
@@ -1139,13 +1107,15 @@ export default function ComparisonPage() {
                 <div className="flex justify-center py-12">
                   <div className="w-7 h-7 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                 </div>
-              ) : similarityGroups.length === 0 ? (
+              ) : clusterGroups.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-                  <p className="text-sm text-gray-400">אין מספיק מחקרים לסיווג — נדרשים לפחות 2 מחקרים בקטגוריה</p>
+                  <p className="text-sm text-gray-400">
+                    {mlInsights ? 'אין מספיק מחקרים לסיווג' : 'הרכיב החכם (Python) אינו זמין כרגע'}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {similarityGroups.map((group, i) => (
+                  {clusterGroups.map((group, i) => (
                     <SimilarityGroupCard key={i} group={group} navigate={navigate} />
                   ))}
                 </div>

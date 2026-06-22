@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using RupResearchAPI.DTOs;
 using RupResearchAPI.Services;
 using Microsoft.AspNetCore.Hosting;
@@ -13,12 +14,14 @@ namespace RupResearchAPI.Controllers
         private readonly IPaymentRequestService _service;
         private readonly IWebHostEnvironment _env;
         private readonly IAuditLogService _audit;
+        private readonly IMemoryCache _cache;
 
-        public PaymentRequestsController(IPaymentRequestService service, IWebHostEnvironment env, IAuditLogService audit)
+        public PaymentRequestsController(IPaymentRequestService service, IWebHostEnvironment env, IAuditLogService audit, IMemoryCache cache)
         {
             _service = service;
             _env = env;
             _audit = audit;
+            _cache = cache;
         }
 
         [HttpGet("api/projects/{projectId}/payment-requests")]
@@ -63,6 +66,7 @@ namespace RupResearchAPI.Controllers
                 await _audit.LogAsync(projectId, actorId, "payment_request_created",
                     $"יצירת בקשת תשלום: {dto.RequestTitle ?? "ללא כותרת"} | סכום: ₪{amount}",
                     "payment", created.PaymentRequestId.ToString());
+                _cache.Remove("ml-insights");
                 return Ok(created);
             }
             catch (InvalidOperationException ex)
@@ -105,6 +109,7 @@ namespace RupResearchAPI.Controllers
                 await _audit.LogAsync(updated.ProjectId.Value, actorId, actionType, description,
                     "payment", id.ToString());
             }
+            _cache.Remove("ml-insights");
             return Ok(updated);
         }
 

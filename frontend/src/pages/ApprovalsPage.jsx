@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getPendingPaymentRequests, getAllPaymentRequests, updatePaymentRequestStatus } from '../api/paymentRequestsApi';
 import { getPendingHourApprovals, decideMonthlyApproval } from '../api/hourReportsApi';
+import { getMlInsights } from '../api/projectsApi';
 import Layout from '../components/Layout';
 import { requestNotificationPermission, sendNotification } from '../utils/notifications';
 import { celebrate } from '../utils/celebrate';
@@ -91,7 +92,55 @@ const STATUS_BADGE = {
   'ממתין': 'bg-yellow-100 text-yellow-700',
 };
 
-function RequestCard({ request, onApprove, onReject, showProject, highlighted }) {
+function MlInsightBadge({ mlInfo }) {
+  const [open, setOpen] = useState(false);
+  if (!mlInfo) return null;
+
+  const { approval_probability, approval_label, amount_flag, expected_amount, reasons } = mlInfo;
+  const lowApproval = approval_probability < 0.5;
+
+  if (!lowApproval && !amount_flag) return null;
+
+  return (
+    <div dir="rtl">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex flex-wrap gap-1.5 text-right"
+      >
+        {lowApproval && (
+          <span className="inline-flex items-center gap-1 text-sm font-semibold bg-orange-50 text-orange-700 border border-orange-200 px-2.5 py-1 rounded-full">
+            🤖 {approval_label} ({Math.round(approval_probability * 100)}%)
+          </span>
+        )}
+        {amount_flag && (
+          <span className="inline-flex items-center gap-1 text-sm font-semibold bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1 rounded-full">
+            🤖 סכום חריג - צפי: {formatAmount(expected_amount)}
+          </span>
+        )}
+        <span className="inline-flex items-center text-sm text-gray-400 underline">
+          {open ? 'הסתר הסבר' : 'למה?'}
+        </span>
+      </button>
+
+      {open && reasons?.length > 0 && (
+        <div className="mt-2 bg-amber-50/70 border border-amber-200 rounded-xl p-3 space-y-1.5">
+          <p className="text-sm font-bold text-amber-800">למה הבקשה סומנה?</p>
+          <ul className="space-y-1">
+            {reasons.map((r, i) => (
+              <li key={i} className="text-sm text-amber-800 flex items-start gap-1.5">
+                <span className="mt-0.5">•</span>
+                <span className="leading-relaxed">{r}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RequestCard({ request, onApprove, onReject, showProject, highlighted, mlInfo }) {
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(highlighted || false);
 
@@ -156,6 +205,9 @@ function RequestCard({ request, onApprove, onReject, showProject, highlighted })
             </span>
           )}
         </div>
+
+        {/* ML insight badges */}
+        {request.status === 'ממתין' && <MlInsightBadge mlInfo={mlInfo} />}
 
         {/* Expand button */}
         {hasDetails && (
@@ -311,6 +363,7 @@ export default function ApprovalsPage() {
   const [tab, setTab] = useState('payments');
   const [requests, setRequests] = useState([]);
   const [hourRecords, setHourRecords] = useState([]);
+  const [pendingInsights, setPendingInsights] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [toastMsg, setToastMsg] = useState('');
@@ -329,6 +382,10 @@ export default function ApprovalsPage() {
       ]);
       setRequests(Array.isArray(pRes.data) ? pRes.data : []);
       setHourRecords(Array.isArray(hRes.data) ? hRes.data : []);
+
+      getMlInsights()
+        .then((res) => setPendingInsights(res.data?.pending_requests || {}))
+        .catch(() => setPendingInsights({}));
 
       // Push notification when there are pending items
       const totalPending = (pRes.data?.length ?? 0) + (hRes.data?.length ?? 0);
@@ -556,7 +613,8 @@ export default function ApprovalsPage() {
                       <div key={req.paymentRequestId} ref={isHighlighted ? highlightRef : null}>
                         <RequestCard request={req}
                           onApprove={handleApprove} onReject={handleReject}
-                          showProject={isSecretary} highlighted={isHighlighted} />
+                          showProject={isSecretary} highlighted={isHighlighted}
+                          mlInfo={pendingInsights[String(req.paymentRequestId)]} />
                       </div>
                     );
                   })}
