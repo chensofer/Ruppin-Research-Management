@@ -1101,12 +1101,14 @@ namespace RupResearchAPI.Services
 
         public async Task<List<ProjectResponseDto>> GetAllProjects()
         {
-            var all             = await _db.ResearchProjects.ToListAsync();
-            var allPayments     = await _db.ResearchPaymentRequests.ToListAsync();
-            var allCommitments  = await _db.ResearchFutureCommitments.ToListAsync();
+            var all              = await _db.ResearchProjects.ToListAsync();
+            var allPayments      = await _db.ResearchPaymentRequests.ToListAsync();
+            var allCommitments   = await _db.ResearchFutureCommitments.ToListAsync();
             var allHourApprovals = await _db.ResearchMonthlyWorkApprovals.ToListAsync();
-            var allUsers        = await _db.ResearchUsers.ToListAsync();
-            var nameMap = allUsers.ToDictionary(u => u.UserId?.Trim() ?? "", u => $"{u.FirstName} {u.LastName}".Trim());
+            var allUsers         = await _db.ResearchUsers.ToListAsync();
+            var centers          = await _db.ResearchCenters.ToListAsync();
+            var nameMap    = allUsers.ToDictionary(u => u.UserId?.Trim() ?? "", u => $"{u.FirstName} {u.LastName}".Trim());
+            var centerMap  = centers.ToDictionary(c => c.CenterId, c => c.CenterName);
 
             return all.Select(p =>
             {
@@ -1120,6 +1122,7 @@ namespace RupResearchAPI.Services
                 var dto  = ToDto(p);
                 var piId = p.PrincipalResearcherId?.Trim() ?? "";
                 dto.PrincipalResearcherName     = !string.IsNullOrEmpty(piId) && nameMap.TryGetValue(piId, out var n) ? n : null;
+                dto.CenterName                  = p.CenterId.HasValue && centerMap.TryGetValue(p.CenterId.Value, out var cn) ? cn : null;
                 dto.TotalPaid                   = totalPaid;
                 dto.PendingCount                = pendingCount;
                 dto.PendingHourApprovalsCount   = pendingHourApprovalsCount;

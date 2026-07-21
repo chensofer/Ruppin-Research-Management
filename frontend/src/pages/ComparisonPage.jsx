@@ -180,11 +180,12 @@ function buildTransferRecommendations(projects, myProjectIds, mlInsights) {
     const insight  = projectInsights[p.projectId] ?? projectInsights[String(p.projectId)];
     const riskScore = insight?.risk_score ?? null;
 
+    // מחקר שמסיים בקרוב עם יתרה גבוהה הוא מקור מועדף (לא מוצא)
+    const endingSoon = daysLeft !== null && daysLeft <= 45;
     const isGiver =
-      isMine &&
       avail > Math.max(budget * 0.15, 5000) &&
       (riskScore === null || riskScore < 0.3) &&
-      (daysLeft === null || daysLeft > 45);
+      (!endingSoon || avail > budget * 0.3);
 
     const isReceiver =
       avail < 0 ||
@@ -193,7 +194,12 @@ function buildTransferRecommendations(projects, myProjectIds, mlInsights) {
     return { ...p, timePct, budget, paid, avail, usagePct, burnRate, daysLeft, riskScore, isGiver, isReceiver };
   });
 
-  const givers    = enriched.filter(p => p.isGiver).sort((a, b) => b.avail - a.avail);
+  const givers    = enriched.filter(p => p.isGiver).sort((a, b) => {
+    const aUrgent = a.daysLeft !== null && a.daysLeft <= 45 ? 1 : 0;
+    const bUrgent = b.daysLeft !== null && b.daysLeft <= 45 ? 1 : 0;
+    if (bUrgent !== aUrgent) return bUrgent - aUrgent;
+    return b.avail - a.avail;
+  });
   const receivers = enriched.filter(p => p.isReceiver).sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0));
 
   const recs = [];
@@ -212,7 +218,9 @@ function buildTransferRecommendations(projects, myProjectIds, mlInsights) {
     const tags = [];
     if (giver.riskScore !== null)
       tags.push(`ציון סיכון תקציבי נמוך (${Math.round(giver.riskScore * 100)}%) — מודל ML`);
-    if (giver.daysLeft !== null && giver.daysLeft > 45)
+    if (giver.daysLeft !== null && giver.daysLeft <= 45)
+      tags.push(`המחקר מסתיים בעוד ${giver.daysLeft} ימים — יתרה עודפת`);
+    else if (giver.daysLeft !== null)
       tags.push(`${giver.daysLeft} ימים נותרו למקור`);
     if (recv.avail < 0)
       tags.push(`גירעון ${fmt(Math.abs(recv.avail))}`);
@@ -224,74 +232,32 @@ function buildTransferRecommendations(projects, myProjectIds, mlInsights) {
   return recs;
 }
 
-// ── Topic similarity ──────────────────────────────────────────────────────────
-// מילות עצור — רק מילות יחס ומילים דקדוקיות בסיסיות
-const HE_STOP = new Set([
-  'של','על','עם','את','זה','זו','הם','הן','כי','גם','לא','יש','אין','כל',
-  'עוד','כבר','רק','אם','כך','מה','מי','איך','למה','לפי','בין','אל','מן',
-  'עד','כדי','תוך','אחר','לפני','אך','אולם','לאחר','בגלל','לגבי','לכן',
-  'לעומת','בעוד','כאשר','כדי','אשר','שנים','שנה','ימים',
-]);
 
-// מסיר קידומות נפוצות (ב, ל, מ, כ, ה, ו, ש) לפני השוואה
-function stripPrefix(w) {
-  return w.replace(/^[בלמכהוש]/, '');
-}
+// ── Center groups ────────────────────────────────────────────────────────────
+function buildCenterGroups(projects, myProjectIds) {
+  const myCenters = new Set(
+    projects
+      .filter(p => myProjectIds.has(p.projectId) && p.centerId)
+      .map(p => p.centerId)
+  );
+  if (myCenters.size === 0) return [];
 
-function extractKeywords(name) {
-  if (!name) return new Set();
-  const words = name
-    .replace(/[^א-תa-zA-Z\s]/g, '')
-    .split(/\s+/)
-    .map(w => w.trim())
-    .filter(w => w.length > 2)
-    .map(w => stripPrefix(w))
-    .filter(w => w.length > 2 && !HE_STOP.has(w));
-  return new Set(words);
-}
-
-function jaccardSim(a, b) {
-  if (!a.size || !b.size) return 0;
-  const inter = [...a].filter(x => b.has(x)).length;
-  return inter / (a.size + b.size - inter);
-}
-
-function buildTopicGroups(projects) {
-  const withKw = projects.map(p => ({
-    ...p, _kw: extractKeywords(p.projectNameHe || p.projectNameEn || ''),
-  }));
-
-  const assigned = new Set();
-  const clusters = [];
-
-  for (let i = 0; i < withKw.length; i++) {
-    if (assigned.has(i)) continue;
-    const cluster = [withKw[i]];
-    assigned.add(i);
-    for (let j = i + 1; j < withKw.length; j++) {
-      if (assigned.has(j)) continue;
-      if (jaccardSim(withKw[i]._kw, withKw[j]._kw) >= 0.12) {
-        cluster.push(withKw[j]); assigned.add(j);
-      }
-    }
-    if (cluster.length < 2) continue;
-
-    const freq = {};
-    cluster.forEach(p => [...p._kw].forEach(w => { freq[w] = (freq[w] || 0) + 1; }));
-    const topWords = Object.entries(freq)
-      .filter(([, c]) => c >= 2).sort(([, a], [, b]) => b - a)
-      .slice(0, 5).map(([w]) => w);
-
-    clusters.push({
-      icon: '🧬',
-      title: topWords.length ? `נושא משותף: ${topWords.join(' · ')}` : 'מחקרים בעלי נושא משותף',
-      insight: `${cluster.length} מחקרים חולקים מושגי מפתח זהים — כדאי לתאם`,
-      projects: cluster,
-      alert: false,
-      isTopic: true,
-    });
+  const byCenter = {};
+  for (const p of projects) {
+    if (!p.centerId || !myCenters.has(p.centerId)) continue;
+    if (!byCenter[p.centerId]) byCenter[p.centerId] = { centerName: p.centerName, projects: [] };
+    byCenter[p.centerId].projects.push({ ...p, _isMine: myProjectIds.has(p.projectId) });
   }
-  return clusters;
+
+  return Object.values(byCenter)
+    .filter(g => g.projects.length >= 1)
+    .map(g => ({
+      icon: '🏛️',
+      title: g.centerName ?? 'מרכז מחקר ללא שם',
+      insight: `${g.projects.length} מחקרים במרכז "${g.centerName ?? 'לא ידוע'}"`,
+      projects: g.projects,
+      alert: false,
+    }));
 }
 
 // ── Budget / behavior groups - מבוסס על מודל Clustering (K-Means) ─────────────
@@ -553,54 +519,7 @@ function RecommendationCard({ rec, onTransfer }) {
   );
 }
 
-function OverallStatusSummary({ projects }) {
-  const stats = projects.reduce((acc, p) => {
-    const avail    = p.availableBalance ?? 0;
-    const budget   = p.totalBudget ?? 0;
-    const paid     = p.totalPaid ?? 0;
-    const usagePct = budget > 0 ? Math.round((paid / budget) * 100) : 0;
-    const timePct  = calcTimePct(p);
-    const burnRate = (timePct && timePct > 0) ? (usagePct / timePct) : null;
-    const health   =
-      avail < 0 || usagePct >= 90 ? 'danger'
-      : usagePct >= 70 || (burnRate !== null && burnRate > 1.1) ? 'warning'
-      : 'good';
-    acc[health]++;
-    if (avail > 0) acc.surplus += avail;
-    if (avail < 0) acc.deficit += Math.abs(avail);
-    return acc;
-  }, { good: 0, warning: 0, danger: 0, surplus: 0, deficit: 0 });
 
-  return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-5 mb-6 shadow-sm" dir="rtl">
-      <p className="text-sm font-extrabold text-gray-800 mb-3">📊 תמונת מצב כללית</p>
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div className="bg-gray-50 rounded-xl p-3 text-center">
-          <p className="text-2xl font-extrabold text-gray-800">{projects.length}</p>
-          <p className="text-sm text-gray-500 mt-0.5">מחקרים נותחו</p>
-        </div>
-        <div className="bg-green-50 rounded-xl p-3 text-center">
-          <p className="text-2xl font-extrabold text-green-700">{stats.good}</p>
-          <p className="text-sm text-green-600 mt-0.5">🟢 מצב תקין</p>
-        </div>
-        <div className="bg-amber-50 rounded-xl p-3 text-center">
-          <p className="text-2xl font-extrabold text-amber-700">{stats.warning}</p>
-          <p className="text-sm text-amber-600 mt-0.5">🟡 דורשים מעקב</p>
-        </div>
-        <div className="bg-red-50 rounded-xl p-3 text-center">
-          <p className="text-2xl font-extrabold text-red-700">{stats.danger}</p>
-          <p className="text-sm text-red-600 mt-0.5">🔴 דורשים טיפול</p>
-        </div>
-        <div className="col-span-2 sm:col-span-1 bg-blue-50 rounded-xl p-3 text-center space-y-1">
-          <p className="text-sm font-extrabold text-green-700">💰 {fmt(stats.surplus)}</p>
-          <p className="text-xs text-gray-400">סך יתרות</p>
-          <p className="text-sm font-extrabold text-red-600">⚠️ {fmt(stats.deficit)}</p>
-          <p className="text-xs text-gray-400">סך גירעונות</p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function ProjectHealthCard({ p, navigate }) {
   const avail     = p.availableBalance ?? 0;
@@ -636,9 +555,14 @@ function ProjectHealthCard({ p, navigate }) {
       className={`text-right bg-white hover:bg-gray-50 border ${borderColor} rounded-xl p-3.5 transition-all group flex flex-col gap-2 w-full`}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-bold text-gray-800 leading-snug group-hover:text-primary transition-colors line-clamp-2 flex-1">
-          {p.projectNameHe || p.projectNameEn || `מחקר #${p.projectId}`}
-        </p>
+        <div className="flex-1 min-w-0">
+          {p._isMine && (
+            <span className="inline-block text-xs font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded mb-1">שלי</span>
+          )}
+          <p className="text-sm font-bold text-gray-800 leading-snug group-hover:text-primary transition-colors line-clamp-2">
+            {p.projectNameHe || p.projectNameEn || `מחקר #${p.projectId}`}
+          </p>
+        </div>
         <span className={`flex-shrink-0 text-sm font-bold px-1.5 py-0.5 rounded-full border ${badgeCls}`} title="ניצול תקציב">
           {usagePct}%
         </span>
@@ -790,8 +714,9 @@ export default function ComparisonPage() {
   const axisColor   = dark ? '#6A8099' : '#6b7280';
   const cursorFill  = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
   const barChartHeight = typeof window !== 'undefined' && window.innerWidth < 640 ? 260 : 420;
-  const [projects,      setProjects]      = useState([]);
-  const [myProjectIds,  setMyProjectIds]  = useState(new Set());
+  const [projects,         setProjects]         = useState([]);
+  const [allProjectsRaw,   setAllProjectsRaw]   = useState([]);
+  const [myProjectIds,     setMyProjectIds]      = useState(new Set());
   const [mlInsights,    setMlInsights]    = useState(null);
   const [loading,       setLoading]       = useState(true);
   const [metric,      setMetric]      = useState('all');
@@ -816,7 +741,9 @@ export default function ComparisonPage() {
     setLoading(true);
     Promise.all([getAllProjects(), getProjects()])
       .then(([allRes, myRes]) => {
-        setProjects((allRes.data ?? []).filter(isActive));
+        const all = allRes.data ?? [];
+        setProjects(all.filter(isActive));
+        setAllProjectsRaw(all);
         setMyProjectIds(new Set((myRes.data ?? []).map(p => p.projectId)));
       })
       .catch(() => toast.error('שגיאה בטעינת הנתונים'))
@@ -877,7 +804,7 @@ export default function ComparisonPage() {
   const selectedProjects  = selectedIds.map(id => projects.find(p => p.projectId === id)).filter(Boolean);
   const recommendations   = useMemo(() => buildTransferRecommendations(projects, myProjectIds, mlInsights), [projects, myProjectIds, mlInsights]);
   const clusterGroups     = useMemo(() => buildClusterGroups(projects, mlInsights), [projects, mlInsights]);
-  const topicGroups       = useMemo(() => buildTopicGroups(projects), [projects]);
+  const centerGroups      = useMemo(() => buildCenterGroups(allProjectsRaw, myProjectIds), [allProjectsRaw, myProjectIds]);
 
   // Projects shown in the picker (active only, filtered by search query)
   const filteredForDisplay = projects.filter((p) => {
@@ -1065,41 +992,15 @@ export default function ComparisonPage() {
               )}
             </div>
 
-            {/* תמונת מצב כללית */}
-            {!loading && projects.length > 0 && <OverallStatusSummary projects={projects} />}
-
-            {/* מקרא צבעים */}
-            <div className="flex flex-wrap gap-3 mb-5 text-xs">
-              <span className="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 font-semibold px-3 py-1.5 rounded-full">🟢 מצב תקין — ניצול תקין וקצב הוצאות סביר</span>
-              <span className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 font-semibold px-3 py-1.5 rounded-full">🟡 דורש מעקב — ניצול גבוה או קצב מהיר</span>
-              <span className="flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 font-semibold px-3 py-1.5 rounded-full">🔴 דורש טיפול — גירעון או ניצול קריטי</span>
-            </div>
-
-            {/* מחקרים דומים בנושא */}
-            {!loading && topicGroups.length > 0 && (
-              <div className="mb-6">
-                <div className="flex items-start gap-3 mb-4">
-                  <span className="text-2xl mt-0.5">🧬</span>
-                  <div>
-                    <h2 className="text-base font-extrabold text-gray-800">מחקרים דומים בנושא המחקר</h2>
-                    <p className="text-sm text-gray-400 mt-0.5">קיבוץ לפי מילות מפתח משותפות בשם המחקר</p>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  {topicGroups.map((group, i) => (
-                    <SimilarityGroupCard key={i} group={group} navigate={navigate} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* קיבוץ לפי פרופיל הוצאות - Clustering (K-Means) */}
-            <div>
+            {/* מחקרים דומים לפי מרכז מחקר */}
+            <div className="mt-8">
               <div className="flex items-start gap-3 mb-4">
-                <span className="text-2xl mt-0.5">🔗</span>
+                <span className="text-2xl mt-0.5">🏛️</span>
                 <div>
-                  <h2 className="text-base font-extrabold text-gray-800">קיבוץ לפי פרופיל הוצאות</h2>
-                  <p className="text-sm text-gray-400 mt-0.5">קיבוץ אוטומטי ע״י מודל K-Means (Machine Learning) על בסיס תקציב, קצב הוצאות, ניצול וחריגים</p>
+                  <h2 className="text-base font-extrabold text-gray-800">מחקרים דומים לפי מרכז מחקר</h2>
+                  <p className="text-sm text-gray-400 mt-0.5 leading-relaxed">
+                    ניתן להשוות דפוסי ניהול, קצב הוצאות וניצול תקציב מול מחקרים דומים מאותו מרכז מחקר.
+                  </p>
                 </div>
               </div>
 
@@ -1107,20 +1008,21 @@ export default function ComparisonPage() {
                 <div className="flex justify-center py-12">
                   <div className="w-7 h-7 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                 </div>
-              ) : clusterGroups.length === 0 ? (
+              ) : centerGroups.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-                  <p className="text-sm text-gray-400">
-                    {mlInsights ? 'אין מספיק מחקרים לסיווג' : 'הרכיב החכם (Python) אינו זמין כרגע'}
-                  </p>
+                  <p className="text-4xl mb-3">🏛️</p>
+                  <p className="text-sm font-bold text-gray-700">לא נמצאו מחקרים נוספים באותו מרכז מחקר</p>
+                  <p className="text-xs text-gray-400 mt-1">ייתכן שהמחקרים שלך אינם משויכים למרכז מחקר</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {clusterGroups.map((group, i) => (
+                <div className="space-y-5">
+                  {centerGroups.map((group, i) => (
                     <SimilarityGroupCard key={i} group={group} navigate={navigate} />
                   ))}
                 </div>
               )}
             </div>
+
           </div>
         )}
 
