@@ -31,13 +31,12 @@ export default function Layout({ children }) {
 
   const RESEARCHER_NAV = [
     { to: '/dashboard',   label: 'רשימת מחקרים',        icon: <HiSquares2X2  className="w-5 h-5 flex-shrink-0" /> },
+    { to: '/approvals',   label: 'אישורים ממתינים',      icon: <HiCheckCircle className="w-5 h-5 flex-shrink-0" />, badge: pendingCount },
     { to: '/comparison',  label: 'השוואות בין מחקרים',   icon: <HiChartBar    className="w-5 h-5 flex-shrink-0" />,
       customActive: () => location.pathname === '/comparison' && !location.search.includes('mode=recommendations') },
-    { to: '/comparison?mode=recommendations', label: 'המלצות תקציב', icon: <HiLightBulb className="w-5 h-5 flex-shrink-0" />,
+    { to: '/comparison?mode=recommendations', label: 'המלצות להעברת תקציב', icon: <HiLightBulb className="w-5 h-5 flex-shrink-0" />,
       customActive: () => location.pathname === '/comparison' && location.search.includes('mode=recommendations') },
-    { to: '/approvals',   label: 'אישורים ממתינים',      icon: <HiCheckCircle className="w-5 h-5 flex-shrink-0" />, badge: pendingCount },
     { to: '/archive',     label: 'ארכיון מחקרים',        icon: <HiArchiveBox  className="w-5 h-5 flex-shrink-0" /> },
-    { to: '/history',     label: 'היסטוריית שינויים',    icon: <HiClock       className="w-5 h-5 flex-shrink-0" /> },
   ];
 
   const SECRETARY_NAV = [

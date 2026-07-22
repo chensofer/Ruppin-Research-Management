@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
 import ExportReportModal from '../components/ExportReportModal';
 import { exportProjectReport } from '../utils/exportReport';
+import { getAuditLogs } from '../api/auditApi';
 import TabOverview from '../components/ProjectPage/TabOverview';
 import TabPayments from '../components/ProjectPage/TabPayments';
 import TabTeam from '../components/ProjectPage/TabTeam';
@@ -27,15 +28,24 @@ import TabBudgetTransfer from '../components/ProjectPage/TabBudgetTransfer';
 import TabHistory from '../components/ProjectPage/TabHistory';
 
 const TABS = [
-  { id: 'history',      label: 'היסטוריית שינויים' },
   { id: 'overview',     label: 'סקירה כללית' },
-  { id: 'transactions', label: 'ריכוז תנועות' },
-  { id: 'payments',     label: 'בקשות תשלום' },
   { id: 'team',         label: 'צוות המחקר' },
   { id: 'assistants',   label: 'עוזרי מחקר' },
   { id: 'documents',    label: 'מסמכים' },
+  { id: 'transactions', label: 'ריכוז תנועות' },
   { id: 'future',       label: 'הוצאות עתידיות' },
+  { id: 'payments',     label: 'בקשות תשלום' },
   { id: 'transfer',     label: 'העברת תקציב' },
+  { id: 'history',      label: 'היסטוריית שינויים' },
+];
+
+const VIEW_ONLY_TABS = [
+  { id: 'overview',     label: 'סקירה כללית' },
+  { id: 'team',         label: 'צוות המחקר' },
+  { id: 'assistants',   label: 'עוזרי מחקר' },
+  { id: 'documents',    label: 'מסמכים' },
+  { id: 'transactions', label: 'ריכוז תנועות' },
+  { id: 'future',       label: 'הוצאות עתידיות' },
 ];
 
 const fmt = (n) =>
@@ -83,7 +93,8 @@ export default function ProjectPage() {
   const [files, setFiles] = useState([]);
   const [commitments, setCommitments] = useState([]);
   const [pendingHourApprovals, setPendingHourApprovals] = useState([]);
-  const [activeTab, setActiveTab] = useState(urlTab && TABS.some(t => t.id === urlTab) ? urlTab : 'history');
+  const [activeTab, setActiveTab] = useState(urlTab && TABS.some(t => t.id === urlTab) ? urlTab : 'overview');
+  const [isMember, setIsMember] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -105,7 +116,8 @@ export default function ProjectPage() {
           ? getPendingHourApprovals(user.userId).catch(() => ({ data: [] }))
           : Promise.resolve({ data: [] }),
       ]);
-      setDetail(detailRes.data);
+      const d = detailRes.data;
+      setDetail(d);
       setPayments(payRes.data);
       setFiles(filesRes.data);
       setCommitments(commRes.data);
@@ -113,6 +125,17 @@ export default function ProjectPage() {
       setPendingHourApprovals(
         (hourRes.data ?? []).filter((a) => a.projectId === projectIdInt)
       );
+      // Determine if the current user is a member of this project
+      const uid = user?.userId?.trim();
+      const role = user?.systemAuthorization;
+      const fullAccess =
+        role === 'מנהל מרכז' ||
+        role === 'מזכירות' ||
+        d?.principalResearcherId?.trim() === uid ||
+        (d?.teamMembers ?? []).some(m => m.userId?.trim() === uid);
+      setIsMember(fullAccess);
+      if (!fullAccess && urlTab && !VIEW_ONLY_TABS.some(t => t.id === urlTab))
+        setActiveTab('overview');
     } catch (err) {
       console.error('ProjectPage loadAll error:', err?.response?.status, err?.response?.data, err?.message);
       setError('שגיאה בטעינת נתוני המחקר');
@@ -195,6 +218,8 @@ export default function ProjectPage() {
   }
 
   const isArchived = detail.isArchived === true;
+  const readOnly = isArchived || !isMember;
+  const activeTabs = isMember ? TABS : VIEW_ONLY_TABS;
   const budget = detail.totalBudget || 0;
   const totalPaid = detail.totalPaid || 0;
   const totalFuture = detail.totalFuture || 0;
@@ -229,7 +254,7 @@ export default function ProjectPage() {
             </button>
           </div>
           {/* Archive / Restore — שמאל (אחרון ב-RTL) */}
-          {isArchived ? (
+          {isMember && isArchived ? (
             <button
               onClick={handleRestore}
               disabled={restoring}
@@ -245,7 +270,7 @@ export default function ProjectPage() {
               )}
               <span className="hidden sm:inline">{restoring ? 'משחזר...' : 'שחזר מחקר'}</span>
             </button>
-          ) : (
+          ) : isMember ? (
             <button
               onClick={() => setShowDeleteModal(true)}
               className="flex items-center gap-1.5 text-sm font-semibold text-red-500 border border-red-200 p-2 sm:px-3 sm:py-2 rounded-xl hover:bg-red-50 hover:border-red-300 transition-all flex-shrink-0"
@@ -257,7 +282,7 @@ export default function ProjectPage() {
               </svg>
               <span className="hidden sm:inline">העבר לארכיון</span>
             </button>
-          )}
+          ) : null}
         </div>
 
         <div className="min-w-0">
@@ -513,10 +538,16 @@ export default function ProjectPage() {
 
       {/* Tabs — select on mobile, pill row on desktop */}
       <div className="mb-6" dir="rtl">
+        {!isMember && (
+          <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700">
+            <span>👁️</span>
+            <span>מחקר זה אינו שלך — מוצגת גישת צפייה בלבד</span>
+          </div>
+        )}
         {/* Mobile/tablet: grid of tab buttons */}
         <div className="md:hidden bg-gray-100/70 p-1.5 rounded-2xl">
           <div className="grid grid-cols-2 gap-1">
-            {TABS.map((tab) => (
+            {activeTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -535,7 +566,7 @@ export default function ProjectPage() {
         {/* Desktop: pill row */}
         <div className="hidden md:block overflow-x-auto pb-1">
           <div className="flex gap-1 min-w-max bg-gray-100/70 p-1.5 rounded-2xl">
-            {TABS.map((tab) => (
+            {activeTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -554,14 +585,14 @@ export default function ProjectPage() {
 
       {/* Tab content */}
       {activeTab === 'overview' && (
-        <TabOverview detail={detail} onChanged={reloadDetail} readOnly={isArchived} />
+        <TabOverview detail={detail} onChanged={reloadDetail} readOnly={readOnly} />
       )}
       {activeTab === 'payments' && (
         <TabPayments
           projectId={id}
           payments={payments}
           onCreated={() => { reloadPayments(); reloadDetail(); }}
-          readOnly={isArchived}
+          readOnly={readOnly}
         />
       )}
       {activeTab === 'team' && (
@@ -571,7 +602,7 @@ export default function ProjectPage() {
           principalResearcherId={detail.principalResearcherId?.trim()}
           principalResearcherName={detail.principalResearcherName}
           onChanged={reloadDetail}
-          readOnly={isArchived}
+          readOnly={readOnly}
         />
       )}
       {activeTab === 'assistants' && (
@@ -579,7 +610,7 @@ export default function ProjectPage() {
           projectId={id}
           assistants={detail.assistants}
           onChanged={reloadDetail}
-          readOnly={isArchived}
+          readOnly={readOnly}
         />
       )}
       {activeTab === 'transactions' && (
@@ -594,7 +625,7 @@ export default function ProjectPage() {
           projectId={id}
           files={files}
           onChanged={reloadFiles}
-          readOnly={isArchived}
+          readOnly={readOnly}
         />
       )}
       {activeTab === 'future' && (
@@ -603,10 +634,10 @@ export default function ProjectPage() {
           commitments={commitments}
           availableBalance={available}
           onChanged={() => { reloadCommitments(); reloadDetail(); }}
-          readOnly={isArchived}
+          readOnly={readOnly}
         />
       )}
-      {activeTab === 'transfer' && (
+      {activeTab === 'transfer' && isMember && (
         <TabBudgetTransfer
           projectId={id}
           projectName={detail.projectNameHe || detail.projectNameEn}
@@ -631,8 +662,12 @@ export default function ProjectPage() {
           onExport={async (sections, format) => {
             const safeName = (detail.projectNameHe || detail.projectNameEn || 'מחקר')
               .replace(/[\\/:*?"<>|]/g, '_').slice(0, 30);
+            let auditLogs = [];
+            if (sections.history) {
+              try { auditLogs = (await getAuditLogs(id)).data ?? []; } catch { auditLogs = []; }
+            }
             await exportProjectReport({
-              detail, payments, commitments, sections, format,
+              detail, payments, commitments, files, auditLogs, sections, format,
               filename: `דוח_${safeName}_${new Date().toISOString().slice(0,10)}.xlsx`,
             });
           }}

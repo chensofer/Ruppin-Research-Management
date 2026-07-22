@@ -5,6 +5,14 @@ const fmtIL  = (n)  => n != null ? new Intl.NumberFormat('he-IL', { maximumFract
 const fmtDate = (d) => { if (!d) return ''; try { return new Date(d).toLocaleDateString('he-IL'); } catch { return String(d); } };
 const todayStr = () => new Date().toLocaleDateString('he-IL');
 
+const TODAY_STR = new Date().toISOString().split('T')[0];
+function effectiveStatus(p) {
+  const raw = p.status || '';
+  const isMarkedActive = raw === 'פעיל' || raw === 'Active' || raw === 'active';
+  if (isMarkedActive && p.endDate && String(p.endDate).slice(0, 10) < TODAY_STR) return 'לא פעיל';
+  return raw;
+}
+
 const PRIMARY  = '003478';
 const ACCENT   = '5CB800';
 const LIGHT_BG = 'F1F5FA';
@@ -205,8 +213,104 @@ function addTableSheet(wb, name, title, headers, rows, colWidths) {
   ws.columns = colWidths.map(w => ({ width: w }));
 }
 
+// ─── Action label map (mirrors TabHistory ACTION_META) ────────────────────────
+const ACTION_LABELS = {
+  project_created: 'יצירת מחקר', project_updated: 'עדכון נתוני מחקר',
+  project_archived: 'ארכוב מחקר', project_restored: 'שחזור מחקר',
+  team_member_added: 'הוספת חבר צוות', team_member_removed: 'הסרת חבר צוות',
+  assistant_added: 'הוספת עוזר מחקר', assistant_removed: 'הסרת עוזר מחקר',
+  assistant_created: 'יצירת עוזר מחקר', assistant_updated: 'עדכון עוזר מחקר',
+  payment_request_created: 'בקשת תשלום חדשה', payment_approved: 'אישור תשלום',
+  payment_rejected: 'דחיית תשלום', payment_paid: 'תשלום בוצע',
+  payment_status_updated: 'עדכון סטטוס תשלום',
+  hour_report_submitted: 'הגשת דוח שעות', hour_report_approved: 'אישור דוח שעות',
+  hour_report_rejected: 'דחיית דוח שעות',
+  budget_transferred: 'העברת תקציב', budget_categories_updated: 'עדכון קטגוריות תקציב',
+  commitment_added: 'הוספת התחייבות', commitment_updated: 'עדכון התחייבות',
+  commitment_deleted: 'מחיקת התחייבות',
+  file_uploaded: 'העלאת קובץ', file_deleted: 'מחיקת קובץ',
+};
+function actionLabel(type) { return ACTION_LABELS[type] ?? type; }
+
+function formatDateTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('he-IL', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+// ─── Documents sheet ──────────────────────────────────────────────────────────
+function addDocumentsSheet(wb, files, projectName) {
+  const ws = wb.addWorksheet('מסמכים');
+  ws.views = [{ rightToLeft: true }];
+
+  ws.mergeCells('A1:D1');
+  const t = ws.getCell('A1');
+  t.value = `מסמכים — ${projectName || ''}`;
+  styleTitle(t);
+  ws.getRow(1).height = 28;
+
+  ws.mergeCells('A2:D2');
+  ws.getCell('A2').value = `יוצא בתאריך: ${todayStr()}`;
+  styleSubtitle(ws.getCell('A2'));
+  ws.getRow(2).height = 16;
+  ws.addRow([]);
+
+  const hRow = ws.addRow(['שם הקובץ', 'תיקייה', 'תאריך העלאה', 'קישור']);
+  hRow.height = 22;
+  hRow.eachCell(c => styleHeader(c));
+
+  (files ?? []).forEach((f, i) => {
+    const r = ws.addRow([f.fileName || '', f.folderName || 'כללי', fmtDate(f.createdDate), f.path ? 'פתח קובץ' : '']);
+    r.height = 20;
+    r.eachCell((c, col) => styleData(c, i % 2 === 1, false));
+    if (f.path) {
+      const linkCell = r.getCell(4);
+      linkCell.value = { text: 'פתח קובץ', hyperlink: f.path };
+      linkCell.font = { color: { argb: 'FF003478' }, underline: true, size: 11 };
+      linkCell.alignment = { horizontal: 'right', readingOrder: 'rightToLeft' };
+    }
+  });
+
+  ws.columns = [{ width: 36 }, { width: 18 }, { width: 15 }, { width: 18 }];
+}
+
+// ─── History sheet ────────────────────────────────────────────────────────────
+function addHistorySheet(wb, auditLogs, projectName) {
+  const ws = wb.addWorksheet('היסטוריית שינויים');
+  ws.views = [{ rightToLeft: true }];
+
+  ws.mergeCells('A1:E1');
+  const t = ws.getCell('A1');
+  t.value = `היסטוריית שינויים — ${projectName || ''}`;
+  styleTitle(t);
+  ws.getRow(1).height = 28;
+
+  ws.mergeCells('A2:E2');
+  ws.getCell('A2').value = `יוצא בתאריך: ${todayStr()}`;
+  styleSubtitle(ws.getCell('A2'));
+  ws.getRow(2).height = 16;
+  ws.addRow([]);
+
+  const hRow = ws.addRow(['תאריך ושעה', 'מבצע הפעולה', 'מזהה משתמש', 'סוג פעולה', 'תיאור הפעולה']);
+  hRow.height = 22;
+  hRow.eachCell(c => styleHeader(c));
+
+  (auditLogs ?? []).forEach((log, i) => {
+    const r = ws.addRow([
+      formatDateTime(log.createdAt),
+      log.performedByName || log.performedByUserId || '',
+      log.performedByUserId || '',
+      actionLabel(log.actionType),
+      log.actionDescription || '',
+    ]);
+    r.height = 20;
+    r.eachCell((c, col) => styleData(c, i % 2 === 1, false));
+  });
+
+  ws.columns = [{ width: 20 }, { width: 22 }, { width: 14 }, { width: 22 }, { width: 60 }];
+}
+
 // ─── Main Excel export ────────────────────────────────────────────────────────
-export async function exportProjectReport({ detail, payments, commitments, sections, filename, format = 'excel' }) {
+export async function exportProjectReport({ detail, payments, commitments, files, auditLogs, sections, filename, format = 'excel' }) {
   if (format === 'pdf') { exportProjectPDF({ detail, payments, commitments, sections }); return; }
 
   const wb = new ExcelJS.Workbook();
@@ -240,6 +344,12 @@ export async function exportProjectReport({ detail, payments, commitments, secti
       ['קטגוריה', 'תיאור', 'סכום צפוי (₪)', 'תאריך צפוי', 'סטטוס'],
       active.map(c => [c.categoryName||'', c.commitmentDescription||'', fmt(c.expectedAmount), fmtDate(c.expectedDate), c.status||'']),
       [22, 32, 15, 14, 12]);
+  }
+  if (sections.documents && files?.length) {
+    addDocumentsSheet(wb, files, detail.projectNameHe || detail.projectNameEn);
+  }
+  if (sections.history && auditLogs?.length) {
+    addHistorySheet(wb, auditLogs, detail.projectNameHe || detail.projectNameEn);
   }
 
   const buffer = await wb.xlsx.writeBuffer();
@@ -279,7 +389,7 @@ export async function exportDashboardReport(projects, sections, format = 'excel'
 
   projects.forEach((p, i) => {
     const pct = (p.totalBudget||0) > 0 ? Math.round(((p.totalPaid||0)/p.totalBudget)*100) : 0;
-    const r = ws.addRow([p.projectNameHe||p.projectNameEn||'', p.principalResearcherId||'', fmtDate(p.startDate), fmtDate(p.endDate), p.status||'', fmt(p.totalBudget), fmt(p.totalPaid), fmt(p.availableBalance), `${pct}%`]);
+    const r = ws.addRow([p.projectNameHe||p.projectNameEn||'', p.principalResearcherId||'', fmtDate(p.startDate), fmtDate(p.endDate), effectiveStatus(p), fmt(p.totalBudget), fmt(p.totalPaid), fmt(p.availableBalance), `${pct}%`]);
     r.height = 20;
     r.eachCell((c, col) => styleData(c, i % 2 === 1, col >= 6 && col <= 8));
   });
@@ -341,7 +451,7 @@ export function exportProjectPDF({ detail, payments, commitments, sections }) {
 }
 
 export function exportDashboardPDF(projects) {
-  const rows=projects.map(p=>{const pct=(p.totalBudget||0)>0?Math.round(((p.totalPaid||0)/p.totalBudget)*100):0;return`<tr><td>${p.projectNameHe||p.projectNameEn||''}</td><td>${fmtDate(p.startDate)}</td><td>${fmtDate(p.endDate)}</td><td>${p.status||''}</td><td class="num">${fmtIL(p.totalBudget)}</td><td class="num">${fmtIL(p.totalPaid)}</td><td class="num">${fmtIL(p.availableBalance)}</td><td class="num">${pct}%</td></tr>`;}).join('');
+  const rows=projects.map(p=>{const pct=(p.totalBudget||0)>0?Math.round(((p.totalPaid||0)/p.totalBudget)*100):0;return`<tr><td>${p.projectNameHe||p.projectNameEn||''}</td><td>${fmtDate(p.startDate)}</td><td>${fmtDate(p.endDate)}</td><td>${effectiveStatus(p)}</td><td class="num">${fmtIL(p.totalBudget)}</td><td class="num">${fmtIL(p.totalPaid)}</td><td class="num">${fmtIL(p.availableBalance)}</td><td class="num">${pct}%</td></tr>`;}).join('');
   const html=`<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"><title>דוח מחקרים</title>
   <style>@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap');
   body{font-family:'Assistant',Arial,sans-serif;direction:rtl;font-size:12px;padding:24px;}

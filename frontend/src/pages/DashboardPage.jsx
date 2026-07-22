@@ -371,8 +371,10 @@ export default function DashboardPage() {
       {showExport && (
         <ExportReportModal
           type="dashboard"
+          projects={projects}
           onClose={() => setShowExport(false)}
-          onExport={async (sections, format) => await exportDashboardReport(displayed, sections, format)}
+          onExport={async (sections, format, projectsToExport) =>
+            await exportDashboardReport(projectsToExport, sections, format)}
         />
       )}
     </>

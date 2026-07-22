@@ -32,48 +32,50 @@ const STEPS = [
 export const STEP_IDS = STEPS.map((s) => s.id);
 
 export default function Stepper({ currentStep }) {
-  const currentIndex = STEP_IDS.indexOf(currentStep);
+  const currentIndex = STEPS.findIndex(s => s.id === currentStep);
 
   return (
-    <div dir="rtl" className="border-b border-gray-100 px-3 pt-4 pb-3">
-      <div className="flex items-start">
+    <div dir="rtl" className="border-b border-gray-100 px-4 pt-4 pb-3">
+      <div className="relative flex justify-between items-start">
+
+        {/* Gray background line */}
+        <div className="absolute top-4 right-4 left-4 h-0.5 bg-gray-200 z-0" />
+
+        {/* Green completed line */}
+        {currentIndex > 0 && (
+          <div
+            className="absolute top-4 right-4 h-0.5 bg-green-400 z-0 transition-all duration-300"
+            style={{ width: `calc((100% - 2rem) * ${currentIndex / (STEPS.length - 1)})` }}
+          />
+        )}
+
         {STEPS.map((step, idx) => {
           const isCompleted = idx < currentIndex;
           const isActive    = idx === currentIndex;
 
           return (
-            <div key={step.id} className="flex items-center flex-1 min-w-0">
-              {/* Circle + label */}
-              <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                  isCompleted ? 'bg-green-500' :
-                  isActive    ? 'bg-primary'   : 'bg-gray-100 border border-gray-200'
-                }`}>
-                  {isCompleted ? (
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <svg className={`w-4 h-4 ${isActive ? 'text-white' : 'text-gray-400'}`}
-                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      {step.icon}
-                    </svg>
-                  )}
-                </div>
-                <span className={`text-center leading-tight whitespace-nowrap text-sm font-medium ${
-                  isCompleted ? 'text-green-600' :
-                  isActive    ? 'text-primary'   : 'text-gray-400'
-                }`}>
-                  {step.label}
-                </span>
+            <div key={step.id} className="flex flex-col items-center gap-1 relative z-10">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                isCompleted ? 'bg-green-500' :
+                isActive    ? 'bg-primary'   : 'bg-gray-100 border border-gray-200'
+              }`}>
+                {isCompleted ? (
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className={`w-4 h-4 ${isActive ? 'text-white' : 'text-gray-400'}`}
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {step.icon}
+                  </svg>
+                )}
               </div>
-
-              {/* Connector line */}
-              {idx < STEPS.length - 1 && (
-                <div className={`flex-1 h-0.5 mx-1 mb-4 transition-colors ${
-                  idx < currentIndex ? 'bg-green-400' : 'bg-gray-200'
-                }`} />
-              )}
+              <span className={`text-center leading-tight whitespace-nowrap text-sm font-medium ${
+                isCompleted ? 'text-green-600' :
+                isActive    ? 'text-primary'   : 'text-gray-400'
+              }`}>
+                {step.label}
+              </span>
             </div>
           );
         })}

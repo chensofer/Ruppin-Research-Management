@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import { getAllProjects, getProjects, getCommitments, getMlInsights } from '../api/projectsApi';
 import { getPaymentRequestsByProject } from '../api/paymentRequestsApi';
+import { getCenters } from '../api/centersApi';
 import Layout from '../components/Layout';
 
 const TODAY    = new Date().toISOString().split('T')[0];
@@ -203,17 +204,22 @@ function buildTransferRecommendations(projects, myProjectIds, mlInsights) {
   const receivers = enriched.filter(p => p.isReceiver).sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0));
 
   const recs = [];
-  const usedGivers = new Set();
+  // עוקב אחר היתרה הנותרת לכל מקור אחרי שיוכים קודמים
+  const giverRemaining = Object.fromEntries(givers.map(g => [g.projectId, g.avail]));
 
   for (const recv of receivers) {
-    const giver = givers.find(g => g.projectId !== recv.projectId && !usedGivers.has(g.projectId));
+    const giver = givers.find(g =>
+      g.projectId !== recv.projectId &&
+      giverRemaining[g.projectId] > Math.max(g.budget * 0.15, 5000)
+    );
     if (!giver) break;
 
+    const remaining = giverRemaining[giver.projectId];
     const need   = recv.avail < 0 ? Math.abs(recv.avail) + recv.budget * 0.05 : recv.budget * 0.12;
-    const amount = Math.min(giver.avail * 0.35, need);
+    const amount = Math.min(remaining * 0.35, need);
     if (amount < 2000) continue;
 
-    usedGivers.add(giver.projectId);
+    giverRemaining[giver.projectId] -= amount;
 
     const tags = [];
     if (giver.riskScore !== null)
@@ -234,7 +240,7 @@ function buildTransferRecommendations(projects, myProjectIds, mlInsights) {
 
 
 // ── Center groups ────────────────────────────────────────────────────────────
-function buildCenterGroups(projects, myProjectIds) {
+function buildCenterGroups(projects, myProjectIds, centersMap = {}) {
   const myCenters = new Set(
     projects
       .filter(p => myProjectIds.has(p.projectId) && p.centerId)
@@ -245,19 +251,22 @@ function buildCenterGroups(projects, myProjectIds) {
   const byCenter = {};
   for (const p of projects) {
     if (!p.centerId || !myCenters.has(p.centerId)) continue;
-    if (!byCenter[p.centerId]) byCenter[p.centerId] = { centerName: p.centerName, projects: [] };
+    if (!byCenter[p.centerId]) byCenter[p.centerId] = { centerId: p.centerId, projects: [] };
     byCenter[p.centerId].projects.push({ ...p, _isMine: myProjectIds.has(p.projectId) });
   }
 
   return Object.values(byCenter)
     .filter(g => g.projects.length >= 1)
-    .map(g => ({
-      icon: '🏛️',
-      title: g.centerName ?? 'מרכז מחקר ללא שם',
-      insight: `${g.projects.length} מחקרים במרכז "${g.centerName ?? 'לא ידוע'}"`,
-      projects: g.projects,
-      alert: false,
-    }));
+    .map(g => {
+      const name = centersMap[g.centerId] ?? `מרכז מחקר #${g.centerId}`;
+      return {
+        icon: '🏛️',
+        title: name,
+        insight: `${g.projects.length} מחקרים במרכז "${name}"`,
+        projects: g.projects,
+        alert: false,
+      };
+    });
 }
 
 // ── Budget / behavior groups - מבוסס על מודל Clustering (K-Means) ─────────────
@@ -376,141 +385,104 @@ function RecommendationCard({ rec, onTransfer }) {
   const recvAfter  = receiver.avail + amount;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden" dir="rtl">
-      <div className="h-1 bg-gradient-to-l from-primary to-accent" />
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden" dir="rtl">
+      <div className="h-0.5 bg-gradient-to-l from-primary to-accent" />
 
-      <div className="p-5 space-y-4">
+      <div className="p-4 space-y-3">
 
-        {/* כותרת ראשית + ציון התאמה */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">💡 המלצה להעברת תקציב</p>
-            <p className="text-base font-bold text-gray-900 leading-snug">
-              מומלץ להעביר <span className="text-primary font-extrabold">{fmt(amount)}</span>{' '}
-              מ<span className="text-green-700">"{giverName}"</span>{' '}
-              אל <span className="text-red-600">"{recvName}"</span>
-            </p>
-          </div>
-          <span className={`flex-shrink-0 text-sm font-bold px-2.5 py-1 rounded-full border ${
+        {/* כותרת + ציון */}
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm font-bold text-gray-900 leading-snug flex-1 min-w-0">
+            💡 להעביר <span className="text-primary font-extrabold">{fmt(amount)}</span>{' '}
+            מ<span className="text-green-700">"{giverName}"</span>{' '}
+            אל <span className="text-red-600">"{recvName}"</span>
+          </p>
+          <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-full border ${
             confidence >= 80 ? 'bg-green-100 text-green-700 border-green-200'
             : confidence >= 60 ? 'bg-amber-100 text-amber-700 border-amber-200'
             : 'bg-gray-100 text-gray-600 border-gray-200'
           }`}>
-            {confidence >= 80 ? '🟢' : '🟡'} התאמה {confidence}%
+            {confidence >= 80 ? '🟢' : '🟡'} {confidence}%
           </span>
         </div>
 
-        {/* שני המחקרים */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* מקור */}
-          <div className="bg-green-50 border border-green-200 rounded-xl p-3.5 space-y-2">
-            <div className="flex items-center gap-1"><span>📤</span><span className="text-sm font-bold text-green-700 uppercase tracking-wider">מקור — יתרה עודפת</span></div>
-            <p className="text-sm font-bold text-gray-900 leading-snug line-clamp-2">{giverName}</p>
-            {giver.principalResearcherName && <p className="text-sm text-gray-500">👤 {giver.principalResearcherName}</p>}
-            <div className="space-y-1 pt-1.5 border-t border-green-200 text-sm">
+        {/* מקור + יעד */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-2.5 space-y-1.5">
+            <p className="text-xs font-bold text-green-700">📤 מקור — יתרה עודפת</p>
+            <p className="text-xs font-bold text-gray-900 line-clamp-2">{giverName}</p>
+            {giver.principalResearcherName && <p className="text-xs text-gray-400">👤 {giver.principalResearcherName}</p>}
+            <div className="text-xs space-y-0.5 pt-1 border-t border-green-200">
               <p>✅ יתרה: <span className="font-bold text-green-700">{fmt(giver.avail)}</span></p>
-              <p>✅ ניצול: <span className="font-bold text-green-700">{giverUsage}% בלבד</span></p>
-              {giver.riskScore !== null && (
-                <p>✅ ציון סיכון (מודל ML): <span className="font-bold text-green-700">{Math.round(giver.riskScore * 100)}% — נמוך</span></p>
-              )}
+              <p>✅ ניצול: <span className="font-bold text-green-700">{giverUsage}%</span></p>
               {giver.daysLeft !== null && (
-                <p className={giver.daysLeft <= 60 ? 'text-amber-700' : 'text-gray-600'}>
-                  {giver.daysLeft <= 60 ? '⚠️' : '✅'} נותרו {giver.daysLeft} ימים
+                <p className={giver.daysLeft <= 60 ? 'text-amber-700' : 'text-gray-500'}>
+                  {giver.daysLeft <= 60 ? '⚠️' : '📅'} {giver.daysLeft} ימים
                 </p>
               )}
             </div>
-            <div>
-              <div className="flex justify-between text-sm text-gray-400 mb-0.5"><span>ניצול תקציב</span><span>{giverUsage}%</span></div>
-              <div className="h-2 bg-white border border-green-200 rounded-full overflow-hidden">
-                <div className="h-full bg-green-400 rounded-full" style={{ width: `${Math.min(giverUsage, 100)}%` }} />
-              </div>
+            <div className="h-1.5 bg-white border border-green-200 rounded-full overflow-hidden">
+              <div className="h-full bg-green-400 rounded-full" style={{ width: `${Math.min(giverUsage, 100)}%` }} />
             </div>
           </div>
 
-          {/* יעד */}
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3.5 space-y-2">
-            <div className="flex items-center gap-1"><span>📥</span><span className="text-sm font-bold text-red-700 uppercase tracking-wider">יעד — זקוק לתקציב</span></div>
-            <p className="text-sm font-bold text-gray-900 leading-snug line-clamp-2">{recvName}</p>
-            {receiver.principalResearcherName && <p className="text-sm text-gray-500">👤 {receiver.principalResearcherName}</p>}
-            <div className="space-y-1 pt-1.5 border-t border-red-200 text-sm">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 space-y-1.5">
+            <p className="text-xs font-bold text-red-700">📥 יעד — זקוק לתקציב</p>
+            <p className="text-xs font-bold text-gray-900 line-clamp-2">{recvName}</p>
+            {receiver.principalResearcherName && <p className="text-xs text-gray-400">👤 {receiver.principalResearcherName}</p>}
+            <div className="text-xs space-y-0.5 pt-1 border-t border-red-200">
               {receiver.avail < 0
                 ? <p>🚨 גירעון: <span className="font-bold text-red-700">−{fmt(Math.abs(receiver.avail))}</span></p>
                 : <p>⚠️ ניצול: <span className="font-bold text-amber-700">{recvUsage}%</span></p>
               }
-              {receiver.riskScore !== null && receiver.riskScore >= 0.5 && (
-                <p>🔥 ציון סיכון (מודל ML): <span className="font-bold text-red-700">{Math.round(receiver.riskScore * 100)}% — גבוה</span></p>
-              )}
               {receiver.daysLeft !== null && (
-                <p className={receiver.daysLeft <= 60 ? 'text-red-600' : 'text-gray-600'}>
-                  {receiver.daysLeft <= 60 ? '🚨' : '📅'} נותרו {receiver.daysLeft} ימים
+                <p className={receiver.daysLeft <= 60 ? 'text-red-600' : 'text-gray-500'}>
+                  {receiver.daysLeft <= 60 ? '🚨' : '📅'} {receiver.daysLeft} ימים
                 </p>
               )}
             </div>
-            <div>
-              <div className="flex justify-between text-sm text-gray-400 mb-0.5"><span>ניצול תקציב</span><span>{recvUsage}%</span></div>
-              <div className="h-2 bg-white border border-red-200 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${receiver.avail < 0 ? 'bg-red-500' : 'bg-amber-400'}`} style={{ width: `${Math.min(recvUsage, 100)}%` }} />
-              </div>
+            <div className="h-1.5 bg-white border border-red-200 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full ${receiver.avail < 0 ? 'bg-red-500' : 'bg-amber-400'}`} style={{ width: `${Math.min(recvUsage, 100)}%` }} />
             </div>
           </div>
         </div>
 
-        {/* סכום מומלץ */}
-        <div className="bg-primary/5 border border-primary/20 rounded-xl py-3 text-center">
-          <p className="text-sm text-primary font-semibold mb-0.5">💸 סכום מומלץ להעברה</p>
-          <p className="text-2xl font-extrabold text-primary leading-none">{fmt(amount)}</p>
-        </div>
-
-        {/* למה ההמלצה */}
-        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 space-y-1">
-          <p className="text-sm font-bold text-blue-800 mb-1.5">🔍 למה קיבלתי את ההמלצה?</p>
-          <p className="text-sm text-blue-700">• המקור מחזיק יתרה זמינה של {fmt(giver.avail)} ({giverUsage}% ניצול מתוך התקציב)</p>
-          {giver.riskScore !== null && (
-            <p className="text-sm text-blue-700">• מודל ה-ML מעריך את סיכון התקציב של המקור ב-{Math.round(giver.riskScore * 100)}% בלבד — צפויה יתרה עודפת</p>
+        {/* למה + השפעה בשורה אחת */}
+        <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 space-y-0.5">
+          <p className="text-xs font-bold text-blue-800 mb-1">🔍 למה מומלץ להעביר?</p>
+          <p className="text-xs text-blue-700">• המקור מחזיק יתרה של {fmt(giver.avail)} — ניצל {giverUsage}% בלבד</p>
+          {giver.daysLeft !== null && giver.daysLeft <= 90 && (
+            <p className="text-xs text-blue-700">• למקור נותרו {giver.daysLeft} ימים — היתרה צפויה להישאר</p>
           )}
           {receiver.avail < 0
-            ? <p className="text-sm text-blue-700">• היעד בגירעון של {fmt(Math.abs(receiver.avail))} — נדרש תגבור מיידי</p>
-            : <p className="text-sm text-blue-700">• היעד ניצל {recvUsage}% מהתקציב וצפוי לחרוג ממנו</p>
+            ? <p className="text-xs text-blue-700">• היעד בגירעון של {fmt(Math.abs(receiver.avail))} — נדרש תגבור</p>
+            : <p className="text-xs text-blue-700">• היעד ניצל {recvUsage}% וצפוי להזדקק לתגבור</p>
           }
-          {receiver.riskScore !== null && receiver.riskScore >= 0.5 && (
-            <p className="text-sm text-blue-700">• מודל ה-ML מעריך את סיכון התקציב של היעד ב-{Math.round(receiver.riskScore * 100)}% — חריגה צפויה</p>
-          )}
         </div>
 
-        {/* טבלת השפעה */}
-        <div className="border border-gray-100 rounded-xl overflow-hidden text-sm">
-          <div className="bg-gray-50 px-4 py-2 border-b border-gray-100">
-            <p className="text-sm font-bold text-gray-600">📊 השפעת ההעברה</p>
+        {/* השפעה + כפתור */}
+        <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2 text-xs">
+          <div className="flex-1 flex items-center gap-4">
+            <div>
+              <p className="text-gray-400">יתרת המקור אחרי</p>
+              <p className="font-bold text-green-700">{fmt(giverAfter)}</p>
+            </div>
+            <div>
+              <p className="text-gray-400">{recvAfter < 0 ? 'גירעון יעד אחרי' : 'יתרת יעד אחרי'}</p>
+              <p className={`font-bold ${recvAfter < 0 ? 'text-red-600' : 'text-green-700'}`}>
+                {recvAfter < 0 ? `−${fmt(Math.abs(recvAfter))}` : fmt(recvAfter)}
+              </p>
+            </div>
           </div>
-          <table className="w-full">
-            <thead><tr className="text-sm text-gray-400 uppercase bg-gray-50">
-              <th className="px-4 py-1.5 text-right font-semibold">מדד</th>
-              <th className="px-4 py-1.5 text-center font-semibold">לפני</th>
-              <th className="px-4 py-1.5 text-center font-semibold">אחרי</th>
-            </tr></thead>
-            <tbody className="divide-y divide-gray-50">
-              <tr>
-                <td className="px-4 py-2 text-gray-600">יתרת המקור</td>
-                <td className="px-4 py-2 text-center font-bold text-green-700">{fmt(giver.avail)}</td>
-                <td className="px-4 py-2 text-center font-bold text-green-600">{fmt(giverAfter)}</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-2 text-gray-600">{receiver.avail < 0 ? 'גירעון היעד' : 'יתרת היעד'}</td>
-                <td className={`px-4 py-2 text-center font-bold ${receiver.avail < 0 ? 'text-red-600' : 'text-amber-600'}`}>
-                  {receiver.avail < 0 ? `−${fmt(Math.abs(receiver.avail))}` : fmt(receiver.avail)}
-                </td>
-                <td className={`px-4 py-2 text-center font-bold ${recvAfter < 0 ? 'text-red-500' : 'text-green-600'}`}>
-                  {recvAfter < 0 ? `−${fmt(Math.abs(recvAfter))}` : fmt(recvAfter)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="text-center">
+            <p className="text-gray-400 mb-0.5">מועבר</p>
+            <p className="font-extrabold text-primary">{fmt(amount)}</p>
+          </div>
         </div>
 
-        {/* כפתור */}
         <button
           onClick={() => onTransfer(giver.projectId, receiver.projectId, amount)}
-          className="w-full bg-primary hover:bg-primary-dark text-white text-sm font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+          className="w-full bg-primary hover:bg-primary-dark text-white text-sm font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
         >
           💸 התחל תהליך העברה
         </button>
@@ -717,11 +689,12 @@ export default function ComparisonPage() {
   const [projects,         setProjects]         = useState([]);
   const [allProjectsRaw,   setAllProjectsRaw]   = useState([]);
   const [myProjectIds,     setMyProjectIds]      = useState(new Set());
+  const [centersMap,       setCentersMap]        = useState({});
   const [mlInsights,    setMlInsights]    = useState(null);
   const [loading,       setLoading]       = useState(true);
   const [metric,      setMetric]      = useState('all');
   const urlMode = searchParams.get('mode');
-  const [mode,        setMode]        = useState(urlMode === 'recommendations' ? 'recommendations' : 'overview');
+  const [mode,        setMode]        = useState(['overview','compare','recommendations','center'].includes(urlMode) ? urlMode : 'overview');
 
   const switchMode = (key) => {
     setMode(key);
@@ -736,15 +709,21 @@ export default function ComparisonPage() {
   const [loadingCmp,  setLoadingCmp]  = useState(false);
   const [period,      setPeriod]      = useState('monthly');
   const [search,      setSearch]      = useState('');
+  const [centerSearch,       setCenterSearch]       = useState('');
+  const [selectedCenterTitle, setSelectedCenterTitle] = useState(null);
+  const [centerDropOpen,     setCenterDropOpen]     = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
-    Promise.all([getAllProjects(), getProjects()])
-      .then(([allRes, myRes]) => {
+    Promise.all([getAllProjects(), getProjects(), getCenters()])
+      .then(([allRes, myRes, centersRes]) => {
         const all = allRes.data ?? [];
         setProjects(all.filter(isActive));
         setAllProjectsRaw(all);
         setMyProjectIds(new Set((myRes.data ?? []).map(p => p.projectId)));
+        const map = {};
+        (centersRes.data ?? []).forEach(c => { map[c.centerId] = c.centerName; });
+        setCentersMap(map);
       })
       .catch(() => toast.error('שגיאה בטעינת הנתונים'))
       .finally(() => setLoading(false));
@@ -804,7 +783,7 @@ export default function ComparisonPage() {
   const selectedProjects  = selectedIds.map(id => projects.find(p => p.projectId === id)).filter(Boolean);
   const recommendations   = useMemo(() => buildTransferRecommendations(projects, myProjectIds, mlInsights), [projects, myProjectIds, mlInsights]);
   const clusterGroups     = useMemo(() => buildClusterGroups(projects, mlInsights), [projects, mlInsights]);
-  const centerGroups      = useMemo(() => buildCenterGroups(allProjectsRaw, myProjectIds), [allProjectsRaw, myProjectIds]);
+  const centerGroups      = useMemo(() => buildCenterGroups(allProjectsRaw, myProjectIds, centersMap), [allProjectsRaw, myProjectIds, centersMap]);
 
   // Projects shown in the picker (active only, filtered by search query)
   const filteredForDisplay = projects.filter((p) => {
@@ -839,30 +818,29 @@ export default function ComparisonPage() {
   return (
     <Layout>
       <div dir="rtl">
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="mb-6 flex flex-col gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">השוואות בין מחקרים</h1>
             <p className="text-sm text-gray-400 mt-0.5">{projects.length} מחקרים פעילים</p>
           </div>
-          <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl self-start flex-wrap">
-            {[
-              { key: 'overview',        label: 'סקירה כללית' },
-              { key: 'compare',         label: '⚖️ השוואה ישירה' },
-              { key: 'recommendations', label: '💡 המלצות', badge: recommendations.length },
-            ].map((m) => (
-              <button key={m.key} onClick={() => switchMode(m.key)}
-                className={`relative px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
-                  mode === m.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                }`}>
-                {m.label}
-                {m.badge > 0 && (
-                  <span className="absolute -top-1.5 -left-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none px-1">
-                    {m.badge}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+          {mode !== 'recommendations' && (
+            <div className="overflow-x-auto pb-1">
+              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl min-w-max">
+                {[
+                  { key: 'overview', label: 'סקירה כללית' },
+                  { key: 'compare',  label: '⚖️ השוואה ישירה' },
+                  { key: 'center',   label: '🏛️ מחקרים לפי מרכז מחקר' },
+                ].map((m) => (
+                  <button key={m.key} onClick={() => switchMode(m.key)}
+                    className={`relative px-4 py-2 text-sm font-semibold rounded-lg transition-colors whitespace-nowrap ${
+                      mode === m.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    }`}>
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {mode === 'overview' && (
@@ -888,21 +866,25 @@ export default function ComparisonPage() {
               ) : projects.length === 0 ? (
                 <p className="text-center text-gray-400 py-20 text-sm">אין מחקרים פעילים להצגה</p>
               ) : (
-                <ResponsiveContainer width="100%" height={barChartHeight}>
-                  <BarChart data={chartData} margin={{ top: 4, right: 10, left: 10, bottom: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                    <XAxis dataKey="name" tick={<CustomXTick />} interval={0} height={44} />
-                    <YAxis tick={{ fontSize: 11, fill: axisColor }} tickFormatter={(v) => `₪${(v/1000).toFixed(0)}k`} />
-                    <Tooltip content={<ChartTooltip />} cursor={{ fill: cursorFill }} />
-                    <Legend
-                      verticalAlign="top"
-                      wrapperStyle={{ fontSize: 13, paddingBottom: '12px', top: 0, color: axisColor }}
-                    />
-                    {(metric==='all'||metric==='budget')    && <Bar dataKey="תקציב כולל"  fill="#93c5fd" radius={[4,4,0,0]} />}
-                    {(metric==='all'||metric==='paid')      && <Bar dataKey="הוצאות בפועל" fill="#f87171" radius={[4,4,0,0]} />}
-                    {(metric==='all'||metric==='available') && <Bar dataKey="יתרה זמינה"  fill="#4ade80" radius={[4,4,0,0]} />}
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="overflow-x-auto">
+                  <div style={{ minWidth: Math.max(520, chartData.length * 65) }}>
+                    <ResponsiveContainer width="100%" height={barChartHeight}>
+                      <BarChart data={chartData} margin={{ top: 4, right: 10, left: 10, bottom: 10 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                        <XAxis dataKey="name" tick={<CustomXTick />} interval={0} height={52} />
+                        <YAxis tick={{ fontSize: 11, fill: axisColor }} tickFormatter={(v) => `₪${(v/1000).toFixed(0)}k`} width={55} />
+                        <Tooltip content={<ChartTooltip />} cursor={{ fill: cursorFill }} />
+                        <Legend
+                          verticalAlign="top"
+                          wrapperStyle={{ fontSize: 13, paddingBottom: '12px', top: 0, color: axisColor }}
+                        />
+                        {(metric==='all'||metric==='budget')    && <Bar dataKey="תקציב כולל"  fill="#93c5fd" radius={[4,4,0,0]} />}
+                        {(metric==='all'||metric==='paid')      && <Bar dataKey="הוצאות בפועל" fill="#f87171" radius={[4,4,0,0]} />}
+                        {(metric==='all'||metric==='available') && <Bar dataKey="יתרה זמינה"  fill="#4ade80" radius={[4,4,0,0]} />}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               )}
             </div>
             {!loading && projects.length > 0 && (
@@ -911,14 +893,14 @@ export default function ComparisonPage() {
                   <h2 className="text-sm font-semibold text-gray-700">פירוט לפי מחקר</h2>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm" dir="rtl">
+                  <table className="w-full text-sm min-w-[480px]" dir="rtl">
                     <thead className="bg-gray-50 text-xs text-gray-500">
                       <tr>
-                        <th className="px-5 py-3 text-right font-semibold">שם המחקר</th>
-                        <th className="px-4 py-3 text-left font-semibold">תקציב כולל</th>
-                        <th className="px-4 py-3 text-left font-semibold">הוצאות בפועל</th>
-                        <th className="px-4 py-3 text-left font-semibold">יתרה זמינה</th>
-                        <th className="px-4 py-3 text-left font-semibold">% ניצול</th>
+                        <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">שם המחקר</th>
+                        <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">תקציב (₪)</th>
+                        <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">הוצאות (₪)</th>
+                        <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">יתרה (₪)</th>
+                        <th className="px-3 py-3 text-left font-semibold whitespace-nowrap">% ניצול</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -931,13 +913,13 @@ export default function ComparisonPage() {
                         return (
                           <tr key={p.projectId} className="hover:bg-gray-50 transition-colors cursor-pointer"
                             onClick={() => navigate(`/projects/${p.projectId}`)}>
-                            <td className="px-5 py-3 font-medium text-gray-800 max-w-[220px] truncate">
+                            <td className="px-4 py-3 font-medium text-gray-800 max-w-[160px] sm:max-w-[220px] truncate">
                               {p.projectNameHe || p.projectNameEn || `#${p.projectId}`}
                             </td>
-                            <td className="px-4 py-3 text-left tabular-nums text-gray-600">{fmt(budget)}</td>
-                            <td className="px-4 py-3 text-left tabular-nums text-red-500">{fmt(paid)}</td>
-                            <td className="px-4 py-3 text-left tabular-nums text-green-700">{fmt(avail)}</td>
-                            <td className={`px-4 py-3 text-left tabular-nums font-bold ${color}`}>{usedPct}%</td>
+                            <td className="px-3 py-3 text-left tabular-nums text-gray-600 whitespace-nowrap">{fmt(budget)}</td>
+                            <td className="px-3 py-3 text-left tabular-nums text-red-500 whitespace-nowrap">{fmt(paid)}</td>
+                            <td className="px-3 py-3 text-left tabular-nums text-green-700 whitespace-nowrap">{fmt(avail)}</td>
+                            <td className={`px-3 py-3 text-left tabular-nums font-bold whitespace-nowrap ${color}`}>{usedPct}%</td>
                           </tr>
                         );
                       })}
@@ -976,7 +958,6 @@ export default function ComparisonPage() {
                 </div>
               ) : (
                 <>
-                  <RecommendationsSummary recommendations={recommendations} />
                   <div className="space-y-4">
                     {recommendations.map((rec, i) => (
                       <RecommendationCard
@@ -992,37 +973,110 @@ export default function ComparisonPage() {
               )}
             </div>
 
-            {/* מחקרים דומים לפי מרכז מחקר */}
-            <div className="mt-8">
-              <div className="flex items-start gap-3 mb-4">
-                <span className="text-2xl mt-0.5">🏛️</span>
-                <div>
-                  <h2 className="text-base font-extrabold text-gray-800">מחקרים דומים לפי מרכז מחקר</h2>
-                  <p className="text-sm text-gray-400 mt-0.5 leading-relaxed">
-                    ניתן להשוות דפוסי ניהול, קצב הוצאות וניצול תקציב מול מחקרים דומים מאותו מרכז מחקר.
-                  </p>
-                </div>
-              </div>
 
-              {loading ? (
-                <div className="flex justify-center py-12">
-                  <div className="w-7 h-7 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
+        {mode === 'center' && (
+          <div dir="rtl">
+            <div className="flex items-start gap-3 mb-4">
+              <span className="text-2xl mt-0.5">🏛️</span>
+              <div>
+                <h2 className="text-base font-extrabold text-gray-800">מחקרים לפי מרכז מחקר</h2>
+                <p className="text-sm text-gray-400 mt-0.5 leading-relaxed">
+                  ניתן להשוות דפוסי ניהול, קצב הוצאות וניצול תקציב מול מחקרים מאותו מרכז מחקר.
+                </p>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="w-7 h-7 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : centerGroups.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+                <p className="text-4xl mb-3">🏛️</p>
+                <p className="text-sm font-bold text-gray-700">לא נמצאו מחקרים נוספים באותו מרכז מחקר</p>
+                <p className="text-xs text-gray-400 mt-1">ייתכן שהמחקרים שלך אינם משויכים למרכז מחקר</p>
+              </div>
+            ) : (
+              <>
+                {/* Center search + dropdown */}
+                <div className="relative mb-5">
+                  <div className="relative">
+                    <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input
+                      type="text"
+                      value={selectedCenterTitle ? selectedCenterTitle : centerSearch}
+                      onChange={e => {
+                        setCenterSearch(e.target.value);
+                        setSelectedCenterTitle(null);
+                        setCenterDropOpen(true);
+                      }}
+                      onFocus={() => setCenterDropOpen(true)}
+                      placeholder="חיפוש מרכז מחקר..."
+                      className="w-full bg-white border border-gray-200 rounded-xl pr-10 pl-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary shadow-sm"
+                    />
+                    {(selectedCenterTitle || centerSearch) && (
+                      <button
+                        onClick={() => { setCenterSearch(''); setSelectedCenterTitle(null); setCenterDropOpen(false); }}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Dropdown list */}
+                  {centerDropOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setCenterDropOpen(false)} />
+                      <div className="absolute right-0 left-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 max-h-56 overflow-y-auto">
+                        {centerGroups
+                          .filter(g => !centerSearch.trim() || g.title.includes(centerSearch.trim()))
+                          .length === 0 ? (
+                          <p className="text-sm text-gray-400 text-center py-4">לא נמצאו מרכזי מחקר</p>
+                        ) : (
+                          centerGroups
+                            .filter(g => !centerSearch.trim() || g.title.toLowerCase().includes(centerSearch.toLowerCase()))
+                            .map((g, i) => (
+                              <button
+                                key={i}
+                                onClick={() => { setSelectedCenterTitle(g.title); setCenterSearch(''); setCenterDropOpen(false); }}
+                                className={`w-full text-right px-4 py-2.5 text-sm hover:bg-primary/5 transition-colors flex items-center justify-between gap-2 border-b border-gray-50 last:border-0 ${
+                                  selectedCenterTitle === g.title ? 'bg-primary/5 font-semibold text-primary' : 'text-gray-700'
+                                }`}
+                              >
+                                <span className="flex items-center gap-2">
+                                  <span>{g.icon}</span>
+                                  <span>{g.title}</span>
+                                </span>
+                                <span className="text-xs text-gray-400 flex-shrink-0">{g.projects.length} מחקרים</span>
+                              </button>
+                            ))
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
-              ) : centerGroups.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-                  <p className="text-4xl mb-3">🏛️</p>
-                  <p className="text-sm font-bold text-gray-700">לא נמצאו מחקרים נוספים באותו מרכז מחקר</p>
-                  <p className="text-xs text-gray-400 mt-1">ייתכן שהמחקרים שלך אינם משויכים למרכז מחקר</p>
-                </div>
-              ) : (
+
+                {/* Results */}
                 <div className="space-y-5">
-                  {centerGroups.map((group, i) => (
+                  {(selectedCenterTitle
+                    ? centerGroups.filter(g => g.title === selectedCenterTitle)
+                    : centerGroups
+                  ).map((group, i) => (
                     <SimilarityGroupCard key={i} group={group} navigate={navigate} />
                   ))}
                 </div>
-              )}
-            </div>
-
+              </>
+            )}
           </div>
         )}
 
