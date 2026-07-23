@@ -18,7 +18,7 @@ export default function LoginPage() {
   // אם כבר מחובר ויש כתובת לחזור אליה — עבור ישירות
   useEffect(() => {
     if (user) {
-      navigate(from ?? (user.systemAuthorization === 'עוזר מחקר' ? '/attendance' : user.systemAuthorization === 'מזכירות' ? '/history' : '/dashboard'), { replace: true });
+      navigate(user.systemAuthorization === 'עוזר מחקר' ? '/attendance' : user.systemAuthorization === 'מזכירות' ? (from ?? '/history') : '/dashboard', { replace: true });
     }
   }, [user]);
 
@@ -32,7 +32,7 @@ export default function LoginPage() {
       const res = await loginApi(form);
       login(res.data);
       const role = res.data.systemAuthorization;
-      navigate(from ?? (role === 'עוזר מחקר' ? '/attendance' : role === 'מזכירות' ? '/approvals' : '/dashboard'), { replace: true });
+      navigate(role === 'עוזר מחקר' ? '/attendance' : role === 'מזכירות' ? (from ?? '/approvals') : '/dashboard', { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'שם משתמש או סיסמה שגויים');
     } finally {

@@ -24,5 +24,13 @@ namespace RupResearchAPI.Services
             int year,
             decimal totalHours,
             int approvalId);
+
+        Task SendBudgetTransferRequestEmailAsync(
+            string giverPIEmail,
+            string giverPIName,
+            string giverProjectName,
+            string receiverProjectName,
+            decimal amount,
+            string requesterName);
     }
 }

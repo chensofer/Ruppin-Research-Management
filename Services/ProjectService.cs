@@ -1186,7 +1186,7 @@ namespace RupResearchAPI.Services
             _db.ResearchPaymentRequests.Add(new ResearchPaymentRequest
             {
                 ProjectId = sourceId,
-                CategoryName = "העברת תקציב",
+                CategoryName = null,
                 RequestTitle = $"העברת תקציב ← {targetName}",
                 RequestedAmount = amount,       // positive → shown as outgoing (-)
                 RequestDate = today,
@@ -1199,7 +1199,7 @@ namespace RupResearchAPI.Services
             _db.ResearchPaymentRequests.Add(new ResearchPaymentRequest
             {
                 ProjectId = targetId,
-                CategoryName = "העברת תקציב",
+                CategoryName = null,
                 RequestTitle = $"העברת תקציב ← {sourceName}",
                 RequestedAmount = -amount,      // negative → shown as incoming (+)
                 RequestDate = today,

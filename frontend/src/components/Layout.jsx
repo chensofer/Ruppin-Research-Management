@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -6,10 +6,11 @@ import Logo from './Logo';
 import {
   HiSquares2X2, HiCheckCircle, HiCalendarDays, HiDocumentChartBar,
   HiArrowRightOnRectangle, HiBars3, HiChartBar, HiArchiveBox,
-  HiSun, HiMoon, HiClock, HiUserGroup, HiLightBulb,
+  HiSun, HiMoon, HiClock, HiUserGroup, HiLightBulb, HiBell,
 } from 'react-icons/hi2';
 import { getPendingPaymentRequests } from '../api/paymentRequestsApi';
 import { getPendingHourApprovals } from '../api/hourReportsApi';
+import { getMyNotifications, markNotificationRead, markAllRead } from '../api/notificationsApi';
 
 const ASSISTANT_NAV = [
   { to: '/attendance', label: 'דיווח נוכחות', icon: <HiCalendarDays      className="w-5 h-5 flex-shrink-0" /> },
@@ -23,6 +24,8 @@ export default function Layout({ children }) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen]       = useState(false);
   const [pendingCount, setPendingCount]   = useState(0);
+  const [notifications, setNotifications] = useState([]);
+  const [notifOpen, setNotifOpen]         = useState(false);
 
   const role = user?.systemAuthorization;
   const isAssistant  = role === 'עוזר מחקר';
@@ -84,6 +87,37 @@ export default function Layout({ children }) {
     };
   }, [user, isAssistant, location.pathname]);
 
+  // טעינת התראות — בעת כניסה לאתר ובכל פוקוס חלון (רק לחוקרים)
+  const firstNotifLoad = useRef(true);
+  useEffect(() => {
+    if (isAssistant || !user?.userId) return;
+    const fetchNotifs = (autoOpen = false) =>
+      getMyNotifications()
+        .then(r => {
+          const items = r.data ?? [];
+          setNotifications(items);
+          // פתח אוטומטית את פאנל ההתראות בכניסה הראשונה אם יש התראות
+          if (autoOpen && items.length > 0) setNotifOpen(true);
+        })
+        .catch(() => {});
+    fetchNotifs(firstNotifLoad.current);
+    firstNotifLoad.current = false;
+    window.addEventListener('focus', fetchNotifs);
+    return () => window.removeEventListener('focus', fetchNotifs);
+  }, [user, isAssistant]);
+
+
+  const handleMarkRead = async (id) => {
+    await markNotificationRead(id).catch(() => {});
+    setNotifications(prev => prev.filter(n => n.notificationId !== id));
+  };
+
+  const handleMarkAllRead = async () => {
+    await markAllRead().catch(() => {});
+    setNotifications([]);
+    setNotifOpen(false);
+  };
+
   const SidebarContent = () => (
     <div className="flex flex-col h-full" style={{ background: 'linear-gradient(180deg, #003478 0%, #001E50 100%)' }}>
       {/* Logo */}
@@ -118,6 +152,26 @@ export default function Layout({ children }) {
           </NavLink>
         ))}
       </nav>
+
+      {/* Notifications bell — only the button lives here; the dropdown panel is rendered outside SidebarContent to avoid remount issues */}
+      {!isAssistant && (
+        <div className="px-3 pb-2">
+          <button
+            onClick={() => setNotifOpen(v => !v)}
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-white/65 hover:bg-white/10 hover:text-white"
+          >
+            <div className="relative">
+              <HiBell className="w-5 h-5 flex-shrink-0" />
+              {notifications.length > 0 && (
+                <span className="absolute -top-1.5 -left-1.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
+                  {notifications.length > 9 ? '9+' : notifications.length}
+                </span>
+              )}
+            </div>
+            <span className="flex-1 text-right">התראות</span>
+          </button>
+        </div>
+      )}
 
       {/* User section */}
       <div className="px-3 py-4 border-t border-white/10">
@@ -197,6 +251,74 @@ export default function Layout({ children }) {
           <HiArrowRightOnRectangle className="w-5 h-5" />
         </button>
       </div>
+
+      {/* Notifications dropdown — fixed panel next to sidebar, rendered here to avoid SidebarContent remount issues */}
+      {notifOpen && !isAssistant && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+          <div
+            className="fixed right-64 bottom-20 w-80 bg-white rounded-2xl shadow-2xl z-50 overflow-hidden border border-gray-100"
+            dir="rtl"
+          >
+            <div className="bg-purple-600 px-4 py-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold text-white">🔔 {notifications.length > 0 ? `${notifications.length} התראות חדשות` : 'התראות'}</p>
+                {notifications.length > 0 && (
+                  <button onClick={handleMarkAllRead} className="text-xs text-purple-200 hover:text-white underline">
+                    סמן הכל כנקרא
+                  </button>
+                )}
+              </div>
+              {notifications.length > 0 && (
+                <p className="text-xs text-purple-200 mt-0.5">קיבלת בקשות העברת תקציב הממתינות לטיפולך</p>
+              )}
+            </div>
+            {notifications.length === 0 ? (
+              <div className="px-4 py-6 text-center">
+                <p className="text-2xl mb-1">🔕</p>
+                <p className="text-sm text-gray-400">אין התראות חדשות</p>
+              </div>
+            ) : (
+              <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+                {notifications.map(n => {
+                  let parsed = null;
+                  try { parsed = JSON.parse(n.data); } catch {}
+                  const dateStr = n.createdAt && !n.createdAt.endsWith('Z') ? n.createdAt + 'Z' : n.createdAt;
+                  return (
+                    <div key={n.notificationId} className="px-4 py-3 bg-purple-50/40 hover:bg-purple-50 transition-colors">
+                      <p className="text-xs font-semibold text-purple-700 mb-0.5">💸 בקשת העברת תקציב</p>
+                      <p className="text-sm text-gray-700 leading-relaxed">{n.message}</p>
+                      {parsed && (
+                        <button
+                          onClick={() => {
+                            handleMarkRead(n.notificationId);
+                            setNotifOpen(false);
+                            navigate(`/projects/${parsed.giverProjectId}?tab=transfer&to=${parsed.receiverProjectId}&amount=${Math.round(parsed.amount)}`);
+                          }}
+                          className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                        >
+                          💸 בצע העברה
+                        </button>
+                      )}
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="text-xs text-gray-400">
+                          {new Date(dateStr).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                        <button
+                          onClick={() => handleMarkRead(n.notificationId)}
+                          className="text-xs text-gray-400 hover:text-gray-600 underline"
+                        >
+                          סמן כנקרא
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Main content */}
       <main className="flex-1 md:mr-64 p-4 md:p-8 min-h-screen pt-16 md:pt-8 overflow-x-hidden">

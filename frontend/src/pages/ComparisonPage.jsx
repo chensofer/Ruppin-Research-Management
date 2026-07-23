@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, LineChart, Line,
 } from 'recharts';
-import { getAllProjects, getProjects, getCommitments, getMlInsights } from '../api/projectsApi';
+import { getAllProjects, getProjects, getCommitments, getMlInsights, requestBudgetTransfer } from '../api/projectsApi';
 import { getPaymentRequestsByProject } from '../api/paymentRequestsApi';
 import { getCenters } from '../api/centersApi';
 import Layout from '../components/Layout';
@@ -166,34 +166,44 @@ function buildMetrics(selectedProjects, compareData) {
 // ציון הסיכון התקציבי (risk_score) שמחזיר מודל Random Forest שאומן ב-
 // ml_component/budget_risk_classifier.py (ראו /api/projects/ml-insights),
 // במקום סף burn-rate קשיח.
-function buildTransferRecommendations(projects, myProjectIds, mlInsights) {
+function buildTransferRecommendations(projects, myProjectIds, mlInsights, allProjects) {
   const projectInsights = mlInsights?.projects ?? {};
 
-  const enriched = projects.map(p => {
-    const timePct  = calcTimePct(p);
-    const budget   = p.totalBudget ?? 0;
-    const paid     = p.totalPaid   ?? 0;
-    const avail    = p.availableBalance ?? 0;
-    const usagePct = budget > 0 ? (paid / budget) * 100 : 0;
-    const burnRate = (timePct && timePct > 0) ? usagePct / timePct : null;
-    const daysLeft = calcDaysLeft(p);
-    const isMine   = myProjectIds.has(p.projectId);
-    const insight  = projectInsights[p.projectId] ?? projectInsights[String(p.projectId)];
+  const enrich = (p, allowReceiver) => {
+    const timePct   = calcTimePct(p);
+    const budget    = p.totalBudget ?? 0;
+    const paid      = p.totalPaid   ?? 0;
+    const avail     = p.availableBalance ?? 0;
+    const usagePct  = budget > 0 ? (paid / budget) * 100 : 0;
+    const burnRate  = (timePct && timePct > 0) ? usagePct / timePct : null;
+    const daysLeft  = calcDaysLeft(p);
+    const hasEnded  = !!p.endDate && String(p.endDate).slice(0, 10) < TODAY;
+    const insight   = projectInsights[p.projectId] ?? projectInsights[String(p.projectId)];
     const riskScore = insight?.risk_score ?? null;
 
-    // מחקר שמסיים בקרוב עם יתרה גבוהה הוא מקור מועדף (לא מוצא)
     const endingSoon = daysLeft !== null && daysLeft <= 45;
-    const isGiver =
-      avail > Math.max(budget * 0.15, 5000) &&
-      (riskScore === null || riskScore < 0.3) &&
-      (!endingSoon || avail > budget * 0.3);
 
-    const isReceiver =
+    const isGiver = hasEnded
+      ? avail > 0
+      : avail > Math.max(budget * 0.15, 5000) &&
+        (endingSoon || riskScore === null || riskScore < 0.3);
+
+    const isReceiver = allowReceiver && (
       avail < 0 ||
-      (riskScore !== null && riskScore >= 0.5);
+      (riskScore !== null && riskScore >= 0.5)
+    );
 
-    return { ...p, timePct, budget, paid, avail, usagePct, burnRate, daysLeft, riskScore, isGiver, isReceiver };
-  });
+    return { ...p, timePct, budget, paid, avail, usagePct, burnRate, daysLeft, hasEnded, riskScore, isGiver, isReceiver };
+  };
+
+  const activeIds = new Set(projects.map(p => p.projectId));
+  const endedWithSurplus = (allProjects ?? [])
+    .filter(p => !activeIds.has(p.projectId) && !p.isArchived && (p.availableBalance ?? 0) > 0);
+
+  const enriched = [
+    ...projects.map(p => enrich(p, true)),
+    ...endedWithSurplus.map(p => enrich(p, false)),
+  ];
 
   const givers    = enriched.filter(p => p.isGiver).sort((a, b) => {
     const aUrgent = a.daysLeft !== null && a.daysLeft <= 45 ? 1 : 0;
@@ -210,13 +220,20 @@ function buildTransferRecommendations(projects, myProjectIds, mlInsights) {
   for (const recv of receivers) {
     const giver = givers.find(g =>
       g.projectId !== recv.projectId &&
-      giverRemaining[g.projectId] > Math.max(g.budget * 0.15, 5000)
+      (g.hasEnded ? giverRemaining[g.projectId] > 0 : giverRemaining[g.projectId] > Math.max(g.budget * 0.15, 5000))
     );
     if (!giver) break;
 
     const remaining = giverRemaining[giver.projectId];
-    const need   = recv.avail < 0 ? Math.abs(recv.avail) + recv.budget * 0.05 : recv.budget * 0.12;
-    const amount = Math.min(remaining * 0.35, need);
+    // כמה צריך לתת: אם יש גירעון — מכסים את כולו + 10% מאגן. אחרת — מביאים ניצול ל-50%.
+    const need = recv.avail < 0
+      ? Math.abs(recv.avail) + recv.budget * 0.1
+      : Math.max(recv.budget * (recv.usagePct / 100) - recv.budget * 0.5, recv.budget * 0.1);
+    // המקסימום שהמקור יכול לתת תוך שמירה על 15% מינימום לעצמו
+    const maxCanGive = giver.hasEnded
+      ? remaining
+      : remaining - Math.max(giver.budget * 0.15, 5000);
+    const amount = Math.min(maxCanGive, need);
     if (amount < 2000) continue;
 
     giverRemaining[giver.projectId] -= amount;
@@ -224,7 +241,9 @@ function buildTransferRecommendations(projects, myProjectIds, mlInsights) {
     const tags = [];
     if (giver.riskScore !== null)
       tags.push(`ציון סיכון תקציבי נמוך (${Math.round(giver.riskScore * 100)}%) — מודל ML`);
-    if (giver.daysLeft !== null && giver.daysLeft <= 45)
+    if (giver.hasEnded)
+      tags.push(`המחקר הסתיים — יתרה פנויה להעברה`);
+    else if (giver.daysLeft !== null && giver.daysLeft <= 45)
       tags.push(`המחקר מסתיים בעוד ${giver.daysLeft} ימים — יתרה עודפת`);
     else if (giver.daysLeft !== null)
       tags.push(`${giver.daysLeft} ימים נותרו למקור`);
@@ -233,7 +252,7 @@ function buildTransferRecommendations(projects, myProjectIds, mlInsights) {
     if (recv.riskScore !== null && recv.riskScore >= 0.5)
       tags.push(`ציון סיכון תקציבי גבוה (${Math.round(recv.riskScore * 100)}%) — מודל ML`);
 
-    recs.push({ giver, receiver: recv, amount, tags });
+    recs.push({ giver, receiver: recv, amount, tags, isGiverMine: myProjectIds.has(giver.projectId) });
   }
   return recs;
 }
@@ -374,8 +393,8 @@ function RecommendationsSummary({ recommendations }) {
   );
 }
 
-function RecommendationCard({ rec, onTransfer }) {
-  const { giver, receiver, amount } = rec;
+function RecommendationCard({ rec, onTransfer, onRequestTransfer }) {
+  const { giver, receiver, amount, isGiverMine } = rec;
   const giverName  = giver.projectNameHe    || giver.projectNameEn    || `מחקר #${giver.projectId}`;
   const recvName   = receiver.projectNameHe || receiver.projectNameEn || `מחקר #${receiver.projectId}`;
   const giverUsage = Math.round(giver.usagePct ?? 0);
@@ -415,11 +434,14 @@ function RecommendationCard({ rec, onTransfer }) {
             <div className="text-xs space-y-0.5 pt-1 border-t border-green-200">
               <p>✅ יתרה: <span className="font-bold text-green-700">{fmt(giver.avail)}</span></p>
               <p>✅ ניצול: <span className="font-bold text-green-700">{giverUsage}%</span></p>
-              {giver.daysLeft !== null && (
-                <p className={giver.daysLeft <= 60 ? 'text-amber-700' : 'text-gray-500'}>
-                  {giver.daysLeft <= 60 ? '⚠️' : '📅'} {giver.daysLeft} ימים
-                </p>
-              )}
+              {giver.hasEnded
+                ? <p className="text-orange-600 font-semibold">🔚 המחקר הסתיים — יתרה פנויה להעברה</p>
+                : giver.daysLeft !== null && (
+                  <p className={giver.daysLeft <= 60 ? 'text-amber-700' : 'text-gray-500'}>
+                    {giver.daysLeft <= 60 ? '⚠️' : '📅'} {giver.daysLeft} ימים
+                  </p>
+                )
+              }
             </div>
             <div className="h-1.5 bg-white border border-green-200 rounded-full overflow-hidden">
               <div className="h-full bg-green-400 rounded-full" style={{ width: `${Math.min(giverUsage, 100)}%` }} />
@@ -451,9 +473,12 @@ function RecommendationCard({ rec, onTransfer }) {
         <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 space-y-0.5">
           <p className="text-xs font-bold text-blue-800 mb-1">🔍 למה מומלץ להעביר?</p>
           <p className="text-xs text-blue-700">• המקור מחזיק יתרה של {fmt(giver.avail)} — ניצל {giverUsage}% בלבד</p>
-          {giver.daysLeft !== null && giver.daysLeft <= 90 && (
-            <p className="text-xs text-blue-700">• למקור נותרו {giver.daysLeft} ימים — היתרה צפויה להישאר</p>
-          )}
+          {giver.hasEnded
+            ? <p className="text-xs text-blue-700">• המחקר הסתיים — כל היתרה פנויה להעברה</p>
+            : giver.daysLeft !== null && giver.daysLeft <= 90 && (
+              <p className="text-xs text-blue-700">• למקור נותרו {giver.daysLeft} ימים — היתרה צפויה להישאר</p>
+            )
+          }
           {receiver.avail < 0
             ? <p className="text-xs text-blue-700">• היעד בגירעון של {fmt(Math.abs(receiver.avail))} — נדרש תגבור</p>
             : <p className="text-xs text-blue-700">• היעד ניצל {recvUsage}% וצפוי להזדקק לתגבור</p>
@@ -480,12 +505,34 @@ function RecommendationCard({ rec, onTransfer }) {
           </div>
         </div>
 
-        <button
-          onClick={() => onTransfer(giver.projectId, receiver.projectId, amount)}
-          className="w-full bg-primary hover:bg-primary-dark text-white text-sm font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
-        >
-          💸 התחל תהליך העברה
-        </button>
+        {isGiverMine ? (
+          <button
+            onClick={() => onTransfer(giver.projectId, receiver.projectId, amount)}
+            className="w-full bg-primary hover:bg-primary-dark text-white text-sm font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
+          >
+            💸 התחל תהליך העברה
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-4 flex flex-col items-center text-center gap-3">
+              <span className="text-xs font-bold text-purple-400 uppercase tracking-widest">מחקר שאינו שלך</span>
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-lg">👤</div>
+                <p className="text-xs text-gray-400 mt-1">חוקר ראשי</p>
+                <p className="text-base font-bold text-purple-800">{giver.principalResearcherName || 'לא ידוע'}</p>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed border-t border-purple-100 pt-2 w-full">
+                ניתן לשלוח ל<span className="font-semibold text-purple-700">{giver.principalResearcherName || 'החוקר הראשי'}</span> התראה עם פרטי הבקשה — הוא/היא יפנו למזכירות לביצוע ההעברה.
+              </p>
+            </div>
+            <button
+              onClick={() => onRequestTransfer(giver.projectId, receiver.projectId, amount)}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm shadow-purple-200"
+            >
+              🔔 שלח התראה ל{giver.principalResearcherName || 'החוקר הראשי'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -781,7 +828,7 @@ export default function ComparisonPage() {
   ];
 
   const selectedProjects  = selectedIds.map(id => projects.find(p => p.projectId === id)).filter(Boolean);
-  const recommendations   = useMemo(() => buildTransferRecommendations(projects, myProjectIds, mlInsights), [projects, myProjectIds, mlInsights]);
+  const recommendations   = useMemo(() => buildTransferRecommendations(projects, myProjectIds, mlInsights, allProjectsRaw), [projects, myProjectIds, mlInsights, allProjectsRaw]);
   const clusterGroups     = useMemo(() => buildClusterGroups(projects, mlInsights), [projects, mlInsights]);
   const centerGroups      = useMemo(() => buildCenterGroups(allProjectsRaw, myProjectIds, centersMap), [allProjectsRaw, myProjectIds, centersMap]);
 
@@ -820,7 +867,7 @@ export default function ComparisonPage() {
       <div dir="rtl">
         <div className="mb-6 flex flex-col gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">השוואות בין מחקרים</h1>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">ניהול תקציב מחקרים</h1>
             <p className="text-sm text-gray-400 mt-0.5">{projects.length} מחקרים פעילים</p>
           </div>
           {mode !== 'recommendations' && (
@@ -966,6 +1013,15 @@ export default function ComparisonPage() {
                         onTransfer={(giverId, receiverId, amount) =>
                           navigate(`/projects/${giverId}?tab=transfer&to=${receiverId}&amount=${Math.round(amount)}`)
                         }
+                        onRequestTransfer={async (giverId, receiverId, amount) => {
+                          try {
+                            await requestBudgetTransfer(giverId, receiverId, Math.round(amount));
+                            toast.success('הבקשה נשלחה בהצלחה — החוקר הראשי יקבל התראה בכניסה הבאה שלו למערכת');
+                          } catch (err) {
+                            const msg = err?.response?.data?.message;
+                            toast.error(msg || 'שגיאה בשליחת הבקשה — נסה שנית');
+                          }
+                        }}
                       />
                     ))}
                   </div>

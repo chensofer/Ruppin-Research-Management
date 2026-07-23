@@ -70,3 +70,7 @@ export const transferBudget = (sourceId, data) =>
 
 // Smart component (Python ML) insights - risk score + clustering per project
 export const getMlInsights = () => axiosInstance.get('/projects/ml-insights');
+
+// Budget transfer request email — sends email to giver PI when requester doesn't own the giver project
+export const requestBudgetTransfer = (giverProjectId, receiverProjectId, amount) =>
+  axiosInstance.post('/projects/budget-transfer-request', { giverProjectId, receiverProjectId, amount });

@@ -28,6 +28,7 @@ namespace RupResearchAPI.Data
         public DbSet<ResearchAuditLog> ResearchAuditLogs { get; set; }
         public DbSet<ResearchActivityLog> ResearchActivityLogs { get; set; }
         public DbSet<ResearchProjectFolder> ResearchProjectFolders { get; set; }
+        public DbSet<ResearchNotification> ResearchNotifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import ExportReportModal from '../components/ExportReportModal';
 import { exportDashboardReport } from '../utils/exportReport';
 import { getProjects } from '../api/projectsApi';
+import { getMyNotifications, markAllRead } from '../api/notificationsApi';
 import Layout from '../components/Layout';
 import ProjectCard from '../components/ProjectCard';
 import CreateProjectModal from '../components/CreateProjectModal';
@@ -111,30 +112,37 @@ export default function DashboardPage() {
   const [showModal, setShowModal]       = useState(false);
   const [alertsOpen, setAlertsOpen]     = useState(false);
   const [showExport, setShowExport]     = useState(false);
-  const [budgetAlerts, setBudgetAlerts] = useState([]);
-  const [timeAlerts, setTimeAlerts]     = useState([]);
-  const [alertsSeen, setAlertsSeen]     = useState(false);
+  const [budgetAlerts, setBudgetAlerts]       = useState([]);
+  const [timeAlerts, setTimeAlerts]           = useState([]);
+  const [transferNotifs, setTransferNotifs]   = useState([]);
+  const [alertsSeen, setAlertsSeen]           = useState(false);
 
   const handleDismissAlerts = () => {
     setAlertsOpen(false);
+    if (transferNotifs.length > 0) {
+      markAllRead().catch(() => {});
+      setTransferNotifs([]);
+    }
   };
 
   const loadProjects = useCallback(() => {
     setLoading(true);
-    getProjects()
-      .then((res) => {
+    Promise.all([
+      getProjects(),
+      getMyNotifications().catch(() => ({ data: [] })),
+    ]).then(([res, notifRes]) => {
         const data = res.data ?? [];
+        const notifs = notifRes.data ?? [];
         setProjects(data);
+        setTransferNotifs(notifs);
         try {
           const { budgetAlerts: ba, timeAlerts: ta } = buildAlerts(data);
           setBudgetAlerts(ba);
           setTimeAlerts(ta);
-          if (ba.length > 0 || ta.length > 0) {
-            if (!sessionStorage.getItem('alerts_shown')) {
-              sessionStorage.setItem('alerts_shown', '1');
-              setAlertsOpen(true);
-              setAlertsSeen(true);
-            }
+          if ((ba.length > 0 || ta.length > 0 || notifs.length > 0) && !sessionStorage.getItem('alerts_shown')) {
+            sessionStorage.setItem('alerts_shown', '1');
+            setAlertsOpen(true);
+            setAlertsSeen(true);
           }
         } catch (e) { console.error('buildAlerts error:', e); }
       })
@@ -152,7 +160,7 @@ export default function DashboardPage() {
 
   const resetFilters = () => { setSearch(''); setStatusFilter('active'); setSortBy('default'); };
   const hasActiveFilters = search !== '' || statusFilter !== 'active' || sortBy !== 'default';
-  const totalAlerts = budgetAlerts.length + timeAlerts.length;
+  const totalAlerts = budgetAlerts.length + timeAlerts.length + transferNotifs.length;
 
   const afterSearch = projects.filter((p) => {
     const q = search.toLowerCase();
@@ -366,7 +374,7 @@ export default function DashboardPage() {
         <CreateProjectModal onClose={() => setShowModal(false)} onCreated={handleCreated} />
       )}
       {alertsOpen && (
-        <AlertsModal budgetAlerts={budgetAlerts} timeAlerts={timeAlerts} onClose={handleDismissAlerts} />
+        <AlertsModal budgetAlerts={budgetAlerts} timeAlerts={timeAlerts} transferRequests={transferNotifs} onClose={handleDismissAlerts} />
       )}
       {showExport && (
         <ExportReportModal

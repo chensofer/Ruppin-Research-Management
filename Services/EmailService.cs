@@ -246,5 +246,85 @@ namespace RupResearchAPI.Services
 
             await SendAsync(toEmail, $"⏱️ דוח שעות חדש — {assistantName} | {monthName} {year} | {totalHours:F1} שעות", html);
         }
+
+        public async Task SendBudgetTransferRequestEmailAsync(
+            string giverPIEmail,
+            string giverPIName,
+            string giverProjectName,
+            string receiverProjectName,
+            decimal amount,
+            string requesterName)
+        {
+            var (_, _, _, _, _, _, siteUrl) = ReadConfig();
+            var date = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+
+            var html = $@"<!DOCTYPE html>
+<html dir='rtl' lang='he'>
+<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'></head>
+<body style='margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;'>
+<table width='100%' cellpadding='0' cellspacing='0' style='background:#f1f5f9;padding:24px 16px;'>
+<tr><td align='center'>
+<table width='600' cellpadding='0' cellspacing='0' style='max-width:600px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);'>
+
+  <!-- Status bar -->
+  <tr><td style='background:#7c3aed;padding:12px 24px;text-align:center;'>
+    <span style='color:white;font-size:15px;font-weight:bold;letter-spacing:0.3px;'>💸 בקשת העברת תקציב בין מחקרים</span>
+  </td></tr>
+
+  <!-- Header -->
+  <tr><td style='background:linear-gradient(135deg,#4c1d95 0%,#7c3aed 100%);padding:28px 28px 20px;text-align:center;'>
+    <p style='color:#ddd6fe;font-size:12px;margin:0 0 8px;letter-spacing:2px;font-weight:bold;'>RUPRESEARCH · מערכת ניהול מחקרים</p>
+    <h1 style='color:white;margin:0 0 12px;font-size:24px;font-weight:bold;'>📤 בקשה להעברת תקציב</h1>
+    <p style='color:rgba(255,255,255,0.7);font-size:13px;margin:0;'>הוגשה ב-{date}</p>
+  </td></tr>
+
+  <!-- Amount box -->
+  <tr><td style='background:#faf5ff;padding:24px 28px;text-align:center;border-bottom:3px solid #7c3aed30;'>
+    <p style='color:#64748b;font-size:13px;margin:0 0 6px;'>💰 סכום המבוקש להעברה</p>
+    <p style='color:#7c3aed;font-size:42px;font-weight:bold;margin:0 0 10px;line-height:1;'>₪{amount:N0}</p>
+    <span style='background:#7c3aed18;color:#7c3aed;font-size:13px;font-weight:bold;padding:5px 18px;border-radius:20px;border:1px solid #7c3aed30;'>בקשה להעברה</span>
+  </td></tr>
+
+  <!-- Details table -->
+  <tr><td style='background:white;padding:0;'>
+    <table width='100%' cellpadding='0' cellspacing='0' dir='rtl' style='border-collapse:collapse;'>
+      <tr><td colspan='2' style='padding:16px 20px 8px;font-size:13px;font-weight:bold;color:#374151;letter-spacing:0.3px;'>פרטי הבקשה</td></tr>
+      <tr style='background:#f8fafc;'><td style='padding:11px 20px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;white-space:nowrap;width:38%;'>📤 מקור (מחקרך)</td><td style='padding:11px 20px;font-weight:bold;color:#1e293b;border-bottom:1px solid #f1f5f9;font-size:14px;'>{giverProjectName}</td></tr>
+      <tr><td style='padding:11px 20px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;white-space:nowrap;'>📥 יעד (מחקר מקבל)</td><td style='padding:11px 20px;color:#1e293b;border-bottom:1px solid #f1f5f9;font-size:14px;'>{receiverProjectName}</td></tr>
+      <tr style='background:#f8fafc;'><td style='padding:11px 20px;color:#64748b;font-size:13px;border-bottom:1px solid #f1f5f9;white-space:nowrap;'>👤 מבקש ההעברה</td><td style='padding:11px 20px;color:#1e293b;border-bottom:1px solid #f1f5f9;font-size:14px;'>{requesterName}</td></tr>
+      <tr><td style='padding:11px 20px;color:#64748b;font-size:13px;white-space:nowrap;'>📅 תאריך הבקשה</td><td style='padding:11px 20px;color:#1e293b;font-size:14px;'>{date}</td></tr>
+    </table>
+  </td></tr>
+
+  <!-- Info box -->
+  <tr><td style='background:#fffbeb;padding:16px 28px;border-top:1px solid #fde68a;'>
+    <p style='color:#92400e;font-size:13px;margin:0;font-weight:bold;'>ℹ️ לתשומת לבך</p>
+    <p style='color:#78350f;font-size:12px;margin:8px 0 0;line-height:1.6;'>
+      {requesterName} מבקש/ת להעביר ₪{amount:N0} ממחקרך <strong>&ldquo;{giverProjectName}&rdquo;</strong> למחקר <strong>&ldquo;{receiverProjectName}&rdquo;</strong>.<br/>
+      אנא פנה/י למזכירות לביצוע ההעברה בפועל, או צור/י קשר עם המבקש/ת לפרטים נוספים.
+    </p>
+  </td></tr>
+
+  <!-- CTA -->
+  <tr><td style='background:white;padding:24px 28px 28px;text-align:center;'>
+    <a href='{siteUrl}' style='display:inline-block;background:#7c3aed;color:white;padding:15px 40px;border-radius:10px;text-decoration:none;font-weight:bold;font-size:16px;letter-spacing:0.3px;'>🔗 כניסה למערכת</a>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style='background:#1e293b;padding:16px 28px;text-align:center;'>
+    <p style='color:#64748b;font-size:12px;margin:0;'>מערכת ניהול מחקרים · המכללה האקדמית רופין · RupResearch System</p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>";
+
+            await SendAsync(
+                giverPIEmail,
+                $"💸 בקשת העברת תקציב — {requesterName} מבקש/ת ₪{amount:N0} ממחקר \"{giverProjectName}\"",
+                html);
+        }
     }
 }

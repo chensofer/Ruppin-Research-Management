@@ -141,7 +141,7 @@ def compute_pending_request_insights(df: pd.DataFrame) -> dict:
         reasons = []
         if amount_flag:
             reasons.append(
-                f"הסכום המבוקש (₪{actual:,.0f}) גבוה בכ-{ratio:.1f}x מהסכום הצפוי "
+                f"הסכום המבוקש (₪{actual:,.0f}) גבוה בכ-{ratio:.1f} פעמים מהסכום הצפוי "
                 f"לבקשה מסוג זה (₪{exp_amount:,.0f}), בהתבסס על בקשות דומות מהעבר."
             )
         if proba < 0.5:

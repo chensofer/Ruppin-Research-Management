@@ -93,6 +93,7 @@ namespace RupResearchAPI.DTOs
         string? Notes);
 
     public record TransferBudgetRequest(int TargetProjectId, decimal Amount);
+    public record BudgetTransferRequestDto(int GiverProjectId, int ReceiverProjectId, decimal Amount);
     public record CreateProviderRequest(string ProviderName, string? Phone, string? Email, string? Notes);
 
     public class ProviderDto

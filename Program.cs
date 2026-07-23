@@ -146,6 +146,18 @@ namespace RupResearchAPI
                             project_id  INT           NOT NULL,
                             folder_name NVARCHAR(100) NOT NULL
                         );
+
+                    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='research_notifications')
+                        CREATE TABLE research_notifications (
+                            notification_id   INT            IDENTITY(1,1) PRIMARY KEY,
+                            recipient_user_id NVARCHAR(20)  NOT NULL,
+                            sender_name       NVARCHAR(200) NULL,
+                            message           NVARCHAR(500) NOT NULL,
+                            notification_type NVARCHAR(50)  NULL,
+                            data              NVARCHAR(MAX) NULL,
+                            is_read           BIT           NOT NULL DEFAULT 0,
+                            created_at        DATETIME      NOT NULL DEFAULT GETDATE()
+                        );
                 ");
             }
             catch { }

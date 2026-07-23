@@ -2,7 +2,9 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using RupResearchAPI.Data;
 using RupResearchAPI.DTOs;
+using RupResearchAPI.Models;
 using RupResearchAPI.Services;
 
 namespace RupResearchAPI.Controllers
@@ -16,13 +18,17 @@ namespace RupResearchAPI.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly IAuditLogService _audit;
         private readonly IMemoryCache _cache;
+        private readonly IUserService _userService;
+        private readonly AppDbContext _db;
 
-        public ProjectsController(IProjectService projectService, IWebHostEnvironment env, IAuditLogService audit, IMemoryCache cache)
+        public ProjectsController(IProjectService projectService, IWebHostEnvironment env, IAuditLogService audit, IMemoryCache cache, IUserService userService, AppDbContext db)
         {
             _projectService = projectService;
             _env = env;
             _audit = audit;
             _cache = cache;
+            _userService = userService;
+            _db = db;
         }
 
         [HttpGet]
@@ -562,6 +568,61 @@ namespace RupResearchAPI.Controllers
             var result = await _projectService.AppendCommitmentFile(commitmentId, file, uploadsRoot);
             if (result == null) return NotFound();
             return Ok(new { filePath = result });
+        }
+
+        // POST /api/projects/budget-transfer-request
+        // שליחת בקשת העברת תקציב בדוא"ל לחוקר הראשי של מחקר המקור
+        [HttpPost("budget-transfer-request")]
+        public async Task<IActionResult> RequestBudgetTransfer([FromBody] BudgetTransferRequestDto dto)
+        {
+            if (dto == null || dto.Amount <= 0)
+                return BadRequest(new { message = "סכום ההעברה חייב להיות גדול מאפס" });
+
+            var giverProject = await _projectService.GetById(dto.GiverProjectId);
+            if (giverProject == null)
+                return NotFound(new { message = "מחקר המקור לא נמצא" });
+
+            var receiverProject = await _projectService.GetById(dto.ReceiverProjectId);
+            if (receiverProject == null)
+                return NotFound(new { message = "מחקר היעד לא נמצא" });
+
+            if (string.IsNullOrEmpty(giverProject.PrincipalResearcherId))
+                return BadRequest(new { message = "לא הוגדר חוקר ראשי למחקר המקור" });
+
+            var giverPI = await _userService.GetByIdAsync(giverProject.PrincipalResearcherId);
+            if (giverPI == null)
+                return BadRequest(new { message = "לא נמצא החוקר הראשי של מחקר המקור" });
+
+            var requesterId = User.FindFirst("user_id")?.Value ?? string.Empty;
+            var requester = await _userService.GetByIdAsync(requesterId);
+            var requesterName = requester != null
+                ? $"{requester.FirstName} {requester.LastName}".Trim()
+                : "משתמש במערכת";
+
+            var giverProjectName    = giverProject.ProjectNameHe    ?? giverProject.ProjectNameEn    ?? $"מחקר #{dto.GiverProjectId}";
+            var receiverProjectName = receiverProject.ProjectNameHe ?? receiverProject.ProjectNameEn ?? $"מחקר #{dto.ReceiverProjectId}";
+
+            var notification = new ResearchNotification
+            {
+                RecipientUserId  = giverProject.PrincipalResearcherId!,
+                SenderName       = requesterName,
+                Message          = $"{requesterName} מבקש/ת להעביר ₪{dto.Amount:N0} ממחקרך \"{giverProjectName}\" למחקר \"{receiverProjectName}\". יש לפנות למזכירות לביצוע ההעברה.",
+                NotificationType = "budget_transfer_request",
+                Data             = System.Text.Json.JsonSerializer.Serialize(new {
+                    giverProjectId    = dto.GiverProjectId,
+                    receiverProjectId = dto.ReceiverProjectId,
+                    giverProjectName,
+                    receiverProjectName,
+                    amount            = dto.Amount,
+                    requesterName,
+                }),
+                IsRead    = false,
+                CreatedAt = DateTime.UtcNow,
+            };
+            _db.ResearchNotifications.Add(notification);
+            await _db.SaveChangesAsync();
+
+            return Ok(new { message = "הבקשה נשלחה בהצלחה לחוקר הראשי של מחקר המקור" });
         }
 
     }

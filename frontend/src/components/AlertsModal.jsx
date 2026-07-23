@@ -1,14 +1,14 @@
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 import { Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiBell, HiXMark, HiExclamationTriangle, HiClock, HiArrowRight } from 'react-icons/hi2';
+import { HiBell, HiXMark, HiExclamationTriangle, HiClock, HiArrowRight, HiArrowsRightLeft, HiArrowTopRightOnSquare } from 'react-icons/hi2';
 
 const fmt = (n) =>
   `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)}`;
 
-export default function AlertsModal({ budgetAlerts, timeAlerts, onClose }) {
+export default function AlertsModal({ budgetAlerts, timeAlerts, transferRequests = [], onClose }) {
   const navigate = useNavigate();
-  const total = budgetAlerts.length + timeAlerts.length;
+  const total = budgetAlerts.length + timeAlerts.length + transferRequests.length;
 
   return (
     <Transition show={true} as={Fragment}>
@@ -131,6 +131,46 @@ export default function AlertsModal({ budgetAlerts, timeAlerts, onClose }) {
                           <p className="text-sm text-orange-400 mt-1">{a.elapsedPct}% מהתקופה חלף</p>
                         </div>
                       ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Transfer request alerts */}
+                {transferRequests.length > 0 && (
+                  <section>
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <div className="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <HiArrowsRightLeft className="w-3.5 h-3.5 text-purple-600" />
+                      </div>
+                      <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">בקשות להעברת תקציב</h3>
+                    </div>
+                    <div className="space-y-2">
+                      {transferRequests.map((n) => {
+                        let parsed = null;
+                        try { parsed = JSON.parse(n.data); } catch {}
+                        const dateStr = n.createdAt && !n.createdAt.endsWith('Z') ? n.createdAt + 'Z' : n.createdAt;
+                        return (
+                          <div
+                            key={n.notificationId}
+                            className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 border-r-[3px] border-r-purple-400"
+                          >
+                            <p className="text-sm font-semibold text-purple-700 mb-1">💸 בקשת העברת תקציב</p>
+                            <p className="text-sm text-gray-700 leading-relaxed">{n.message}</p>
+                            {parsed && (
+                              <button
+                                onClick={() => { navigate(`/projects/${parsed.giverProjectId}?tab=transfer&to=${parsed.receiverProjectId}&amount=${Math.round(parsed.amount)}`); onClose(); }}
+                                className="mt-2.5 w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                              >
+                                <HiArrowTopRightOnSquare className="w-4 h-4" />
+                                עבור לביצוע ההעברה
+                              </button>
+                            )}
+                            <p className="text-xs text-gray-400 mt-2">
+                              {new Date(dateStr).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        );
+                      })}
                     </div>
                   </section>
                 )}
