@@ -3,8 +3,10 @@ import { celebrate } from '../utils/celebrate';
 import { useAuth } from '../context/AuthContext';
 import ExportReportModal from '../components/ExportReportModal';
 import { exportDashboardReport } from '../utils/exportReport';
-import { getProjects, getMlInsights } from '../api/projectsApi';
+import { getProjects, getAllProjects, getMlInsights } from '../api/projectsApi';
+import { getCenters } from '../api/centersApi';
 import { getMyNotifications, markAllRead } from '../api/notificationsApi';
+import { setCachedProjectData, getCachedProjectData } from '../utils/projectsCache';
 import Layout from '../components/Layout';
 import ProjectCard from '../components/ProjectCard';
 import CreateProjectModal from '../components/CreateProjectModal';
@@ -120,10 +122,6 @@ export default function DashboardPage() {
 
   const handleDismissAlerts = () => {
     setAlertsOpen(false);
-    if (transferNotifs.length > 0) {
-      markAllRead().catch(() => {});
-      setTransferNotifs([]);
-    }
   };
 
   const loadProjects = useCallback(() => {
@@ -145,13 +143,27 @@ export default function DashboardPage() {
             setAlertsOpen(true);
             setAlertsSeen(true);
           }
-        } catch (e) { console.error('buildAlerts error:', e); }
+        } catch { }
       })
       .catch(() => toast.error('שגיאה בטעינת המחקרים'))
       .finally(() => setLoading(false));
   }, [user]);
 
   useEffect(() => { loadProjects(); }, [loadProjects]);
+
+  // prefetch נתוני השוואות ברקע מיד אחרי טעינת הדשבורד — כך שדף ההמלצות יהיה מהיר
+  useEffect(() => {
+    if (getCachedProjectData()) return; // כבר יש cache תקף
+    Promise.all([getAllProjects(), getProjects(), getCenters(), getMlInsights().catch(() => null)])
+      .then(([allRes, myRes, centersRes, mlRes]) => {
+        const all   = allRes.data  ?? [];
+        const myIds = new Set((myRes.data ?? []).map(p => p.projectId));
+        const map   = {};
+        (centersRes.data ?? []).forEach(c => { map[c.centerId] = c.centerName; });
+        setCachedProjectData({ all, myIds, centersMap: map, mlInsights: mlRes?.data ?? null });
+      })
+      .catch(() => {});
+  }, []);
 
   // תוצרי הרכיב החכם (Python) - ציון סיכון תקציבי לכל מחקר, נטען בנפרד כדי
   // שלא לעכב את טעינת רשימת המחקרים עצמה

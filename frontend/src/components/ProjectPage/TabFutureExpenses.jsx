@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { getCategories } from '../../api/categoriesApi';
 import HebrewDatePicker from '../HebrewDatePicker';
 import { addCommitment, updateCommitment, deleteCommitment, uploadCommitmentFile } from '../../api/projectsApi';
+import { analyzeDocuments } from '../../api/paymentRequestsApi';
+import { fileUrl } from '../../utils/fileUrl';
 
 const fmt = (n) =>
   n != null ? `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)}` : '—';
@@ -17,6 +19,7 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
   const [form, setForm] = useState(EMPTY);
   const [categories, setCategories] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [error, setError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -27,6 +30,29 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
   }, [showForm]);
 
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  const handleScan = async () => {
+    if (selectedFiles.length === 0) { setError('יש לבחור קובץ לסריקה תחילה'); return; }
+    setScanning(true);
+    setError('');
+    try {
+      const res = await analyzeDocuments(selectedFiles);
+      const d = res.data;
+      setForm(f => ({
+        ...f,
+        commitmentDescription: d.requestTitle ?? f.commitmentDescription,
+        expectedAmount:        d.requestedAmount ? String(d.requestedAmount) : f.expectedAmount,
+        notes: [
+          d.requestDescription ?? '',
+          d.providerName ? `ספק: ${d.providerName}` : '',
+        ].filter(Boolean).join(' | ') || f.notes,
+      }));
+    } catch {
+      setError('סריקת המסמך נכשלה — ניתן למלא את הפרטים ידנית');
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -204,13 +230,33 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
                   placeholder="הערות נוספות..." className={`${inputCls} resize-none`} />
               </div>
 
-              {/* File upload */}
+              {/* File upload + OCR */}
               <div>
-                <label className="block text-sm text-gray-500 mb-1">קבצים מצורפים (לא חובה)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm text-gray-500">קבצים מצורפים (לא חובה)</label>
+                  {selectedFiles.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleScan}
+                      disabled={scanning}
+                      title="מלא טופס אוטומטית מתוך המסמך"
+                      className="flex items-center gap-1.5 text-sm font-semibold text-primary bg-primary/5 border border-primary/20 px-3 py-1 rounded-lg hover:bg-primary/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {scanning ? (
+                        <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
+                        </svg>
+                      )}
+                      {scanning ? 'סורק...' : 'מלא טופס אוטומטית'}
+                    </button>
+                  )}
+                </div>
                 <input
                   type="file"
                   multiple
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
                   onChange={(e) => {
                     const added = Array.from(e.target.files);
                     setSelectedFiles((prev) => {
@@ -228,7 +274,11 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
                         <span className="text-gray-600 truncate">{f.name}</span>
                         <button type="button"
                           onClick={() => setSelectedFiles((prev) => prev.filter((_, idx) => idx !== i))}
-                          className="text-gray-400 hover:text-red-500 mr-2 flex-shrink-0">✕</button>
+                          className="text-gray-400 hover:text-red-500 mr-2 flex-shrink-0">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -291,7 +341,7 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
                             const name = path.split('/').pop();
                             return (
                               <a key={i}
-                                href={`http://localhost:5269${path}`}
+                                href={fileUrl(path)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 text-primary bg-primary/10 hover:bg-primary/20 text-sm px-2 py-0.5 rounded-lg transition-colors"

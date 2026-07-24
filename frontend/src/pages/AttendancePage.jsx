@@ -401,7 +401,9 @@ export default function AttendancePage() {
                 {/* Grid header */}
                 <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-primary-light">
                   <span className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                    <span className="text-base">📅</span>
+                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
                     {MONTH_NAMES[month - 1]} {year}
                   </span>
                   <div className="flex items-center gap-2">
@@ -549,7 +551,10 @@ export default function AttendancePage() {
                     </>
                   ) : hasDraftData ? (
                     <span className="text-gray-700 font-medium">
-                      ✏️ {Object.values(drafts).filter(d => d?.fromHour || d?.toHour || d?.workedHours).length} ימים מולאו
+                      <span className="inline-flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        {Object.values(drafts).filter(d => d?.fromHour || d?.toHour || d?.workedHours).length} ימים מולאו
+                      </span>
                     </span>
                   ) : (
                     'מלא שעות לימים בהם עבדת'

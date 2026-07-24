@@ -10,17 +10,17 @@ function isProjectActive(p) {
 
 const SECTION_DEFS = {
   project: [
-    { key: 'details',      label: 'פרטי מחקר',          icon: '📋' },
-    { key: 'transactions', label: 'ריכוז תנועות',         icon: '💳' },
-    { key: 'payments',     label: 'בקשות תשלום',          icon: '🧾' },
-    { key: 'team',         label: 'צוות המחקר',           icon: '👥' },
-    { key: 'assistants',   label: 'עוזרי מחקר',           icon: '🎓' },
-    { key: 'documents',    label: 'מסמכים',               icon: '📁' },
-    { key: 'future',       label: 'הוצאות עתידיות',       icon: '📅' },
-    { key: 'history',      label: 'היסטוריית שינויים',    icon: '🕐' },
+    { key: 'details',      label: 'פרטי מחקר' },
+    { key: 'transactions', label: 'ריכוז תנועות' },
+    { key: 'payments',     label: 'בקשות תשלום' },
+    { key: 'team',         label: 'צוות המחקר' },
+    { key: 'assistants',   label: 'עוזרי מחקר' },
+    { key: 'documents',    label: 'מסמכים' },
+    { key: 'future',       label: 'הוצאות עתידיות' },
+    { key: 'history',      label: 'היסטוריית שינויים' },
   ],
   dashboard: [
-    { key: 'summary', label: 'טבלת סיכום', icon: '📊' },
+    { key: 'summary', label: 'טבלת סיכום' },
   ],
 };
 
@@ -223,7 +223,6 @@ export default function ExportReportModal({ type = 'project', projects = [], onE
                     onChange={() => toggle(d.key)}
                     className="w-4 h-4 accent-primary"
                   />
-                  <span className="text-base">{d.icon}</span>
                   <span className="text-sm font-medium text-gray-700">{d.label}</span>
                 </label>
               ))}

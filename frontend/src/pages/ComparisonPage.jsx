@@ -7,6 +7,7 @@ import {
   Legend, ResponsiveContainer, LineChart, Line,
 } from 'recharts';
 import { getAllProjects, getProjects, getCommitments, getMlInsights, requestBudgetTransfer } from '../api/projectsApi';
+import { getCachedProjectData, setCachedProjectData, invalidateProjectCache } from '../utils/projectsCache';
 import { getPaymentRequestsByProject } from '../api/paymentRequestsApi';
 import { getCenters } from '../api/centersApi';
 import Layout from '../components/Layout';
@@ -71,18 +72,39 @@ function calcDaysLeft(p) {
   return Math.max(0, Math.round((new Date(String(p.endDate).slice(0,10)) - new Date(TODAY)) / 86_400_000));
 }
 
+function iconEl(path, extra = '') {
+  return (
+    <svg className={`w-4 h-4 ${extra}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={path} />
+    </svg>
+  );
+}
+const ICONS = {
+  budget:      iconEl('M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z'),
+  expenses:    iconEl('M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'),
+  balance:     iconEl('M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z'),
+  chartBar:    iconEl('M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'),
+  clock:       iconEl('M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'),
+  clipboard:   iconEl('M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'),
+  document:    iconEl('M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'),
+  calendar:    iconEl('M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'),
+  trendingUp:  iconEl('M13 7h8m0 0v8m0-8l-8 8-4-4-6 6'),
+  building:    iconEl('M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4'),
+  shield:      iconEl('M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'),
+};
+
 function buildMetrics(selectedProjects, compareData) {
   return [
     {
-      label: 'תקציב כולל', icon: '💼',
+      label: 'תקציב כולל', icon: ICONS.budget,
       values: selectedProjects.map(p => ({ raw: p.totalBudget ?? 0, display: fmtK(p.totalBudget) })),
     },
     {
-      label: 'סה״כ הוצאות בפועל', icon: '💸',
+      label: 'סה״כ הוצאות בפועל', icon: ICONS.expenses,
       values: selectedProjects.map(p => ({ raw: p.totalPaid ?? 0, display: fmtK(p.totalPaid) })),
     },
     {
-      label: 'יתרה זמינה', icon: '💰',
+      label: 'יתרה זמינה', icon: ICONS.balance,
       values: selectedProjects.map(p => {
         const v = p.availableBalance ?? 0;
         return { raw: Math.max(v,0), display: fmtK(v),
@@ -90,7 +112,7 @@ function buildMetrics(selectedProjects, compareData) {
       }),
     },
     {
-      label: '% ניצול תקציב', icon: '📊',
+      label: '% ניצול תקציב', icon: ICONS.chartBar,
       values: selectedProjects.map(p => {
         const pct = (p.totalBudget ?? 0) > 0 ? Math.round(((p.totalPaid ?? 0) / p.totalBudget) * 100) : 0;
         return { raw: pct, display: `${pct}%`,
@@ -99,16 +121,16 @@ function buildMetrics(selectedProjects, compareData) {
       }),
     },
     {
-      label: 'בקשות ממתינות', icon: '⏳',
+      label: 'בקשות תשלום ממתינות', icon: ICONS.clock,
       values: selectedProjects.map(p => {
         const v = p.pendingCount ?? 0;
         return { raw: v, display: `${v}`,
-          sub: v === 0 ? 'ללא ממתינות' : `${v} בקשות`,
+          sub: v === 0 ? 'אין בקשות ממתינות לאישור' : `${v} בקשות תשלום ממתינות לאישור`,
           badge: v > 0 ? { text: `${v}`, cls: 'bg-yellow-100 text-yellow-700' } : null };
       }),
     },
     {
-      label: 'התחייבויות עתידיות', icon: '📋',
+      label: 'התחייבויות עתידיות', icon: ICONS.clipboard,
       values: selectedProjects.map(p => {
         const cmts  = (compareData[p.projectId]?.commitments ?? []).filter(c => c.status !== 'בוטל');
         const total = cmts.reduce((s, c) => s + (c.expectedAmount ?? 0), 0);
@@ -117,17 +139,17 @@ function buildMetrics(selectedProjects, compareData) {
       }),
     },
     {
-      label: 'מספר הוצאות', icon: '🧾',
+      label: 'מספר הוצאות', icon: ICONS.document,
       values: selectedProjects.map(p => {
         const reqs     = compareData[p.projectId]?.requests ?? [];
         const approved = reqs.filter(r => r.status === 'אושר' || r.status === 'שולם').length;
         const pending  = reqs.filter(r => r.status === 'ממתין').length;
         return { raw: approved, display: `${approved}`,
-          sub: pending > 0 ? `+ ${pending} ממתינות` : 'הוצאות מאושרות' };
+          sub: pending > 0 ? `+ ${pending} בקשות תשלום ממתינות לאישור` : 'הוצאות מאושרות' };
       }),
     },
     {
-      label: '% זמן שעבר', icon: '⏱️',
+      label: '% זמן שעבר', icon: ICONS.clock,
       values: selectedProjects.map(p => {
         const pct = calcTimePct(p);
         return { raw: pct ?? 0, display: pct != null ? `${pct}%` : '—',
@@ -136,7 +158,7 @@ function buildMetrics(selectedProjects, compareData) {
       }),
     },
     {
-      label: 'ימים לסיום', icon: '📅',
+      label: 'ימים לסיום', icon: ICONS.calendar,
       values: selectedProjects.map(p => {
         const dl = calcDaysLeft(p);
         return { raw: dl ?? 99999, display: dl != null ? `${dl}` : '—',
@@ -146,14 +168,19 @@ function buildMetrics(selectedProjects, compareData) {
       }),
     },
     {
-      label: 'קצב שריפת תקציב', icon: '🔥',
+      label: 'קצב שריפת תקציב', icon: ICONS.trendingUp,
       values: selectedProjects.map(p => {
         const timePct  = calcTimePct(p);
         const usagePct = (p.totalBudget ?? 0) > 0 ? ((p.totalPaid ?? 0) / p.totalBudget) * 100 : 0;
         if (!timePct) return { raw: 0, display: '—', sub: 'אין נתונים' };
         const rate = Math.round((usagePct / timePct) * 100) / 100;
+        const subText = rate > 1
+          ? `קצב ניצול גבוה פי ${rate.toFixed(2)} מהקצב הצפוי`
+          : rate > 0 && rate < 1
+          ? `קצב ניצול נמוך פי ${(1 / rate).toFixed(2)} מהקצב הצפוי`
+          : 'קצב ניצול תקין';
         return { raw: rate, display: `×${rate.toFixed(2)}`,
-          sub: rate > 1 ? 'מוציא מהר מהצפוי' : rate < 1 ? 'מוציא לאט מהצפוי' : 'בקצב תקין',
+          sub: subText,
           badge: rate > 1.3 ? { text: 'מהיר מדי', cls: 'bg-red-100 text-red-700' }
                : rate < 0.5 ? { text: 'איטי',     cls: 'bg-blue-100 text-blue-700' } : null };
       }),
@@ -331,7 +358,7 @@ function buildCenterGroups(myProjects, centersMap = {}) {
     .map(g => {
       const name = centersMap[g.centerId] ?? `מרכז מחקר #${g.centerId}`;
       return {
-        icon: '🏛️',
+        icon: ICONS.building,
         title: name,
         insight: `${g.projects.length} מהמחקרים שלך במרכז "${name}"`,
         projects: g.projects,
@@ -359,7 +386,7 @@ function buildClusterGroups(projects, mlInsights) {
       return (p.availableBalance ?? 0) < 0 || insight?.risk_label === 'בסיכון';
     }).length;
 
-    const icon = info.label.includes('בסיכון') ? '🔥' : info.label.includes('חסכוני') ? '🐢' : '💵';
+    const icon = info.label.includes('בסיכון') ? ICONS.trendingUp : info.label.includes('חסכוני') ? ICONS.shield : ICONS.chartBar;
     const utilizationPct = Math.round(info.avg_budget_utilization * 100);
 
     groups.push({
@@ -424,7 +451,10 @@ function RecommendationsSummary({ recommendations }) {
   return (
     <div className="bg-primary/5 border border-primary/20 rounded-2xl px-5 py-4 mb-6 flex flex-wrap items-center justify-between gap-4" dir="rtl">
       <div>
-        <p className="text-sm font-extrabold text-gray-800">🎯 נמצאו {recommendations.length} המלצות להעברת תקציב</p>
+        <p className="text-sm font-extrabold text-gray-800 flex items-center gap-1.5">
+          <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+          נמצאו {recommendations.length} המלצות להעברת תקציב
+        </p>
         <p className="text-xs text-gray-500 mt-0.5">ניתן לאזן תקציבים בין מחקרים ולהפחית גירעונות</p>
       </div>
       <div className="flex gap-5 flex-wrap">
@@ -463,34 +493,46 @@ function RecommendationCard({ rec, onTransfer, onRequestTransfer }) {
 
         {/* כותרת + ציון */}
         <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-bold text-gray-900 leading-snug flex-1 min-w-0">
-            💡 להעביר <span className="text-primary font-extrabold">{fmt(amount)}</span>{' '}
-            מ<span className="text-green-700">"{giverName}"</span>{' '}
-            אל <span className="text-red-600">"{recvName}"</span>
-          </p>
+          <div className="flex items-start gap-1.5 flex-1 min-w-0">
+            <svg className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+            <p className="text-sm font-bold text-gray-900 leading-snug">
+              להעביר <span className="text-primary font-extrabold">{fmt(amount)}</span>{' '}
+              מ<span className="text-green-700">"{giverName}"</span>{' '}
+              אל <span className="text-red-600">"{recvName}"</span>
+            </p>
+          </div>
           <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-full border ${
             confidence >= 80 ? 'bg-green-100 text-green-700 border-green-200'
             : confidence >= 60 ? 'bg-amber-100 text-amber-700 border-amber-200'
             : 'bg-gray-100 text-gray-600 border-gray-200'
           }`}>
-            {confidence >= 80 ? '🟢' : '🟡'} {confidence}%
+            {confidence}% התאמה
           </span>
         </div>
 
         {/* מקור + יעד */}
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-green-50 border border-green-200 rounded-lg p-2.5 space-y-1.5">
-            <p className="text-xs font-bold text-green-700">📤 מקור — יתרה עודפת</p>
+            <p className="text-xs font-bold text-green-700">מקור — יתרה עודפת</p>
             <p className="text-xs font-bold text-gray-900 line-clamp-2">{giverName}</p>
-            {giver.principalResearcherName && <p className="text-xs text-gray-400">👤 {giver.principalResearcherName}</p>}
+            {giver.principalResearcherName && (
+              <p className="text-xs text-gray-400 flex items-center gap-1">
+                <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                {giver.principalResearcherName}
+              </p>
+            )}
             <div className="text-xs space-y-0.5 pt-1 border-t border-green-200">
-              <p>✅ יתרה: <span className="font-bold text-green-700">{fmt(giver.avail)}</span></p>
-              <p>✅ ניצול: <span className="font-bold text-green-700">{giverUsage}%</span></p>
+              <p>יתרה: <span className="font-bold text-green-700">{fmt(giver.avail)}</span></p>
+              <p>ניצול: <span className="font-bold text-green-700">{giverUsage}%</span></p>
               {giver.hasEnded
-                ? <p className="text-orange-600 font-semibold">🔚 המחקר הסתיים — יתרה פנויה להעברה</p>
+                ? <p className="text-orange-600 font-semibold">המחקר הסתיים — יתרה פנויה להעברה</p>
                 : giver.daysLeft !== null && (
                   <p className={giver.daysLeft <= 60 ? 'text-amber-700' : 'text-gray-500'}>
-                    {giver.daysLeft <= 60 ? '⚠️' : '📅'} {giver.daysLeft} ימים
+                    {giver.daysLeft} ימים{giver.daysLeft <= 60 ? ' — מתקרב לסיום' : ''}
                   </p>
                 )
               }
@@ -501,17 +543,24 @@ function RecommendationCard({ rec, onTransfer, onRequestTransfer }) {
           </div>
 
           <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 space-y-1.5">
-            <p className="text-xs font-bold text-red-700">📥 יעד — זקוק לתקציב</p>
+            <p className="text-xs font-bold text-red-700">יעד — זקוק לתקציב</p>
             <p className="text-xs font-bold text-gray-900 line-clamp-2">{recvName}</p>
-            {receiver.principalResearcherName && <p className="text-xs text-gray-400">👤 {receiver.principalResearcherName}</p>}
+            {receiver.principalResearcherName && (
+              <p className="text-xs text-gray-400 flex items-center gap-1">
+                <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                {receiver.principalResearcherName}
+              </p>
+            )}
             <div className="text-xs space-y-0.5 pt-1 border-t border-red-200">
               {receiver.avail < 0
-                ? <p>🚨 גירעון: <span className="font-bold text-red-700">−{fmt(Math.abs(receiver.avail))}</span></p>
-                : <p>⚠️ ניצול: <span className="font-bold text-amber-700">{recvUsage}%</span></p>
+                ? <p>גירעון: <span className="font-bold text-red-700">−{fmt(Math.abs(receiver.avail))}</span></p>
+                : <p>ניצול: <span className="font-bold text-amber-700">{recvUsage}%</span></p>
               }
               {receiver.daysLeft !== null && (
                 <p className={receiver.daysLeft <= 60 ? 'text-red-600' : 'text-gray-500'}>
-                  {receiver.daysLeft <= 60 ? '🚨' : '📅'} {receiver.daysLeft} ימים
+                  {receiver.daysLeft} ימים{receiver.daysLeft <= 60 ? ' — קרוב לסיום' : ''}
                 </p>
               )}
             </div>
@@ -546,26 +595,36 @@ function RecommendationCard({ rec, onTransfer, onRequestTransfer }) {
             onClick={() => onTransfer(giver.projectId, receiver.projectId, amount)}
             className="w-full bg-primary hover:bg-primary-dark text-white text-sm font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
           >
-            💸 התחל תהליך העברה
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+            לטיפול בבקשת ההעברה
           </button>
         ) : (
           <div className="space-y-2">
             <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-4 flex flex-col items-center text-center gap-3">
               <span className="text-xs font-bold text-purple-400 uppercase tracking-widest">מחקר שאינו שלך</span>
               <div className="flex flex-col items-center gap-1">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-lg">👤</div>
+                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                  <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
                 <p className="text-xs text-gray-400 mt-1">חוקר ראשי</p>
                 <p className="text-base font-bold text-purple-800">{giver.principalResearcherName || 'לא ידוע'}</p>
               </div>
               <p className="text-xs text-gray-500 leading-relaxed border-t border-purple-100 pt-2 w-full">
-                ניתן לשלוח ל<span className="font-semibold text-purple-700">{giver.principalResearcherName || 'החוקר הראשי'}</span> התראה עם פרטי הבקשה — הוא/היא יפנו למזכירות לביצוע ההעברה.
+                ניתן לשלוח ל<span className="font-semibold text-purple-700">{giver.principalResearcherName || 'החוקר הראשי'}</span> התראה עם פרטי הבקשה — החוקר הראשי יפנה למזכירות לביצוע ההעברה.
               </p>
             </div>
             <button
               onClick={() => onRequestTransfer(giver.projectId, receiver.projectId, amount)}
               className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm shadow-purple-200"
             >
-              🔔 שלח התראה ל{giver.principalResearcherName || 'החוקר הראשי'}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              שלח התראה ל{giver.principalResearcherName || 'החוקר הראשי'}
             </button>
           </div>
         )}
@@ -595,7 +654,7 @@ function ProjectHealthCard({ p, navigate }) {
   const badgeCls    = health === 'danger' ? 'bg-red-100 text-red-700 border-red-200'
                     : health === 'warning' ? 'bg-amber-100 text-amber-700 border-amber-200'
                     :                        'bg-green-100 text-green-700 border-green-200';
-  const statusIcon  = health === 'danger' ? '🚨' : health === 'warning' ? '⚠️' : '✅';
+  const statusColor = health === 'danger' ? 'text-red-500' : health === 'warning' ? 'text-amber-500' : 'text-green-500';
 
   const warningReason =
     isDeficit                                          ? `חריגה מהתקציב המאושר (גירעון ${fmt(Math.abs(avail))})` :
@@ -629,7 +688,9 @@ function ProjectHealthCard({ p, navigate }) {
       </div>
 
       <div className="flex items-center gap-1.5">
-        <span className="text-sm leading-none">{statusIcon}</span>
+        <svg className={`w-3.5 h-3.5 flex-shrink-0 ${statusColor}`} fill="currentColor" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" />
+        </svg>
         <p className={`text-sm font-extrabold ${isDeficit ? 'text-red-600' : 'text-green-700'}`}>
           {isDeficit ? `גירעון ${fmt(Math.abs(avail))}` : `יתרה ${fmt(avail)}`}
         </p>
@@ -637,7 +698,7 @@ function ProjectHealthCard({ p, navigate }) {
 
       {daysLeft !== null && (
         <p className={`text-sm font-medium ${daysLeft <= 30 ? 'text-red-600' : daysLeft <= 90 ? 'text-amber-600' : 'text-gray-400'}`}>
-          📅 {daysLeft} ימים לסיום
+          {daysLeft} ימים לסיום
         </p>
       )}
 
@@ -669,7 +730,7 @@ function SimilarityGroupCard({ group, navigate }) {
       {/* כותרת */}
       <div className={`px-5 py-3.5 flex items-center justify-between border-b ${headerBg}`}>
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="text-xl leading-none flex-shrink-0">{group.icon}</span>
+          <span className="text-primary/60 flex-shrink-0">{group.icon}</span>
           <div className="min-w-0">
             <h3 className="text-base font-bold text-gray-800">{group.title}</h3>
             <p className="text-sm text-gray-500 mt-0.5 leading-relaxed">{group.insight}</p>
@@ -679,12 +740,12 @@ function SimilarityGroupCard({ group, navigate }) {
         <div className="flex items-center gap-1.5 flex-shrink-0 mr-3">
           {dangerCount > 0 && (
             <span className="text-sm font-bold bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-full">
-              🚨 {dangerCount}
+              {dangerCount} בסיכון
             </span>
           )}
           {warningCount > 0 && (
             <span className="text-sm font-bold bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
-              ⚠️ {warningCount}
+              {warningCount} דורשים תשומת לב
             </span>
           )}
           <span className="text-sm font-bold text-gray-400 bg-white border border-gray-200 px-2 py-0.5 rounded-full">
@@ -794,27 +855,52 @@ export default function ComparisonPage() {
   const [centerDropOpen,     setCenterDropOpen]     = useState(false);
 
   const load = useCallback(() => {
+    const cached = getCachedProjectData();
+    if (cached) {
+      // נתונים זמינים מה-cache — טוענים מיידית ללא loading
+      const { all, myIds, centersMap: cMap, mlInsights: mlData } = cached;
+      setProjects(all.filter(isActive).filter(p => myIds.has(p.projectId)));
+      setAllProjectsRaw(all);
+      setMyProjectIds(myIds);
+      setCentersMap(cMap);
+      setMlInsights(mlData);
+      setLoading(false);
+      // רענון שקט ברקע
+      Promise.all([getAllProjects(), getProjects(), getCenters(), getMlInsights().catch(() => null)])
+        .then(([allRes, myRes, centersRes, mlRes]) => {
+          const freshAll   = allRes.data ?? [];
+          const freshMyIds = new Set((myRes.data ?? []).map(p => p.projectId));
+          const freshMap   = {};
+          (centersRes.data ?? []).forEach(c => { freshMap[c.centerId] = c.centerName; });
+          const freshMl = mlRes?.data ?? null;
+          setCachedProjectData({ all: freshAll, myIds: freshMyIds, centersMap: freshMap, mlInsights: freshMl });
+          setProjects(freshAll.filter(isActive).filter(p => freshMyIds.has(p.projectId)));
+          setAllProjectsRaw(freshAll);
+          setMyProjectIds(freshMyIds);
+          setCentersMap(freshMap);
+          setMlInsights(freshMl);
+        })
+        .catch(() => {});
+      return;
+    }
+
     setLoading(true);
-    Promise.all([getAllProjects(), getProjects(), getCenters()])
-      .then(([allRes, myRes, centersRes]) => {
-        const all = allRes.data ?? [];
+    Promise.all([getAllProjects(), getProjects(), getCenters(), getMlInsights().catch(() => null)])
+      .then(([allRes, myRes, centersRes, mlRes]) => {
+        const all   = allRes.data ?? [];
         const myIds = new Set((myRes.data ?? []).map(p => p.projectId));
-        // סקירה כללית / השוואה ישירה / מרכז מחקר / קבוצות דפוס הוצאות - רק מחקרים
-        // שהמשתמש עצמו משתתף בהם, כדי לא לחשוף מחקרים של חוקרים אחרים.
         setProjects(all.filter(isActive).filter(p => myIds.has(p.projectId)));
         setAllProjectsRaw(all);
         setMyProjectIds(myIds);
         const map = {};
         (centersRes.data ?? []).forEach(c => { map[c.centerId] = c.centerName; });
         setCentersMap(map);
+        const mlData = mlRes?.data ?? null;
+        setMlInsights(mlData);
+        setCachedProjectData({ all, myIds, centersMap: map, mlInsights: mlData });
       })
       .catch(() => toast.error('שגיאה בטעינת הנתונים'))
       .finally(() => setLoading(false));
-
-    // תוצרי הרכיב החכם (Python) - ציון סיכון תקציבי + פילוח לקבוצות (Clustering)
-    getMlInsights()
-      .then((res) => setMlInsights(res.data))
-      .catch(() => setMlInsights(null));
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -915,9 +1001,9 @@ export default function ComparisonPage() {
               <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl min-w-max">
                 {[
                   { key: 'overview', label: 'סקירה כללית' },
-                  { key: 'compare',  label: '⚖️ השוואה ישירה' },
-                  { key: 'center',   label: '🏛️ מחקרים לפי מרכז מחקר' },
-                  { key: 'clusters', label: '🧬 קבוצות לפי דפוס הוצאות' },
+                  { key: 'compare',  label: 'השוואה ישירה' },
+                  { key: 'center',   label: 'מחקרים לפי מרכז מחקר' },
+                  { key: 'clusters', label: 'קבוצות לפי דפוס הוצאות' },
                 ].map((m) => (
                   <button key={m.key} onClick={() => switchMode(m.key)}
                     className={`relative px-4 py-2 text-sm font-semibold rounded-lg transition-colors whitespace-nowrap ${
@@ -1024,7 +1110,11 @@ export default function ComparisonPage() {
             {/* המלצות להעברת תקציב */}
             <div className="mb-8">
               <div className="flex items-start gap-3 mb-4">
-                <span className="text-2xl mt-0.5">💡</span>
+                <div className="w-8 h-8 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                </div>
                 <div>
                   <h2 className="text-base font-extrabold text-gray-800">המלצות להעברת תקציב</h2>
                   <p className="text-sm text-gray-400 mt-0.5 leading-relaxed">
@@ -1040,7 +1130,11 @@ export default function ComparisonPage() {
                 </div>
               ) : recommendations.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-                  <p className="text-4xl mb-3">✅</p>
+                  <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
                   <p className="text-sm font-bold text-gray-700">אין המלצות להעברה כרגע</p>
                   <p className="text-xs text-gray-400 mt-1">כל המחקרים מאוזנים מבחינת תקציב ולוח זמנים</p>
                 </div>
@@ -1077,7 +1171,7 @@ export default function ComparisonPage() {
         {mode === 'center' && (
           <div dir="rtl">
             <div className="flex items-start gap-3 mb-4">
-              <span className="text-2xl mt-0.5">🏛️</span>
+              <span className="text-primary/60 mt-0.5">{ICONS.building}</span>
               <div>
                 <h2 className="text-base font-extrabold text-gray-800">מחקרים לפי מרכז מחקר</h2>
                 <p className="text-sm text-gray-400 mt-0.5 leading-relaxed">
@@ -1092,7 +1186,7 @@ export default function ComparisonPage() {
               </div>
             ) : centerGroups.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-                <p className="text-4xl mb-3">🏛️</p>
+                <div className="flex justify-center mb-3 text-gray-300">{ICONS.building}</div>
                 <p className="text-sm font-bold text-gray-700">לא נמצאו מחקרים נוספים באותו מרכז מחקר</p>
                 <p className="text-xs text-gray-400 mt-1">ייתכן שהמחקרים שלך אינם משויכים למרכז מחקר</p>
               </div>
@@ -1180,7 +1274,7 @@ export default function ComparisonPage() {
         {mode === 'clusters' && (
           <div dir="rtl">
             <div className="flex items-start gap-3 mb-4">
-              <span className="text-2xl mt-0.5">🧬</span>
+              <span className="text-primary/60 mt-0.5">{ICONS.chartBar}</span>
               <div>
                 <h2 className="text-base font-extrabold text-gray-800">קבוצות פרויקטים לפי דפוס הוצאות</h2>
                 <p className="text-sm text-gray-400 mt-0.5 leading-relaxed">
@@ -1195,7 +1289,7 @@ export default function ComparisonPage() {
               </div>
             ) : clusterGroups.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-                <p className="text-4xl mb-3">🧬</p>
+                <div className="flex justify-center mb-3 text-gray-300">{ICONS.chartBar}</div>
                 <p className="text-sm font-bold text-gray-700">לא נמצאו נתוני קיבוץ עבור המחקרים שלך</p>
                 <p className="text-xs text-gray-400 mt-1">ייתכן שהרכיב החכם עדיין מחשב את התוצאות — נסה לרענן בעוד רגע</p>
               </div>
@@ -1295,7 +1389,7 @@ export default function ComparisonPage() {
 
             {selectedProjects.length < 2 ? (
               <div className="bg-white rounded-2xl border border-dashed border-gray-200 py-20 text-center">
-                <p className="text-4xl mb-3">⚖️</p>
+                <div className="flex justify-center mb-3 text-gray-300">{ICONS.chartBar}</div>
                 <p className="text-sm font-semibold text-gray-500">בחר לפחות 2 מחקרים להשוואה</p>
               </div>
             ) : loadingCmp ? (
@@ -1304,32 +1398,63 @@ export default function ComparisonPage() {
               </div>
             ) : (
               <>
-                {/* Scroll hint on mobile */}
-                <p className="sm:hidden text-xs text-gray-400 mb-2 flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
-                  </svg>
-                  ניתן לגלול לרוחב
-                </p>
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-auto mb-5" style={{ maxHeight: '75vh' }}>
-                    <table className="text-sm" dir="rtl"
-                      style={{ minWidth: `${120 + selectedProjects.length * 130}px` }}>
+                {/* Mobile: vertical metric cards (shown instead of table) */}
+                <div className="sm:hidden space-y-3 mb-5">
+                  {metrics.map(({ label, icon, values }) => (
+                    <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                      <p className="text-xs font-semibold text-gray-500 mb-3 flex items-center gap-1.5">
+                        <span className="text-gray-400 flex-shrink-0">{icon}</span>
+                        {label}
+                      </p>
+                      <div className="space-y-2.5">
+                        {selectedProjects.map((p, i) => (
+                          <div key={p.projectId} className="flex items-start gap-3">
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                            <span
+                              className="text-sm text-gray-600 flex-1 leading-snug cursor-pointer hover:text-primary transition-colors"
+                              style={{ wordBreak: 'break-word' }}
+                              onClick={() => navigate(`/projects/${p.projectId}`)}
+                            >
+                              {p.projectNameHe || p.projectNameEn || `#${p.projectId}`}
+                            </span>
+                            <div className="text-left flex-shrink-0">
+                              <p className="text-sm font-extrabold tabular-nums" style={{ color: COLORS[i % COLORS.length] }}>
+                                {values[i].display}
+                              </p>
+                              {values[i].badge && (
+                                <span className={`inline-block text-xs font-bold px-1.5 py-0.5 rounded-full mt-0.5 ${values[i].badge.cls}`}>
+                                  {values[i].badge.text}
+                                </span>
+                              )}
+                              {values[i].sub && <p className="text-xs text-gray-400 mt-0.5">{values[i].sub}</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop: comparison table (hidden on mobile) */}
+                <div className="hidden sm:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-auto mb-5" style={{ maxHeight: '75vh' }}>
+                    <table className="text-sm w-full" dir="rtl"
+                      style={{ minWidth: `${180 + selectedProjects.length * 180}px` }}>
                       <thead>
                         <tr className="border-b border-gray-100">
-                          <th className="px-3 sm:px-5 py-3 sm:py-4 text-right sticky top-0 right-0 z-30 bg-gray-50 w-28 sm:w-44 border-l border-r-0 border-gray-100">
+                          <th className="px-5 py-4 text-right sticky top-0 right-0 z-30 bg-gray-50 w-44 border-l border-r-0 border-gray-100">
                             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">פרמטר</span>
                           </th>
                           {selectedProjects.map((p, i) => (
                             <th key={p.projectId}
-                              className="px-3 sm:px-4 py-3 sm:py-4 text-right sticky top-0 z-20 border-r border-gray-100 last:border-r-0 cursor-pointer hover:bg-gray-100 transition-colors bg-gray-50"
+                              className="px-4 py-4 text-right sticky top-0 z-20 border-r border-gray-100 last:border-r-0 cursor-pointer hover:bg-gray-100 transition-colors bg-gray-50 min-w-[180px]"
                               onClick={() => navigate(`/projects/${p.projectId}`)}>
-                              <div className="flex items-center gap-1.5 sm:gap-2">
-                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                                <span className="text-xs sm:text-sm font-bold text-gray-800 truncate max-w-[90px] sm:max-w-[130px]" title={p.projectNameHe}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                <span className="text-sm font-bold text-gray-800 leading-snug break-words" title={p.projectNameHe}>
                                   {p.projectNameHe || p.projectNameEn || `#${p.projectId}`}
                                 </span>
                               </div>
-                              <p className="text-xs text-primary font-medium mt-0.5 mr-4 sm:mr-5 hidden sm:block">פתח מחקר ←</p>
+                              <p className="text-xs text-primary font-medium mt-0.5 mr-5">פתח מחקר ←</p>
                             </th>
                           ))}
                         </tr>
@@ -1340,28 +1465,27 @@ export default function ComparisonPage() {
                           const max  = Math.max(...raws.filter(v => isFinite(v) && v > 0));
                           return (
                             <tr key={label} className="hover:bg-gray-50/40 transition-colors">
-                              <td className="px-3 sm:px-5 py-3 sm:py-4 sticky right-0 bg-white border-l border-gray-50 z-10 w-28 sm:w-44">
-                                <div className="flex items-center gap-1.5 sm:gap-2">
-                                  <span className="text-sm sm:text-base leading-none">{icon}</span>
-                                  <span className="text-xs sm:text-xs font-semibold text-gray-600 leading-tight">{label}</span>
+                              <td className="px-5 py-4 sticky right-0 bg-white border-l border-gray-100 z-10 w-44">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-400 flex-shrink-0">{icon}</span>
+                                  <span className="text-xs font-semibold text-gray-600 leading-tight">{label}</span>
                                 </div>
                               </td>
                               {values.map((v, i) => {
                                 const color = COLORS[i % COLORS.length];
-                                const pct   = max > 0 ? (v.raw / max) * 100 : 0;
                                 return (
-                                  <td key={i} className="px-3 sm:px-4 py-3 sm:py-4 border-r border-gray-50 last:border-r-0 align-top min-w-[110px] sm:min-w-[160px]">
-                                    <div className="flex items-start gap-1 sm:gap-1.5 flex-wrap">
-                                      <p className="text-sm sm:text-base font-extrabold tabular-nums leading-tight" style={{ color }}>
+                                  <td key={i} className="px-4 py-4 border-r border-gray-50 last:border-r-0 align-top min-w-[180px]">
+                                    <div className="flex items-start gap-1.5 flex-wrap">
+                                      <p className="text-base font-extrabold tabular-nums leading-tight" style={{ color }}>
                                         {v.display}
                                       </p>
                                       {v.badge && (
-                                        <span className={`text-xs sm:text-xs font-bold px-1 sm:px-1.5 py-0.5 rounded-full ${v.badge.cls}`}>
+                                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${v.badge.cls}`}>
                                           {v.badge.text}
                                         </span>
                                       )}
                                     </div>
-                                    {v.sub && <p className="text-xs sm:text-xs text-gray-400 mt-0.5">{v.sub}</p>}
+                                    {v.sub && <p className="text-xs text-gray-400 mt-0.5">{v.sub}</p>}
                                   </td>
                                 );
                               })}

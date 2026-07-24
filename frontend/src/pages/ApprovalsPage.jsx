@@ -7,6 +7,7 @@ import { getMlInsights } from '../api/projectsApi';
 import Layout from '../components/Layout';
 import { requestNotificationPermission, sendNotification } from '../utils/notifications';
 import { celebrate } from '../utils/celebrate';
+import { fileUrl } from '../utils/fileUrl';
 
 const MONTH_NAMES = [
   '', 'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
@@ -69,7 +70,7 @@ function ActionRow({ onApprove, onReject, busy }) {
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
         </svg>
-        {busy ? 'מאשר...' : 'אישור'}
+        {busy ? 'מאשר...' : 'אישור הבקשה'}
       </button>
       <button
         onClick={() => setRejecting(true)}
@@ -79,7 +80,7 @@ function ActionRow({ onApprove, onReject, busy }) {
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
-        דחייה
+        דחיית הבקשה
       </button>
     </div>
   );
@@ -96,7 +97,7 @@ function MlInsightBadge({ mlInfo }) {
   const [open, setOpen] = useState(false);
   if (!mlInfo) return null;
 
-  const { approval_probability, approval_label, amount_flag, expected_amount, reasons } = mlInfo;
+  const { approval_probability, amount_flag, expected_amount, reasons } = mlInfo;
   const lowApproval = approval_probability < 0.5;
 
   if (!lowApproval && !amount_flag) return null;
@@ -109,23 +110,28 @@ function MlInsightBadge({ mlInfo }) {
         className="flex flex-wrap gap-1.5 text-right"
       >
         {lowApproval && (
-          <span className="inline-flex items-center gap-1 text-sm font-semibold bg-orange-50 text-orange-700 border border-orange-200 px-2.5 py-1 rounded-full">
-            🤖 {approval_label} ({Math.round(approval_probability * 100)}%)
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold bg-orange-50 text-orange-700 border border-orange-200 px-2.5 py-1 rounded-full">
+            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            נדרשת בדיקה נוספת
+            <span className="font-normal text-orange-500 text-xs">— רמת חריגות: {Math.round(approval_probability * 100)}%</span>
           </span>
         )}
         {amount_flag && (
-          <span className="inline-flex items-center gap-1 text-sm font-semibold bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1 rounded-full">
-            🤖 סכום חריג - צפי: {formatAmount(expected_amount)}
+          <span className="inline-flex flex-col items-start gap-0.5 text-sm font-semibold bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1.5 rounded-xl">
+            <span>הסכום גבוה מהסכום המקובל לבקשות דומות</span>
+            <span className="text-xs font-normal text-purple-500">סכום מקובל משוער: {formatAmount(expected_amount)}</span>
           </span>
         )}
-        <span className="inline-flex items-center text-sm text-gray-400 underline">
-          {open ? 'הסתר הסבר' : 'למה?'}
+        <span className="inline-flex items-center text-sm text-gray-400 underline self-center">
+          {open ? 'הסתר' : 'הסבר'}
         </span>
       </button>
 
       {open && reasons?.length > 0 && (
         <div className="mt-2 bg-amber-50/70 border border-amber-200 rounded-xl p-3 space-y-1.5">
-          <p className="text-sm font-bold text-amber-800">למה הבקשה סומנה?</p>
+          <p className="text-sm font-bold text-amber-800">מדוע הבקשה דורשת בדיקה?</p>
           <ul className="space-y-1">
             {reasons.map((r, i) => (
               <li key={i} className="text-sm text-amber-800 flex items-start gap-1.5">
@@ -150,13 +156,13 @@ function RequestCard({ request, onApprove, onReject, showProject, highlighted, m
   const hasDetails = request.providerName || request.requestDescription || quotationFiles.length > 0;
 
   return (
-    <div className={`bg-white rounded-2xl border shadow-card overflow-hidden transition-all ${
+    <div className={`bg-white rounded-2xl border shadow-card overflow-hidden flex flex-col h-full transition-all ${
       highlighted ? 'border-primary ring-2 ring-primary/30 shadow-lg' : 'border-gray-100'
     }`}>
       {/* Accent stripe */}
-      <div className="h-1 bg-gradient-to-l from-primary to-primary-mid" />
+      <div className="h-1 bg-gradient-to-l from-primary to-primary-mid flex-shrink-0" />
 
-      <div className="p-5 space-y-3">
+      <div className="p-5 flex flex-col flex-1 gap-3">
         {/* Title + Amount */}
         <div className="flex items-start justify-between gap-3" dir="rtl">
           <div className="flex-1 min-w-0">
@@ -243,7 +249,7 @@ function RequestCard({ request, onApprove, onReject, showProject, highlighted, m
                 <p className="text-gray-400 font-medium mb-1.5">קבצים מצורפים</p>
                 <div className="flex flex-wrap gap-1.5">
                   {quotationFiles.map((path, i) => (
-                    <a key={i} href={`http://localhost:5269${path}`} target="_blank" rel="noopener noreferrer"
+                    <a key={i} href={fileUrl(path)} target="_blank" rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-primary bg-primary-light hover:bg-primary/20 px-2.5 py-1 rounded-lg transition-colors text-sm font-medium">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -256,6 +262,9 @@ function RequestCard({ request, onApprove, onReject, showProject, highlighted, m
             )}
           </div>
         )}
+
+        {/* Push action area to bottom */}
+        <div className="flex-1" />
 
         {/* Status badge (non-pending) or action buttons (pending) */}
         {request.status && request.status !== 'ממתין' ? (
@@ -289,11 +298,11 @@ function HourApprovalCard({ record, onDecide }) {
   const paymentAmount = record.totalPaymentAmount;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden flex flex-col h-full">
       {/* Accent stripe */}
-      <div className="h-1 bg-gradient-to-l from-accent to-accent-dark" />
+      <div className="h-1 bg-gradient-to-l from-accent to-accent-dark flex-shrink-0" />
 
-      <div className="p-5 space-y-3">
+      <div className="p-5 flex flex-col flex-1 gap-3">
         {/* Name + Hours/Amount */}
         <div className="flex items-start justify-between gap-3" dir="rtl">
           <div className="flex-1 min-w-0">
@@ -328,6 +337,9 @@ function HourApprovalCard({ record, onDecide }) {
         {record.comments && (
           <p className="text-sm text-gray-500 bg-gray-50 rounded-xl px-3 py-2" dir="rtl">{record.comments}</p>
         )}
+
+        {/* Push action area to bottom */}
+        <div className="flex-1" />
 
         {/* Actions */}
         <ActionRow
@@ -610,7 +622,7 @@ export default function ApprovalsPage() {
                   {group.items.map((req) => {
                     const isHighlighted = req.paymentRequestId === highlightId;
                     return (
-                      <div key={req.paymentRequestId} ref={isHighlighted ? highlightRef : null}>
+                      <div key={req.paymentRequestId} ref={isHighlighted ? highlightRef : null} className="h-full">
                         <RequestCard request={req}
                           onApprove={handleApprove} onReject={handleReject}
                           showProject={isSecretary} highlighted={isHighlighted}

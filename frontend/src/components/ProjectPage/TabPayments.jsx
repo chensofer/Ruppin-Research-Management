@@ -4,6 +4,7 @@ import HebrewDatePicker from '../HebrewDatePicker';
 import { getProviders, createProvider } from '../../api/providersApi';
 import { createPaymentRequest, uploadQuotationFile, notifyPaymentRequest, analyzeDocuments } from '../../api/paymentRequestsApi';
 import { celebrate } from '../../utils/celebrate';
+import { fileUrl } from '../../utils/fileUrl';
 import MobileSelect from '../MobileSelect';
 
 const fmt = (n) =>
@@ -320,14 +321,18 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                   >
                     {scanning ? (
                       <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    ) : '🤖'}
+                    ) : (
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
+                      </svg>
+                    )}
                     {scanning ? 'סורק...' : 'מלא טופס אוטומטית'}
                   </button>
                 </div>
                 <input
                   type="file"
                   multiple
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
                   onChange={(e) => {
                     const added = Array.from(e.target.files);
                     setSelectedFiles((prev) => {
@@ -470,7 +475,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                                     return (
                                       <a
                                         key={i}
-                                        href={`http://localhost:5269${path}`}
+                                        href={fileUrl(path)}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="inline-flex items-center gap-1.5 text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-lg transition-colors"

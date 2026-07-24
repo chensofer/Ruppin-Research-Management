@@ -18,14 +18,29 @@ const STATUS_STYLES = {
   'ממתין': { badge: 'bg-yellow-100 text-yellow-700 ring-1 ring-yellow-200', row: 'border-r-4 border-yellow-400' },
 };
 
-const STATUS_ICONS = { 'אושר': '✅', 'נדחה': '❌', 'ממתין': '⏳' };
+function StatusIcon({ status }) {
+  if (status === 'אושר') return (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+    </svg>
+  );
+  if (status === 'נדחה') return (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+  return (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
 
 function StatusBadge({ status }) {
   const style = STATUS_STYLES[status]?.badge ?? 'bg-gray-100 text-gray-600';
-  const icon = STATUS_ICONS[status] ?? '';
   return (
     <span className={`text-sm font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 ${style}`}>
-      <span>{icon}</span>
+      <StatusIcon status={status} />
       {status}
     </span>
   );
@@ -187,10 +202,10 @@ export default function MyReportsPage() {
             הכל ({submissions.length})
           </button>
           {[
-            { label: 'ממתין לאישור', status: 'ממתין', icon: '⏳', bg: 'linear-gradient(135deg, #FEF9C3 0%, #FEF08A 100%)', border: 'border-yellow-200', ring: 'ring-yellow-300', num: 'text-yellow-700' },
-            { label: 'אושרו',        status: 'אושר',  icon: '✅', bg: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', border: 'border-green-200',  ring: 'ring-green-300',  num: 'text-green-700' },
-            { label: 'נדחו',         status: 'נדחה',  icon: '❌', bg: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)', border: 'border-red-200',    ring: 'ring-red-300',    num: 'text-red-700' },
-          ].map(({ label, status, icon, bg, border, ring, num }) => {
+            { label: 'ממתין לאישור', status: 'ממתין', bg: 'linear-gradient(135deg, #FEF9C3 0%, #FEF08A 100%)', border: 'border-yellow-200', ring: 'ring-yellow-300', num: 'text-yellow-700' },
+            { label: 'אושרו',        status: 'אושר',  bg: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', border: 'border-green-200',  ring: 'ring-green-300',  num: 'text-green-700' },
+            { label: 'נדחו',         status: 'נדחה',  bg: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)', border: 'border-red-200',    ring: 'ring-red-300',    num: 'text-red-700' },
+          ].map(({ label, status, bg, border, ring, num }) => {
             const active = statusFilter === status;
             return (
               <button
@@ -199,7 +214,7 @@ export default function MyReportsPage() {
                 style={{ background: bg }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-semibold transition-all ${border} ${active ? `ring-2 ${ring} shadow-sm` : 'hover:shadow-sm'}`}
               >
-                <span>{icon}</span>
+                <span className={num}><StatusIcon status={status} /></span>
                 <span className={num}>{counts[status] ?? 0}</span>
                 <span className="text-gray-600">{label}</span>
               </button>

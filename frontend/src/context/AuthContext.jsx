@@ -5,6 +5,7 @@ const AuthContext = createContext(null);
 // דגלי "התראה חד-פעמית לסשן" — מתאפסים רק בהתנתקות/כניסה מחדש, לא בכל רענון תגובה מהשרת
 const SESSION_BADGE_KEYS = [
   'alerts_shown',
+  'notif_panel_dismissed',
   'notif_badge_dismissed', 'notif_badge_count',
   'approvals_badge_dismissed', 'approvals_badge_count',
 ];

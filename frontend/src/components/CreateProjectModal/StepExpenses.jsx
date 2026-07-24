@@ -21,6 +21,7 @@ const EMPTY_DRAFT = {
   requestDescription: '',
   requestedAmount: '',
   requestDate: '',
+  invoiceNumber: '',
   providerId: null,
   providerName: '',
   isNewProvider: false,
@@ -38,6 +39,7 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
   const [savingProvider, setSavingProvider] = useState(false);
   const [providerSaveError, setProviderSaveError] = useState('');
   const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState('');
   const fileRef                         = useRef(null);
   const providerInputRef                = useRef(null);
   const [providerDropRect, setProviderDropRect] = useState(null);
@@ -99,59 +101,71 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
 
   const handleFiles = (e) => {
     const picked = Array.from(e.target.files).map((f) => ({ file: f, name: f.name }));
+    const allFiles = [...draft.files.map(f => f.file), ...picked.map(f => f.file)];
     setDraft((d) => ({ ...d, files: [...d.files, ...picked] }));
     e.target.value = '';
+    // Auto-scan the newly added files immediately
+    doScan(allFiles, providerMode, draft.providerId);
   };
 
   const removeFile = (idx) =>
     setDraft((d) => ({ ...d, files: d.files.filter((_, i) => i !== idx) }));
 
-  const handleScan = async () => {
-    if (draft.files.length === 0) return;
+  // Core scan logic — accepts explicit files so it can be called before state update
+  const doScan = async (filesToScan, currentProviderMode, currentProviderId) => {
+    if (!filesToScan || filesToScan.length === 0) return;
     setScanning(true);
+    setScanError('');
     try {
-      const res = await analyzeDocuments(draft.files.map(f => f.file));
+      const res = await analyzeDocuments(filesToScan);
       const d = res.data;
 
-      // Fill main fields
+      // Only fill fields that are currently empty — never overwrite user input
       setDraft(prev => ({
         ...prev,
-        requestDescription: d.requestDescription ?? prev.requestDescription,
-        requestedAmount:    d.requestedAmount ? String(d.requestedAmount) : prev.requestedAmount,
-        requestDate:        d.requestDate ?? prev.requestDate,
-        categoryName:       d.categoryName ?? prev.categoryName,
+        requestDescription: prev.requestDescription || d.requestDescription || prev.requestDescription,
+        requestedAmount:    prev.requestedAmount    || (d.requestedAmount ? String(d.requestedAmount) : prev.requestedAmount),
+        requestDate:        prev.requestDate        || d.requestDate       || prev.requestDate,
+        categoryName:       prev.categoryName       || d.categoryName      || prev.categoryName,
+        invoiceNumber:      prev.invoiceNumber      || d.invoiceNumber     || prev.invoiceNumber,
       }));
 
-      // Handle provider
-      if (d.providerName) {
+      // Handle provider — only if no provider is selected yet
+      if (d.providerName && currentProviderMode === 'none' && !currentProviderId) {
         const match = providers.find(p =>
           p.providerName?.toLowerCase().includes(d.providerName.toLowerCase()) ||
           d.providerName.toLowerCase().includes(p.providerName?.toLowerCase() ?? '')
         );
         if (match) {
-          // Found existing provider — select automatically
           selectProvider(match);
           setProviderMode('existing');
         } else {
-          // Not found — pre-fill new provider form (with phone + email) for user confirmation
           setProviderMode('new');
           setDraft(prev => ({
             ...prev,
             newProvider: {
               ...prev.newProvider,
-              providerName: d.providerName,
-              phone: d.providerPhone ?? prev.newProvider.phone,
-              email: d.providerEmail ?? prev.newProvider.email,
+              providerName: prev.newProvider.providerName || d.providerName,
+              phone:        prev.newProvider.phone        || d.providerPhone || '',
+              email:        prev.newProvider.email        || d.providerEmail || '',
             },
           }));
         }
       }
+
+      const hasInfo = d.requestDescription || d.requestedAmount || d.requestDate || d.providerName || d.invoiceNumber;
+      if (!hasInfo) {
+        setScanError('לא נמצאו פרטי הוצאה במסמך — ניתן למלא ידנית');
+      }
     } catch {
-      // silent fail
+      setScanError('לא הצלחנו לזהות את פרטי ההוצאה מהמסמך. ניתן להזין אותם ידנית.');
     } finally {
       setScanning(false);
     }
   };
+
+  const handleScan = () =>
+    doScan(draft.files.map(f => f.file), providerMode, draft.providerId);
 
   const submit = () => {
     const errs = {};
@@ -226,6 +240,15 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
           wrapperClassName="flex-1"
         />
       </div>
+
+      {/* Invoice / document number */}
+      <input
+        type="text"
+        value={draft.invoiceNumber}
+        onChange={(e) => setDraft((d) => ({ ...d, invoiceNumber: e.target.value }))}
+        placeholder="מספר חשבונית / מסמך (אופציונלי)"
+        className={inputCls}
+      />
 
       {/* Supplier section */}
       <div className="border border-gray-200 rounded-xl p-3 bg-white space-y-2">
@@ -339,7 +362,13 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
             {draft.files.length > 0 && (
               <button type="button" onClick={handleScan} disabled={scanning}
                 className="flex items-center gap-1 text-sm font-semibold text-primary bg-primary/5 border border-primary/20 px-2.5 py-1 rounded-lg hover:bg-primary/10 transition-colors disabled:opacity-50">
-                {scanning ? <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : '🤖'}
+                {scanning ? (
+                  <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
+                  </svg>
+                )}
                 {scanning ? 'סורק...' : 'מלא אוטומטית'}
               </button>
             )}
@@ -348,7 +377,7 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
               + הוסף קובץ
             </button>
           </div>
-          <input ref={fileRef} type="file" multiple className="hidden" onChange={handleFiles} />
+          <input ref={fileRef} type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={handleFiles} />
         </div>
         {draft.files.length > 0 ? (
           <ul className="space-y-1">
@@ -363,6 +392,11 @@ function AddExpenseForm({ onAdd, existingTotal, totalBudget }) {
           </ul>
         ) : (
           <p className="text-sm text-gray-400">לא נבחרו קבצים</p>
+        )}
+        {scanError && (
+          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 leading-relaxed">
+            {scanError}
+          </p>
         )}
       </div>
 

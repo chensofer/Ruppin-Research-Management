@@ -31,48 +31,81 @@ namespace RupResearchAPI.Controllers
             if (string.IsNullOrEmpty(apiKey))
                 return StatusCode(503, new { message = "Gemini API key לא מוגדר" });
 
+            // Extension → MIME fallback for files uploaded without a proper Content-Type
+            var extMimeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { ".jpg",  "image/jpeg" },
+                { ".jpeg", "image/jpeg" },
+                { ".png",  "image/png"  },
+                { ".webp", "image/webp" },
+                { ".gif",  "image/gif"  },
+                { ".bmp",  "image/bmp"  },
+                { ".tiff", "image/tiff" },
+                { ".tif",  "image/tiff" },
+                { ".pdf",  "application/pdf" },
+            };
+
             // Build parts list — one per file
             var parts = new List<object>();
             foreach (var file in files)
             {
-                var allowedTypes = new[] { "application/pdf", "image/jpeg", "image/jpg", "image/png", "image/webp" };
-                var mime = file.ContentType?.ToLower() ?? "";
                 if (file.Length == 0) continue;
 
-                // For unsupported types, skip
-                if (!allowedTypes.Any(t => mime.Contains(t.Split('/')[1])))
-                    continue;
+                var mime = file.ContentType?.ToLower() ?? "";
+                // Fall back to extension when MIME is missing or generic
+                if (string.IsNullOrEmpty(mime) || mime is "application/octet-stream" or "application/unknown")
+                {
+                    var ext = Path.GetExtension(file.FileName);
+                    mime = extMimeMap.GetValueOrDefault(ext, mime);
+                }
+
+                // Resolve Gemini-compatible MIME (supports PDF and common image types)
+                string? geminiMime = null;
+                if (mime.Contains("pdf"))         geminiMime = "application/pdf";
+                else if (mime.Contains("png"))    geminiMime = "image/png";
+                else if (mime.Contains("webp"))   geminiMime = "image/webp";
+                else if (mime.Contains("gif"))    geminiMime = "image/gif";
+                else if (mime.Contains("bmp") || mime.Contains("tiff"))
+                    geminiMime = "image/jpeg"; // convert BMP/TIFF via re-encode not needed — Gemini treats as JPEG
+                else if (mime.Contains("jpeg") || mime.Contains("jpg"))
+                    geminiMime = "image/jpeg";
+
+                if (geminiMime == null) continue; // unsupported type — skip
 
                 using var ms = new MemoryStream();
                 await file.CopyToAsync(ms);
                 var b64 = Convert.ToBase64String(ms.ToArray());
-                var mimeType = mime.Contains("pdf") ? "application/pdf"
-                             : mime.Contains("png") ? "image/png"
-                             : "image/jpeg";
+                var mimeType = geminiMime;
 
                 parts.Add(new { inlineData = new { mimeType, data = b64 } });
             }
 
             if (parts.Count == 0)
-                return BadRequest(new { message = "סוג קובץ לא נתמך. השתמש ב-PDF, JPG או PNG" });
+                return BadRequest(new { message = "סוג קובץ לא נתמך. השתמש ב-PDF, JPG, PNG או WebP" });
 
             // Add the extraction prompt
             parts.Add(new
             {
-                text = @"אנא קרא את המסמך/ים הבאים (חשבוניות, קבלות, הצעות מחיר וכו') וחלץ את הפרטים הבאים.
-החזר JSON בדיוק בפורמט הזה, ללא טקסט נוסף:
+                text = @"IMPORTANT: Output ONLY a valid JSON object. No markdown, no explanation, no code fences.
+
+Read the attached document(s) or image(s) (invoices, receipts, quotes, photos of receipts, etc.) and extract the following fields.
+Return EXACTLY this JSON structure and nothing else:
 {
-  ""requestTitle"": ""כותרת קצרה לבקשה (מה נרכש/מה השירות)"",
+  ""requestTitle"": ""short title describing what was purchased or the service"",
   ""requestedAmount"": 0,
-  ""requestDescription"": ""תיאור מפורט של מה נרכש"",
-  ""providerName"": ""שם הספק / העסק"",
-  ""providerPhone"": ""מספר טלפון של הספק (ספרות ומקפים בלבד) או null"",
-  ""providerEmail"": ""כתובת אימייל של הספק או null"",
-  ""requestDate"": ""YYYY-MM-DD או null""
+  ""requestDescription"": ""detailed description of what was purchased"",
+  ""providerName"": ""vendor/business name"",
+  ""providerPhone"": ""vendor phone number (digits and dashes only) or null"",
+  ""providerEmail"": ""vendor email address or null"",
+  ""requestDate"": ""YYYY-MM-DD or null"",
+  ""categoryName"": ""expense category in Hebrew — one of: ציוד, נסיעות, שכר, ייעוץ, תוכנה, חומרה, כנסים, פרסום, ספרות מקצועית, אחר — or null if unclear"",
+  ""invoiceNumber"": ""invoice number, receipt number, or document number as a string or null""
 }
-אם יש כמה מסמכים, חבר את הסכומים וסכם את התיאורים.
-אם לא מצאת ערך מסוים, השאר null.
-הסכום חייב להיות מספר בלבד (ללא ₪ וללא פסיקים)."
+Rules:
+- If multiple documents: sum the amounts and combine descriptions.
+- Use null for any field you cannot find — do NOT use placeholder text.
+- requestedAmount must be a plain number with no currency symbols or commas.
+- DO NOT wrap the output in markdown code blocks or add any text outside the JSON."
             });
 
             var requestBody = new
@@ -105,11 +138,15 @@ namespace RupResearchAPI.Controllers
                 .GetProperty("text")
                 .GetString() ?? "";
 
-            // Clean markdown code blocks if present
-            text = text.Trim();
-            if (text.StartsWith("```")) text = text.Split('\n', 2)[1];
-            if (text.EndsWith("```")) text = text[..^3];
-            text = text.Trim();
+            // Strip any markdown fencing (```json ... ```) that Gemini sometimes adds
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"```[a-zA-Z]*", "").Trim();
+            text = text.Replace("```", "").Trim();
+
+            // Extract the JSON object by finding the outermost { } — robust against surrounding prose
+            var jsonStart = text.IndexOf('{');
+            var jsonEnd   = text.LastIndexOf('}');
+            if (jsonStart >= 0 && jsonEnd > jsonStart)
+                text = text[jsonStart..(jsonEnd + 1)];
 
             // Parse and return
             try
@@ -119,7 +156,7 @@ namespace RupResearchAPI.Controllers
             }
             catch
             {
-                return Ok(new { requestTitle = (string?)null, requestedAmount = (decimal?)null, requestDescription = text, providerName = (string?)null });
+                return Ok(new { requestTitle = (string?)null, requestedAmount = (decimal?)null, requestDescription = (string?)null, providerName = (string?)null, categoryName = (string?)null, invoiceNumber = (string?)null });
             }
         }
     }

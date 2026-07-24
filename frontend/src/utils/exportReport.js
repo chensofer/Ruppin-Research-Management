@@ -51,7 +51,7 @@ function styleSummary(cell) {
 // ─── Transactions sheet ───────────────────────────────────────────────────────
 function addTransactionsSheet(wb, detail, payments) {
   const ws = wb.addWorksheet('ריכוז תנועות');
-  ws.views = [{ rightToLeft: true }];
+  ws.views = [{ rightToLeft: true, state: 'frozen', xSplit: 0, ySplit: 4 }];
 
   // Title
   ws.mergeCells('A1:G1');
@@ -73,6 +73,7 @@ function addTransactionsSheet(wb, detail, payments) {
   const hRow = ws.addRow(headers);
   hRow.height = 22;
   hRow.eachCell(c => styleHeader(c));
+  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: headers.length } };
 
   // Data
   const approved = (payments || [])
@@ -184,7 +185,7 @@ function addDetailsSheet(wb, detail) {
 // ─── Generic table sheet ──────────────────────────────────────────────────────
 function addTableSheet(wb, name, title, headers, rows, colWidths) {
   const ws = wb.addWorksheet(name);
-  ws.views = [{ rightToLeft: true }];
+  ws.views = [{ rightToLeft: true, state: 'frozen', xSplit: 0, ySplit: 4 }];
 
   ws.mergeCells(`A1:${String.fromCharCode(64 + headers.length)}1`);
   const t = ws.getCell('A1');
@@ -200,6 +201,7 @@ function addTableSheet(wb, name, title, headers, rows, colWidths) {
   const hRow = ws.addRow(headers);
   hRow.height = 22;
   hRow.eachCell(c => styleHeader(c));
+  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: headers.length } };
 
   rows.forEach((row, i) => {
     const r = ws.addRow(row);
@@ -240,7 +242,7 @@ function formatDateTime(iso) {
 // ─── Documents sheet ──────────────────────────────────────────────────────────
 function addDocumentsSheet(wb, files, projectName) {
   const ws = wb.addWorksheet('מסמכים');
-  ws.views = [{ rightToLeft: true }];
+  ws.views = [{ rightToLeft: true, state: 'frozen', xSplit: 0, ySplit: 4 }];
 
   ws.mergeCells('A1:D1');
   const t = ws.getCell('A1');
@@ -257,6 +259,7 @@ function addDocumentsSheet(wb, files, projectName) {
   const hRow = ws.addRow(['שם הקובץ', 'תיקייה', 'תאריך העלאה', 'קישור']);
   hRow.height = 22;
   hRow.eachCell(c => styleHeader(c));
+  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: 4 } };
 
   (files ?? []).forEach((f, i) => {
     const r = ws.addRow([f.fileName || '', f.folderName || 'כללי', fmtDate(f.createdDate), f.path ? 'פתח קובץ' : '']);
@@ -276,7 +279,7 @@ function addDocumentsSheet(wb, files, projectName) {
 // ─── History sheet ────────────────────────────────────────────────────────────
 function addHistorySheet(wb, auditLogs, projectName) {
   const ws = wb.addWorksheet('היסטוריית שינויים');
-  ws.views = [{ rightToLeft: true }];
+  ws.views = [{ rightToLeft: true, state: 'frozen', xSplit: 0, ySplit: 4 }];
 
   ws.mergeCells('A1:E1');
   const t = ws.getCell('A1');
@@ -293,6 +296,7 @@ function addHistorySheet(wb, auditLogs, projectName) {
   const hRow = ws.addRow(['תאריך ושעה', 'מבצע הפעולה', 'מזהה משתמש', 'סוג פעולה', 'תיאור הפעולה']);
   hRow.height = 22;
   hRow.eachCell(c => styleHeader(c));
+  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: 5 } };
 
   (auditLogs ?? []).forEach((log, i) => {
     const r = ws.addRow([
@@ -368,7 +372,7 @@ export async function exportDashboardReport(projects, sections, format = 'excel'
   const wb = new ExcelJS.Workbook();
   wb.creator = 'RupResearch';
   const ws = wb.addWorksheet('סיכום מחקרים');
-  ws.views = [{ rightToLeft: true }];
+  ws.views = [{ rightToLeft: true, state: 'frozen', xSplit: 0, ySplit: 4 }];
 
   ws.mergeCells('A1:I1');
   const t = ws.getCell('A1');
@@ -386,6 +390,7 @@ export async function exportDashboardReport(projects, sections, format = 'excel'
   const hRow = ws.addRow(headers);
   hRow.height = 22;
   hRow.eachCell(c => styleHeader(c));
+  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: headers.length } };
 
   projects.forEach((p, i) => {
     const pct = (p.totalBudget||0) > 0 ? Math.round(((p.totalPaid||0)/p.totalBudget)*100) : 0;
@@ -426,7 +431,13 @@ export function exportProjectPDF({ detail, payments, commitments, sections }) {
   .budget-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}.budget-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px;text-align:center;}
   .budget-card .v{font-size:15px;font-weight:700;color:#003478;}.budget-card .l{font-size:10px;color:#64748b;}
   .info-table td:first-child{font-weight:600;color:#003478;background:#f1f5fb;width:160px;}
-  @media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact;}}</style></head><body>
+  @media print{
+    body{print-color-adjust:exact;-webkit-print-color-adjust:exact;}
+    thead{display:table-header-group;}
+    table{page-break-inside:auto;}
+    tr{page-break-inside:avoid;}
+    h2{page-break-after:avoid;}
+  }</style></head><body>
   <h1>${detail.projectNameHe||''}</h1><div class="sub">דוח מחקר &nbsp;·&nbsp; יוצא בתאריך: ${todayStr()}</div>
   ${sections.details?`<h2>פרטי מחקר</h2>
   <table class="info-table"><tbody>
@@ -458,7 +469,7 @@ export function exportDashboardPDF(projects) {
   h1{font-size:18px;color:#003478;margin-bottom:2px;}.sub{color:#64748b;font-size:10px;margin-bottom:16px;}
   table{width:100%;border-collapse:collapse;}th{background:#003478;color:white;padding:7px 10px;font-size:11px;text-align:right;}
   td{padding:6px 10px;border-bottom:1px solid #f1f5f9;font-size:11px;text-align:right;}tr:nth-child(even){background:#f8fafc;}.num{text-align:left;}
-  @media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact;}}</style></head><body>
+  @media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact;}thead{display:table-header-group;}tr{page-break-inside:avoid;}table{page-break-inside:auto;}}</style></head><body>
   <h1>דוח סיכום מחקרים</h1><div class="sub">יוצא בתאריך: ${todayStr()} &nbsp;·&nbsp; ${projects.length} מחקרים</div>
   <table><thead><tr><th>שם המחקר</th><th>תאריך התחלה</th><th>תאריך סיום</th><th>סטטוס</th><th>תקציב (₪)</th><th>שולם (₪)</th><th>יתרה זמינה (₪)</th><th>% ניצול</th></tr></thead><tbody>${rows}</tbody></table>
   <script>window.onload=()=>window.print();</script></body></html>`;

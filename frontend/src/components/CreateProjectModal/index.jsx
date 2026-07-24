@@ -187,7 +187,6 @@ export default function CreateProjectModal({ onClose, onCreated }) {
 
       onCreated(res.data);
     } catch (err) {
-      console.error('CreateFull error:', err?.response?.status, err?.response?.data, err?.message);
       const msg = err.response?.data?.message
         ?? err.response?.data?.title
         ?? err.response?.data

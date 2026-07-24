@@ -95,7 +95,7 @@ export default function StepDocuments({ files, folders, onFilesChange, onFolders
                   : 'bg-white border border-gray-200 text-gray-600 hover:border-primary hover:text-primary'
               }`}
             >
-              📁 {folder}
+              <svg className="w-3.5 h-3.5 inline-block mr-1 -mt-0.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" /></svg>{folder}
               {folder !== 'כללי' && (
                 <span
                   onClick={(e) => { e.stopPropagation(); removeFolder(folder); }}
@@ -140,7 +140,7 @@ export default function StepDocuments({ files, folders, onFilesChange, onFolders
                 fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
               </svg>
-              <span className="text-sm">📁</span>
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" /></svg>
               <span className="text-sm font-medium text-gray-700">{folder}</span>
               <span className="text-sm text-gray-400 mr-auto">{folderFiles.length} קבצים</span>
             </button>

@@ -113,7 +113,9 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
         {/* Pre-filled from recommendation */}
         {initialTargetId && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-right flex items-center gap-2">
-            <span className="text-lg">💡</span>
+            <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
             <p className="text-sm text-amber-800 leading-relaxed">
               <span className="font-bold">הפרטים מולאו אוטומטית</span> לפי המלצת המערכת — ניתן לשנות לפני האישור
             </p>
@@ -140,7 +142,7 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
                 </div>
               ) : preFilledNotFound ? (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-800">
-                  ⚠️ מחקר היעד אינו זמין להעברה (ייתכן שהוא בארכיון או הסתיים). בחר מחקר אחר.
+                  מחקר היעד אינו זמין להעברה (ייתכן שהוא בארכיון או הסתיים). בחר מחקר אחר.
                   <select
                     value=""
                     onChange={(e) => { setForm((f) => ({ ...f, targetProjectId: e.target.value })); setError(''); }}

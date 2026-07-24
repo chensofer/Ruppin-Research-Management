@@ -157,7 +157,12 @@ export default function AlertsModal({ budgetAlerts, timeAlerts, transferRequests
                             key={n.notificationId}
                             className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 border-r-[3px] border-r-purple-400"
                           >
-                            <p className="text-sm font-semibold text-purple-700 mb-1">💸 בקשת העברת תקציב</p>
+                            <p className="text-sm font-semibold text-purple-700 mb-1 flex items-center gap-1">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                              </svg>
+                              בקשת העברת תקציב
+                            </p>
                             <p className="text-sm text-gray-700 leading-relaxed">{n.message}</p>
                             {parsed && (
                               <button

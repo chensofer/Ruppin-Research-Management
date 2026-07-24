@@ -71,9 +71,9 @@ function calcPerformanceScore(project) {
 }
 
 function getPerformanceLabel(score, dark) {
-  if (score >= 80) return { label: 'ביצועים מצוינים',  color: dark ? '#74D600' : '#5CB800', bg: dark ? 'rgba(92,184,0,0.12)'   : '#f0fae0', ring: dark ? '#5CB800' : '#5CB800' };
-  if (score >= 60) return { label: 'דורש תשומת לב',    color: dark ? '#FBBF24' : '#f59e0b', bg: dark ? 'rgba(251,191,36,0.1)'  : '#fffbeb', ring: dark ? '#f59e0b' : '#f59e0b' };
-  return               { label: 'סיכון תקציבי גבוה',  color: dark ? '#F87171' : '#ef4444', bg: dark ? 'rgba(248,113,113,0.1)' : '#fef2f2', ring: dark ? '#ef4444' : '#ef4444' };
+  if (score >= 80) return { label: 'ביצועים טובים מאוד', color: dark ? '#74D600' : '#5CB800', bg: dark ? 'rgba(92,184,0,0.12)'   : '#f0fae0', ring: dark ? '#5CB800' : '#5CB800' };
+  if (score >= 60) return { label: 'ביצועים תקינים',     color: dark ? '#FBBF24' : '#f59e0b', bg: dark ? 'rgba(251,191,36,0.1)'  : '#fffbeb', ring: dark ? '#f59e0b' : '#f59e0b' };
+  return               { label: 'נדרשת תשומת לב',       color: dark ? '#F87171' : '#ef4444', bg: dark ? 'rgba(248,113,113,0.1)' : '#fef2f2', ring: dark ? '#ef4444' : '#ef4444' };
 }
 
 function buildPerformanceExplanation(project) {
@@ -88,27 +88,24 @@ function buildPerformanceExplanation(project) {
   const budgetUsageRaw   = budget > 0 ? Math.min((paid / budget) * 100, 100) : 0;
   const budgetUsageDisp  = Math.round(budgetUsageRaw);
 
+  // reasons: { type: 'ok'|'warn'|'error'|'info', text: string }[]
   const reasons      = [];
   const improvements = [];
 
   // 1A: Pending payment requests
-  const paymentDeduction = Math.min(pending * 3, 15);
   if (pending === 0) {
-    reasons.push('✅ אין בקשות תשלום ממתינות לאישור');
+    reasons.push({ type: 'ok', text: 'לא קיימות בקשות תשלום הממתינות לאישור.' });
   } else {
-    reasons.push(`⚠️ ${pending} בקשות תשלום ממתינות לאישור: -${paymentDeduction} נקודות`);
-    improvements.push('סקור ואשר את בקשות התשלום הממתינות');
-    improvements.push('עיכוב באישורים עלול לפגוע בפעילות המחקר');
+    reasons.push({ type: 'warn', text: `קיימות ${pending} בקשות תשלום הממתינות לאישור.` });
+    improvements.push('מומלץ לבדוק ולטפל בבקשות התשלום הממתינות לאישור, כדי למנוע עיכובים בפעילות המחקר ובניצול התקציב.');
   }
 
   // 1B: Pending hour approvals
-  const hourDeduction = Math.min(hourPending * 2, 10);
   if (hourPending === 0) {
-    reasons.push('✅ אין דוחות שעות ממתינים לאישור');
+    reasons.push({ type: 'ok', text: 'דיווחי השעות הוגשו במלואם.' });
   } else {
-    reasons.push(`⚠️ ${hourPending} דוחות שעות ממתינים לאישור: -${hourDeduction} נקודות`);
-    improvements.push('סקור את דוחות שעות עוזרי המחקר הממתינים לאישור');
-    improvements.push('עיכוב באישורים עלול לעכב את עיבוד המשכורות');
+    reasons.push({ type: 'warn', text: `קיימים ${hourPending} דוחות שעות הממתינים לאישור.` });
+    improvements.push('מומלץ לאשר את דוחות השעות הממתינים, כדי למנוע עיכוב בתשלום לעוזרי המחקר.');
   }
 
   // 2 & 3: Timeline vs budget (only when budget and dates are available)
@@ -121,37 +118,33 @@ function buildPerformanceExplanation(project) {
     else if (gap > 10) gapDeduction = 10;
 
     if (gapDeduction === 0) {
-      reasons.push(`✅ קצב ניצול תקציב תקין — ${budgetUsageDisp}% נוצל, ${timeProgressDisp}% מהזמן עבר`);
+      reasons.push({ type: 'ok', text: `קצב ניצול התקציב תקין — ${budgetUsageDisp}% נוצל, ${timeProgressDisp}% מהזמן חלף.` });
     } else {
-      reasons.push(`⚠️ פער בין התקדמות הזמן לניצול התקציב (${timeProgressDisp}% זמן, ${budgetUsageDisp}% תקציב, פער ${gapDisp}%): -${gapDeduction} נקודות`);
+      const underusing = timeProgress > budgetUsageRaw;
+      reasons.push({ type: 'warn', text: `קיים פער בין שיעור הזמן שחלף לבין שיעור ניצול התקציב: ${timeProgressDisp}% מהזמן חלף, אך נוצלו ${budgetUsageDisp}% מהתקציב.` });
     }
 
     // Special case 1: near end, too much budget unused
     if (timeProgress >= 70 && budgetUsageRaw < 60) {
-      reasons.push(`🔴 הפרויקט קרוב לסיומו אך חלק גדול מהתקציב טרם נוצל: -10 נקודות`);
-      improvements.push('בחן את הצרכים הנותרים ואת תכנית ההוצאות עד סיום המחקר');
-      improvements.push('אם רלוונטי ומותר — שקול העברת תקציב למחקר אחר');
-      improvements.push('בדוק האם הוצאות מתוכננות עוכבו או נשמטו');
+      reasons.push({ type: 'error', text: 'המחקר מתקרב לסיומו אך חלק ניכר מהתקציב טרם נוצל.' });
+      improvements.push('מומלץ לבחון את הצרכים הנותרים ואת תכנית ההוצאות עד לסיום המחקר, ולשקול האם רלוונטי לבצע העברת תקציב.');
     }
 
     // Special case 2: near end, budget nearly exhausted
     if (timeProgress >= 70 && budgetUsageRaw > 90) {
-      reasons.push(`🔴 הפרויקט קרוב לסיומו וכמעט כל התקציב מוצה: -15 נקודות`);
-      improvements.push('בחן בזהירות את ההוצאות הצפויות הנותרות');
-      improvements.push('הימנע מאישור תשלומים שאינם הכרחיים');
-      improvements.push('שקול בקשת התאמת תקציב אם רלוונטי');
+      reasons.push({ type: 'error', text: 'המחקר מתקרב לסיומו וכמעט כל התקציב מוצה.' });
+      improvements.push('מומלץ לבחון בזהירות את ההוצאות הצפויות הנותרות ולהימנע מאישור תשלומים שאינם הכרחיים.');
     }
 
     // Special case 3: early stage, spending too fast
     if (timeProgress <= 30 && budgetUsageRaw > 50) {
-      reasons.push(`🔴 ניצול תקציב גבוה בשלב מוקדם של הפרויקט: -10 נקודות`);
-      improvements.push('בחן את ההוצאות האחרונות והצפויות לשאר הפרויקט');
-      improvements.push('ודא שקצב ההוצאות ברי-קיימא עד סיום המחקר');
+      reasons.push({ type: 'error', text: 'שיעור ניצול התקציב גבוה בשלב מוקדם של המחקר.' });
+      improvements.push('מומלץ לבחון את ההוצאות האחרונות ולוודא שקצב ההוצאות ברי-קיימא עד לסיום המחקר.');
     }
   } else if (!timeMetrics) {
-    reasons.push('ℹ️ לא הוגדרו תאריכי התחלה/סיום — לא ניתן לחשב קצב ניצול תקציב');
+    reasons.push({ type: 'info', text: 'לא הוגדרו תאריכי התחלה וסיום — לא ניתן לחשב קצב ניצול התקציב.' });
   } else {
-    reasons.push('ℹ️ לא הוגדר תקציב — לא ניתן לחשב קצב ניצול');
+    reasons.push({ type: 'info', text: 'לא הוגדר תקציב — לא ניתן לחשב קצב ניצול.' });
   }
 
   return { reasons, improvements };
@@ -218,7 +211,7 @@ function PerformanceBadge({ score, project }) {
 
         {/* Label */}
         <div className="text-right flex-1 min-w-0">
-          <p className="text-sm text-gray-400 leading-none mb-0.5">מדד ביצועים</p>
+          <p className="text-sm text-gray-400 leading-none mb-0.5">ציון ביצועי המחקר</p>
           <p className="text-sm font-bold leading-none" style={{ color }}>{label}</p>
         </div>
 
@@ -240,18 +233,49 @@ function PerformanceBadge({ score, project }) {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Reasons */}
-          <div className="pt-2 space-y-1">
+          <div className="pt-2 space-y-1.5">
             {reasons.map((r, i) => (
-              <p key={i} className="text-sm text-gray-600 leading-snug">{r}</p>
+              <div key={i} className="flex items-start gap-2">
+                <span className="mt-0.5 flex-shrink-0">
+                  {r.type === 'ok' && (
+                    <svg className="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                  {r.type === 'warn' && (
+                    <svg className="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  )}
+                  {r.type === 'error' && (
+                    <svg className="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  {r.type === 'info' && (
+                    <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                </span>
+                <p className="text-sm text-gray-600 leading-snug">{r.text}</p>
+              </div>
             ))}
           </div>
 
           {/* Improvements */}
           {improvements.length > 0 && (
-            <div className="pt-1 border-t" style={{ borderColor: ring + '30' }}>
-              <p className="text-sm font-bold text-gray-500 mb-1">💡 המלצות לשיפור:</p>
+            <div className="pt-1.5 border-t" style={{ borderColor: ring + '30' }}>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">פעולות מומלצות</p>
               {improvements.map((tip, i) => (
-                <p key={i} className="text-sm text-gray-600 leading-snug">{tip}</p>
+                <div key={i} className="flex items-start gap-2 mt-1.5">
+                  <span className="mt-0.5 flex-shrink-0">
+                    <svg className="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 9l3 3-3 3M6 12h10" />
+                    </svg>
+                  </span>
+                  <p className="text-sm text-gray-600 leading-snug">{tip}</p>
+                </div>
               ))}
             </div>
           )}
@@ -268,14 +292,17 @@ function RiskBadge({ riskInsight }) {
 
   return (
     <div
-      className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold ${
+      title="הערכה המבוססת על קצב ניצול התקציב, הזמן שנותר, התחייבויות ובקשות תשלום פתוחות."
+      className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold cursor-default ${
         atRisk
           ? 'bg-orange-50 text-orange-700 border-orange-200'
           : 'bg-gray-50 text-gray-500 border-gray-100'
       }`}
     >
-      <span>🤖</span>
-      <span>סיכון תקציבי חזוי: {atRisk ? 'גבוה' : 'נמוך'} ({pct}%)</span>
+      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      <span>רמת סיכון תקציבי חזויה: {atRisk ? 'גבוהה' : 'נמוכה'} — {pct}%</span>
     </div>
   );
 }

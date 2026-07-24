@@ -10,7 +10,7 @@ import {
 } from 'react-icons/hi2';
 import { getPendingPaymentRequests } from '../api/paymentRequestsApi';
 import { getPendingHourApprovals } from '../api/hourReportsApi';
-import { getMyNotifications, markNotificationRead, markAllRead } from '../api/notificationsApi';
+import { getMyNotifications, markAllRead, deleteNotification, deleteAllNotifications } from '../api/notificationsApi';
 
 const ASSISTANT_NAV = [
   { to: '/attendance', label: 'דיווח נוכחות', icon: <HiCalendarDays      className="w-5 h-5 flex-shrink-0" /> },
@@ -29,11 +29,6 @@ export default function Layout({ children }) {
     return cached !== null ? Number(cached) : 0;
   });
   const [notifications, setNotifications] = useState([]);
-  const [notifBadgeCount, setNotifBadgeCount] = useState(() => {
-    if (sessionStorage.getItem('notif_badge_dismissed')) return 0;
-    const cached = sessionStorage.getItem('notif_badge_count');
-    return cached !== null ? Number(cached) : 0;
-  });
   const [notifOpen, setNotifOpen]         = useState(false);
 
   const role = user?.systemAuthorization;
@@ -92,7 +87,7 @@ export default function Layout({ children }) {
     });
   }, [user, isAssistant]);
 
-  // טעינת רשימת ההתראות בפועל (לתוכן הפאנל) — בעת כניסה לאתר ובכל פוקוס חלון
+  // טעינת רשימת ההתראות — פותח אוטומטית רק בכניסה הראשונה לסשן (אם לא נסגר ידנית)
   const firstNotifLoad = useRef(true);
   useEffect(() => {
     if (isAssistant || !user?.userId) return;
@@ -101,8 +96,8 @@ export default function Layout({ children }) {
         .then(r => {
           const items = Array.isArray(r.data) ? r.data : [];
           setNotifications(items);
-          // פתח אוטומטית את פאנל ההתראות בכניסה הראשונה אם יש התראות
-          if (autoOpen && items.length > 0) setNotifOpen(true);
+          const userDismissed = sessionStorage.getItem('notif_panel_dismissed');
+          if (autoOpen && items.length > 0 && !userDismissed) setNotifOpen(true);
         })
         .catch(() => {});
     fetchNotifs(firstNotifLoad.current);
@@ -111,35 +106,22 @@ export default function Layout({ children }) {
     return () => window.removeEventListener('focus', fetchNotifs);
   }, [user, isAssistant]);
 
-  // תג המספר על הפעמון — כמו תג האישורים: תמונת מצב חד-פעמית לסשן שנעלמת בלחיצה
-  useEffect(() => {
-    if (isAssistant || !user?.userId) return;
-    if (sessionStorage.getItem('notif_badge_dismissed')) return;
-    if (sessionStorage.getItem('notif_badge_count') !== null) return;
-    getMyNotifications()
-      .then(r => {
-        const items = Array.isArray(r.data) ? r.data : [];
-        sessionStorage.setItem('notif_badge_count', String(items.length));
-        setNotifBadgeCount(items.length);
-      })
-      .catch(() => {});
-  }, [user, isAssistant]);
-
-  const dismissNotifBadge = () => {
-    sessionStorage.setItem('notif_badge_dismissed', '1');
-    setNotifBadgeCount(0);
-  };
-
-  const handleMarkRead = async (id) => {
-    await markNotificationRead(id).catch(() => {});
+  const handleDelete = async (id) => {
+    await deleteNotification(id).catch(() => {});
     setNotifications(prev => prev.filter(n => n.notificationId !== id));
   };
 
-  const handleMarkAllRead = async () => {
-    await markAllRead().catch(() => {});
+  const handleDeleteAll = async () => {
+    await deleteAllNotifications().catch(() => {});
     setNotifications([]);
-    setNotifOpen(false);
+    closeNotifPanel();
   };
+
+  const closeNotifPanel = () => {
+    setNotifOpen(false);
+    sessionStorage.setItem('notif_panel_dismissed', '1');
+  };
+
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full" style={{ background: 'linear-gradient(180deg, #003478 0%, #001E50 100%)' }}>
@@ -180,14 +162,17 @@ export default function Layout({ children }) {
       {!isAssistant && (
         <div className="px-3 pb-2">
           <button
-            onClick={() => { setNotifOpen(v => !v); dismissNotifBadge(); }}
+            onClick={() => {
+              if (notifOpen) { closeNotifPanel(); }
+              else { sessionStorage.removeItem('notif_panel_dismissed'); setNotifOpen(true); }
+            }}
             className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-white/65 hover:bg-white/10 hover:text-white"
           >
             <div className="relative">
               <HiBell className="w-5 h-5 flex-shrink-0" />
-              {notifBadgeCount > 0 && (
+              {notifications.length > 0 && (
                 <span className="absolute -top-1.5 -left-1.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
-                  {notifBadgeCount > 9 ? '9+' : notifBadgeCount}
+                  {notifications.length > 9 ? '9+' : notifications.length}
                 </span>
               )}
             </div>
@@ -278,28 +263,37 @@ export default function Layout({ children }) {
       {/* Notifications dropdown — fixed panel next to sidebar, rendered here to avoid SidebarContent remount issues */}
       {notifOpen && !isAssistant && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+          <div className="fixed inset-0 z-40" onClick={closeNotifPanel} />
           <div
             className="fixed right-64 bottom-20 w-80 bg-white rounded-2xl shadow-2xl z-50 overflow-hidden border border-gray-100"
             dir="rtl"
           >
             <div className="bg-purple-600 px-4 py-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-bold text-white">🔔 {notifications.length > 0 ? `${notifications.length} התראות חדשות` : 'התראות'}</p>
+                <p className="text-sm font-bold text-white flex items-center gap-1.5">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  {notifications.length > 0 ? `${notifications.length} התראות` : 'התראות'}
+                </p>
                 {notifications.length > 0 && (
-                  <button onClick={handleMarkAllRead} className="text-xs text-purple-200 hover:text-white underline">
-                    סמן הכל כנקרא
+                  <button onClick={handleDeleteAll} className="text-xs text-purple-200 hover:text-white underline">
+                    מחק הכל
                   </button>
                 )}
               </div>
               {notifications.length > 0 && (
-                <p className="text-xs text-purple-200 mt-0.5">קיבלת בקשות העברת תקציב הממתינות לטיפולך</p>
+                <p className="text-xs text-purple-200 mt-0.5">בקשות העברת תקציב הממתינות לטיפולך</p>
               )}
             </div>
             {notifications.length === 0 ? (
               <div className="px-4 py-6 text-center">
-                <p className="text-2xl mb-1">🔕</p>
-                <p className="text-sm text-gray-400">אין התראות חדשות</p>
+                <div className="flex justify-center mb-2">
+                  <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-sm text-gray-400">אין התראות</p>
               </div>
             ) : (
               <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
@@ -309,18 +303,26 @@ export default function Layout({ children }) {
                   const dateStr = n.createdAt && !n.createdAt.endsWith('Z') ? n.createdAt + 'Z' : n.createdAt;
                   return (
                     <div key={n.notificationId} className="px-4 py-3 bg-purple-50/40 hover:bg-purple-50 transition-colors">
-                      <p className="text-xs font-semibold text-purple-700 mb-0.5">💸 בקשת העברת תקציב</p>
+                      <p className="text-xs font-semibold text-purple-700 mb-0.5 flex items-center gap-1">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                          </svg>
+                          בקשת העברת תקציב
+                        </p>
                       <p className="text-sm text-gray-700 leading-relaxed">{n.message}</p>
                       {parsed && (
                         <button
                           onClick={() => {
-                            handleMarkRead(n.notificationId);
-                            setNotifOpen(false);
+                            handleDelete(n.notificationId);
+                            closeNotifPanel();
                             navigate(`/projects/${parsed.giverProjectId}?tab=transfer&to=${parsed.receiverProjectId}&amount=${Math.round(parsed.amount)}`);
                           }}
                           className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg transition-colors"
                         >
-                          💸 בצע העברה
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                          </svg>
+                          בצע העברה
                         </button>
                       )}
                       <div className="flex items-center justify-between mt-2">
@@ -328,10 +330,10 @@ export default function Layout({ children }) {
                           {new Date(dateStr).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </p>
                         <button
-                          onClick={() => handleMarkRead(n.notificationId)}
-                          className="text-xs text-gray-400 hover:text-gray-600 underline"
+                          onClick={() => handleDelete(n.notificationId)}
+                          className="text-xs text-red-400 hover:text-red-600 underline"
                         >
-                          סמן כנקרא
+                          מחק
                         </button>
                       </div>
                     </div>

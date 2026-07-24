@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { fileUrl } from '../../utils/fileUrl';
 import ExcelJS from 'exceljs';
 import HebrewDatePicker from '../HebrewDatePicker';
 
@@ -56,7 +57,7 @@ function ExpandedDetails({ row }) {
                   return (
                     <a
                       key={i}
-                      href={`http://localhost:5269${path}`}
+                      href={fileUrl(path)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-lg transition-colors"
