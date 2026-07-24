@@ -49,7 +49,7 @@ function EditField({ label, children, error, span = 1, required = false }) {
 }
 
 // ── PI search picker (used inside edit mode) ────────────────────────────────────
-function PIPicker({ value, name: displayName, onChange, error, allUsers, loading }) {
+function PIPicker({ value, name: displayName, onChange, error, allUsers, loading, disabled = false }) {
   const [query, setQuery] = useState('');
   const [open, setOpen]   = useState(false);
 
@@ -72,17 +72,19 @@ function PIPicker({ value, name: displayName, onChange, error, allUsers, loading
 
   if (value) {
     return (
-      <div className={`flex items-center gap-3 bg-primary/5 border rounded-lg px-3 py-2 ${error ? 'border-red-400' : 'border-primary/20'}`}>
-        <UserAvatar userId={value} firstName={displayName} size="sm" className="bg-primary text-white" />
+      <div className={`flex items-center gap-3 rounded-lg px-3 py-2 border ${disabled ? 'bg-gray-50 border-gray-100' : 'bg-primary/5'} ${error ? 'border-red-400' : disabled ? '' : 'border-primary/20'}`}>
+        <UserAvatar userId={value} firstName={displayName} size="sm" className={disabled ? 'bg-gray-400 text-white' : 'bg-primary text-white'} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-primary truncate">{displayName}</p>
-          <p className="text-sm text-primary/60">{value}</p>
+          <p className={`text-sm font-medium truncate ${disabled ? 'text-gray-500' : 'text-primary'}`}>{displayName}</p>
+          <p className={`text-sm ${disabled ? 'text-gray-400' : 'text-primary/60'}`}>{value}</p>
         </div>
-        <button type="button" onClick={clear} className="text-primary/50 hover:text-primary transition-colors">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        {!disabled && (
+          <button type="button" onClick={clear} className="text-primary/50 hover:text-primary transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
     );
   }
@@ -96,10 +98,10 @@ function PIPicker({ value, name: displayName, onChange, error, allUsers, loading
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={loading ? 'טוען...' : 'חפש חוקר לפי שם או ת.ז...'}
-        disabled={loading}
+        disabled={loading || disabled}
         className={`${inputCls} ${error ? errCls : ''}`}
       />
-      {open && !loading && (
+      {open && !loading && !disabled && (
         <ul className="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
           {filtered.length > 0 ? filtered.map((u) => (
             <li key={u.userId} onMouseDown={() => select(u)}
@@ -131,7 +133,7 @@ function validateForm(f) {
 }
 
 // ── Main component ──────────────────────────────────────────────────────────────
-export default function TabOverview({ detail, onChanged, readOnly = false }) {
+export default function TabOverview({ detail, onChanged, readOnly = false, hasEnded = false }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm]       = useState({});
   const [errors, setErrors]   = useState({});
@@ -213,7 +215,16 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
         <div className="bg-white rounded-xl border border-primary/30 shadow-sm p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-5 pb-3 border-b border-gray-100">
-            <h2 className="text-sm font-semibold text-gray-700">עריכת פרטי המחקר</h2>
+            <div>
+              <h2 className="text-sm font-semibold text-gray-700">
+                {hasEnded ? 'עדכון תאריך סיום' : 'עריכת פרטי המחקר'}
+              </h2>
+              {hasEnded && (
+                <p className="text-sm text-gray-400 mt-0.5">
+                  המחקר הסתיים — ניתן רק לעדכן את תאריך הסיום אם דרוש עוד זמן. שאר הפרטים נעולים.
+                </p>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -247,7 +258,8 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
                 type="text"
                 value={form.projectNameHe}
                 onChange={setField('projectNameHe')}
-                className={`${inputCls} ${errors.projectNameHe ? errCls : ''}`}
+                disabled={hasEnded}
+                className={`${inputCls} ${errors.projectNameHe ? errCls : ''} ${hasEnded ? 'bg-gray-50 text-gray-400' : ''}`}
               />
             </EditField>
             <div>
@@ -265,7 +277,8 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
                 value={form.projectNameEn}
                 onChange={setField('projectNameEn')}
                 placeholder="Research name in English"
-                className={inputCls}
+                disabled={hasEnded}
+                className={`${inputCls} ${hasEnded ? 'bg-gray-50 text-gray-400' : ''}`}
               />
             </div>
 
@@ -275,7 +288,8 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
                 rows={3}
                 value={form.projectDescription}
                 onChange={setField('projectDescription')}
-                className={`${inputCls} resize-none ${errors.projectDescription ? errCls : ''}`}
+                disabled={hasEnded}
+                className={`${inputCls} resize-none ${errors.projectDescription ? errCls : ''} ${hasEnded ? 'bg-gray-50 text-gray-400' : ''}`}
               />
             </EditField>
 
@@ -290,6 +304,7 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
                 error={errors.principalResearcherId}
                 allUsers={allUsers}
                 loading={loadingMeta}
+                disabled={hasEnded}
               />
             </EditField>
 
@@ -298,8 +313,8 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
               <select
                 value={form.centerId}
                 onChange={setField('centerId')}
-                className={`${inputCls} ${errors.centerId ? errCls : ''}`}
-                disabled={loadingMeta}
+                className={`${inputCls} ${errors.centerId ? errCls : ''} ${hasEnded ? 'bg-gray-50 text-gray-400' : ''}`}
+                disabled={loadingMeta || hasEnded}
               >
                 <option value="">— בחר מרכז מחקר —</option>
                 {centers.map((c) => (
@@ -313,7 +328,8 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
                 type="text"
                 value={form.fundingSource}
                 onChange={setField('fundingSource')}
-                className={`${inputCls} ${errors.fundingSource ? errCls : ''}`}
+                disabled={hasEnded}
+                className={`${inputCls} ${errors.fundingSource ? errCls : ''} ${hasEnded ? 'bg-gray-50 text-gray-400' : ''}`}
               />
             </EditField>
 
@@ -323,7 +339,8 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
                 min={0}
                 value={form.totalBudget}
                 onChange={setField('totalBudget')}
-                className={`${inputCls} ${errors.totalBudget ? errCls : ''}`}
+                disabled={hasEnded}
+                className={`${inputCls} ${errors.totalBudget ? errCls : ''} ${hasEnded ? 'bg-gray-50 text-gray-400' : ''}`}
               />
             </EditField>
 
@@ -333,6 +350,7 @@ export default function TabOverview({ detail, onChanged, readOnly = false }) {
                 value={form.startDate}
                 onChange={(iso) => setForm((f) => ({ ...f, startDate: iso }))}
                 placeholder="בחר תאריך התחלה"
+                disabled={hasEnded}
                 className={`${inputCls} ${errors.startDate ? errCls : ''}`}
               />
             </EditField>

@@ -205,10 +205,19 @@ function buildTransferRecommendations(projects, myProjectIds, mlInsights, allPro
     ...endedWithSurplus.map(p => enrich(p, false)),
   ];
 
-  const givers    = enriched.filter(p => p.isGiver).sort((a, b) => {
-    const aUrgent = a.daysLeft !== null && a.daysLeft <= 45 ? 1 : 0;
-    const bUrgent = b.daysLeft !== null && b.daysLeft <= 45 ? 1 : 0;
-    if (bUrgent !== aUrgent) return bUrgent - aUrgent;
+  // עדיפות בין מקורות: מחקרים שמסתיימים ממש בקרוב (וטרם הסתיימו) הם הדחופים
+  // ביותר — הכסף שלהם עומד להינעל. אחריהם מחקרים שכבר הסתיימו. בכל שכבה,
+  // עודף גדול יותר קודם. (לפני התיקון המיון היה לפי עודף בלבד, ולכן מקור
+  // גדול-אך-לא-דחוף "בלע" את כל ההמלצה על חשבון מקור קטן-אך-דחוף-ממש.)
+  const giverTier = (p) => {
+    if (!p.hasEnded && p.daysLeft !== null && p.daysLeft <= 45) return 0; // מסתיים בקרוב
+    if (p.hasEnded) return 1;                                            // כבר הסתיים
+    return 2;                                                            // עודף בלבד (סיכון נמוך)
+  };
+  const givers = enriched.filter(p => p.isGiver).sort((a, b) => {
+    const ta = giverTier(a), tb = giverTier(b);
+    if (ta !== tb) return ta - tb;
+    if (ta === 0) return a.daysLeft - b.daysLeft; // בתוך "מסתיים בקרוב" — הכי קרוב קודם
     return b.avail - a.avail;
   });
   const receivers = enriched.filter(p => p.isReceiver).sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0));
@@ -217,61 +226,104 @@ function buildTransferRecommendations(projects, myProjectIds, mlInsights, allPro
   // עוקב אחר היתרה הנותרת לכל מקור אחרי שיוכים קודמים
   const giverRemaining = Object.fromEntries(givers.map(g => [g.projectId, g.avail]));
 
-  for (const recv of receivers) {
-    const giver = givers.find(g =>
-      g.projectId !== recv.projectId &&
-      (g.hasEnded ? giverRemaining[g.projectId] > 0 : giverRemaining[g.projectId] > Math.max(g.budget * 0.15, 5000))
-    );
-    if (!giver) break;
-
-    const remaining = giverRemaining[giver.projectId];
-    // כמה צריך לתת: אם יש גירעון — מכסים את כולו + 10% מאגן. אחרת — מביאים ניצול ל-50%.
-    const need = recv.avail < 0
-      ? Math.abs(recv.avail) + recv.budget * 0.1
-      : Math.max(recv.budget * (recv.usagePct / 100) - recv.budget * 0.5, recv.budget * 0.1);
-    // המקסימום שהמקור יכול לתת תוך שמירה על 15% מינימום לעצמו
-    const maxCanGive = giver.hasEnded
-      ? remaining
-      : remaining - Math.max(giver.budget * 0.15, 5000);
-    const amount = Math.min(maxCanGive, need);
-    if (amount < 2000) continue;
-
-    giverRemaining[giver.projectId] -= amount;
-
+  const buildTags = (giver, recv) => {
     const tags = [];
-    if (giver.riskScore !== null)
-      tags.push(`ציון סיכון תקציבי נמוך (${Math.round(giver.riskScore * 100)}%) — מודל ML`);
     if (giver.hasEnded)
       tags.push(`המחקר הסתיים — יתרה פנויה להעברה`);
     else if (giver.daysLeft !== null && giver.daysLeft <= 45)
       tags.push(`המחקר מסתיים בעוד ${giver.daysLeft} ימים — יתרה עודפת`);
-    else if (giver.daysLeft !== null)
-      tags.push(`${giver.daysLeft} ימים נותרו למקור`);
+    else if (giver.riskScore !== null)
+      tags.push(`ציון סיכון תקציבי נמוך (${Math.round(giver.riskScore * 100)}%) — מודל ML`);
     if (recv.avail < 0)
       tags.push(`גירעון ${fmt(Math.abs(recv.avail))}`);
     if (recv.riskScore !== null && recv.riskScore >= 0.5)
       tags.push(`ציון סיכון תקציבי גבוה (${Math.round(recv.riskScore * 100)}%) — מודל ML`);
+    return tags;
+  };
 
-    recs.push({ giver, receiver: recv, amount, tags, isGiverMine: myProjectIds.has(giver.projectId) });
+  const maxCanGiveOf = (giver) => giver.hasEnded
+    ? giverRemaining[giver.projectId]
+    : giverRemaining[giver.projectId] - Math.max(giver.budget * 0.15, 5000);
+
+  // כמה כל יעד "רשמי" (גירעון/סיכון) עדיין צריך — עוקבים לאורך שני השלבים
+  const receiverStillNeeded = {};
+  for (const recv of receivers) {
+    receiverStillNeeded[recv.projectId] = recv.avail < 0
+      ? Math.abs(recv.avail) + recv.budget * 0.1
+      : Math.max(recv.budget * (recv.usagePct / 100) - recv.budget * 0.5, recv.budget * 0.1);
   }
+
+  // שלב א' — לכל יעד רשמי ממלאים את הצורך שלו ממקור אחד או יותר (לא עוצרים
+  // במקור הראשון שנמצא), כדי שגם מקורות דחופים קטנים יותר יקבלו המלצה משלהם
+  // במקום להיבלע ע"י מקור גדול יחיד.
+  for (const recv of receivers) {
+    for (const giver of givers) {
+      if (receiverStillNeeded[recv.projectId] < 2000) break;
+      if (giver.projectId === recv.projectId) continue;
+
+      const maxCanGive = maxCanGiveOf(giver);
+      if (maxCanGive < 2000) continue;
+
+      const amount = Math.min(maxCanGive, receiverStillNeeded[recv.projectId]);
+      if (amount < 2000) continue;
+
+      giverRemaining[giver.projectId] -= amount;
+      receiverStillNeeded[recv.projectId] -= amount;
+
+      recs.push({ giver, receiver: recv, amount, tags: buildTags(giver, recv), isGiverMine: myProjectIds.has(giver.projectId) });
+    }
+  }
+
+  // שלב ב' — מקורות דחופים (מחקר שהסתיים / מסתיים ממש בקרוב) שעדיין נשאר להם
+  // עודף לא מנוצל אחרי ששלב א' סיפק את כל היעדים הרשמיים. הכסף הזה עומד
+  // להינעל בלי קשר לכך שאין כרגע יעד "בסיכון" — עדיף להמליץ להעביר אותו הלאה
+  // מאשר שלא תצא בכלל המלצה על מקור שממתין לב שלב א' פספס.
+  for (const giver of givers) {
+    if (giverTier(giver) > 1) continue; // רק "הסתיים" / "מסתיים בקרוב" — לא עודף-בעלמא
+    const maxCanGive = maxCanGiveOf(giver);
+    if (maxCanGive < 2000) continue;
+
+    // מעדיפים יעד רשמי שעדיין לא קיבל את כל מה שהוא צריך
+    let target = receivers.find(r => r.projectId !== giver.projectId && receiverStillNeeded[r.projectId] >= 2000);
+    let need;
+    if (target) {
+      need = receiverStillNeeded[target.projectId];
+    } else {
+      // אין יעד רשמי שנשאר לו צורך — פונים למחקר הפעיל עם הניצול הגבוה ביותר,
+      // שהוא עצמו לא מחקר עם עודף (אין טעם להעביר כסף למי שכבר "מקור")
+      target = enriched
+        .filter(p => p.projectId !== giver.projectId && !p.hasEnded && !p.isGiver && p.usagePct >= 40)
+        .sort((a, b) => b.usagePct - a.usagePct)[0];
+      if (!target) continue;
+      need = Math.max(target.budget * (target.usagePct / 100) - target.budget * 0.5, target.budget * 0.1);
+    }
+
+    const amount = Math.min(maxCanGive, need);
+    if (amount < 2000) continue;
+
+    giverRemaining[giver.projectId] -= amount;
+    if (receiverStillNeeded[target.projectId] != null) receiverStillNeeded[target.projectId] -= amount;
+
+    const tags = buildTags(giver, target);
+    if (!(target.avail < 0) && !(target.riskScore !== null && target.riskScore >= 0.5))
+      tags.push('לא נמצא יעד בסיכון פורמלי — מומלץ לפזר את העודף למחקר הפעיל עם הניצול הגבוה ביותר');
+
+    recs.push({ giver, receiver: target, amount, tags, isGiverMine: myProjectIds.has(giver.projectId) });
+  }
+
   return recs;
 }
 
 
 // ── Center groups ────────────────────────────────────────────────────────────
-function buildCenterGroups(projects, myProjectIds, centersMap = {}) {
-  const myCenters = new Set(
-    projects
-      .filter(p => myProjectIds.has(p.projectId) && p.centerId)
-      .map(p => p.centerId)
-  );
-  if (myCenters.size === 0) return [];
-
+// מחלק אך ורק את המחקרים של המשתמש עצמו לפי מרכז מחקר - ללא חשיפה של מחקרים
+// של חוקרים אחרים באותו מרכז.
+function buildCenterGroups(myProjects, centersMap = {}) {
   const byCenter = {};
-  for (const p of projects) {
-    if (!p.centerId || !myCenters.has(p.centerId)) continue;
+  for (const p of myProjects) {
+    if (!p.centerId) continue;
     if (!byCenter[p.centerId]) byCenter[p.centerId] = { centerId: p.centerId, projects: [] };
-    byCenter[p.centerId].projects.push({ ...p, _isMine: myProjectIds.has(p.projectId) });
+    byCenter[p.centerId].projects.push(p);
   }
 
   return Object.values(byCenter)
@@ -281,7 +333,7 @@ function buildCenterGroups(projects, myProjectIds, centersMap = {}) {
       return {
         icon: '🏛️',
         title: name,
-        insight: `${g.projects.length} מחקרים במרכז "${name}"`,
+        insight: `${g.projects.length} מהמחקרים שלך במרכז "${name}"`,
         projects: g.projects,
         alert: false,
       };
@@ -313,8 +365,8 @@ function buildClusterGroups(projects, mlInsights) {
     groups.push({
       icon,
       alert: danger > 0,
-      title: `${info.label} (קבוצה ${Number(clusterId) + 1})`,
-      insight: `${items.length} מחקרים, ניצול תקציב ממוצע בקבוצה: ${utilizationPct}% — קיבוץ ע״י מודל K-Means (Machine Learning)`
+      title: info.label,
+      insight: `${items.length} מחקרים, ניצול תקציב ממוצע בקבוצה: ${utilizationPct}%`
         + (danger > 0 ? ` — ${danger} מחקרים בסיכון תקציבי` : ''),
       projects: items,
     });
@@ -407,7 +459,7 @@ function RecommendationCard({ rec, onTransfer, onRequestTransfer }) {
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden" dir="rtl">
       <div className="h-0.5 bg-gradient-to-l from-primary to-accent" />
 
-      <div className="p-4 space-y-3">
+      <div className="p-3 space-y-2">
 
         {/* כותרת + ציון */}
         <div className="flex items-start justify-between gap-2">
@@ -467,22 +519,6 @@ function RecommendationCard({ rec, onTransfer, onRequestTransfer }) {
               <div className={`h-full rounded-full ${receiver.avail < 0 ? 'bg-red-500' : 'bg-amber-400'}`} style={{ width: `${Math.min(recvUsage, 100)}%` }} />
             </div>
           </div>
-        </div>
-
-        {/* למה + השפעה בשורה אחת */}
-        <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 space-y-0.5">
-          <p className="text-xs font-bold text-blue-800 mb-1">🔍 למה מומלץ להעביר?</p>
-          <p className="text-xs text-blue-700">• המקור מחזיק יתרה של {fmt(giver.avail)} — ניצל {giverUsage}% בלבד</p>
-          {giver.hasEnded
-            ? <p className="text-xs text-blue-700">• המחקר הסתיים — כל היתרה פנויה להעברה</p>
-            : giver.daysLeft !== null && giver.daysLeft <= 90 && (
-              <p className="text-xs text-blue-700">• למקור נותרו {giver.daysLeft} ימים — היתרה צפויה להישאר</p>
-            )
-          }
-          {receiver.avail < 0
-            ? <p className="text-xs text-blue-700">• היעד בגירעון של {fmt(Math.abs(receiver.avail))} — נדרש תגבור</p>
-            : <p className="text-xs text-blue-700">• היעד ניצל {recvUsage}% וצפוי להזדקק לתגבור</p>
-          }
         </div>
 
         {/* השפעה + כפתור */}
@@ -575,9 +611,6 @@ function ProjectHealthCard({ p, navigate }) {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          {p._isMine && (
-            <span className="inline-block text-xs font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded mb-1">שלי</span>
-          )}
           <p className="text-sm font-bold text-gray-800 leading-snug group-hover:text-primary transition-colors line-clamp-2">
             {p.projectNameHe || p.projectNameEn || `מחקר #${p.projectId}`}
           </p>
@@ -741,7 +774,7 @@ export default function ComparisonPage() {
   const [loading,       setLoading]       = useState(true);
   const [metric,      setMetric]      = useState('all');
   const urlMode = searchParams.get('mode');
-  const [mode,        setMode]        = useState(['overview','compare','recommendations','center'].includes(urlMode) ? urlMode : 'overview');
+  const [mode,        setMode]        = useState(['overview','compare','recommendations','center','clusters'].includes(urlMode) ? urlMode : 'overview');
 
   const switchMode = (key) => {
     setMode(key);
@@ -765,9 +798,12 @@ export default function ComparisonPage() {
     Promise.all([getAllProjects(), getProjects(), getCenters()])
       .then(([allRes, myRes, centersRes]) => {
         const all = allRes.data ?? [];
-        setProjects(all.filter(isActive));
+        const myIds = new Set((myRes.data ?? []).map(p => p.projectId));
+        // סקירה כללית / השוואה ישירה / מרכז מחקר / קבוצות דפוס הוצאות - רק מחקרים
+        // שהמשתמש עצמו משתתף בהם, כדי לא לחשוף מחקרים של חוקרים אחרים.
+        setProjects(all.filter(isActive).filter(p => myIds.has(p.projectId)));
         setAllProjectsRaw(all);
-        setMyProjectIds(new Set((myRes.data ?? []).map(p => p.projectId)));
+        setMyProjectIds(myIds);
         const map = {};
         (centersRes.data ?? []).forEach(c => { map[c.centerId] = c.centerName; });
         setCentersMap(map);
@@ -828,9 +864,13 @@ export default function ComparisonPage() {
   ];
 
   const selectedProjects  = selectedIds.map(id => projects.find(p => p.projectId === id)).filter(Boolean);
-  const recommendations   = useMemo(() => buildTransferRecommendations(projects, myProjectIds, mlInsights, allProjectsRaw), [projects, myProjectIds, mlInsights, allProjectsRaw]);
+  // המלצות ההעברה הן היוצא מן הכלל היחיד שבו נדרשת ראייה של מחקרים שאינם שלי -
+  // אחרת אי אפשר להציע בקשת העברת תקציב ממחקר של חוקר/ת אחר/ת. שאר הטאבים
+  // (השוואה, מרכז מחקר, קבוצות) מוגבלים אך ורק ל-projects (המחקרים שלי בלבד).
+  const allActiveProjects = useMemo(() => allProjectsRaw.filter(isActive), [allProjectsRaw]);
+  const recommendations   = useMemo(() => buildTransferRecommendations(allActiveProjects, myProjectIds, mlInsights, allProjectsRaw), [allActiveProjects, myProjectIds, mlInsights, allProjectsRaw]);
   const clusterGroups     = useMemo(() => buildClusterGroups(projects, mlInsights), [projects, mlInsights]);
-  const centerGroups      = useMemo(() => buildCenterGroups(allProjectsRaw, myProjectIds, centersMap), [allProjectsRaw, myProjectIds, centersMap]);
+  const centerGroups      = useMemo(() => buildCenterGroups(projects, centersMap), [projects, centersMap]);
 
   // Projects shown in the picker (active only, filtered by search query)
   const filteredForDisplay = projects.filter((p) => {
@@ -877,6 +917,7 @@ export default function ComparisonPage() {
                   { key: 'overview', label: 'סקירה כללית' },
                   { key: 'compare',  label: '⚖️ השוואה ישירה' },
                   { key: 'center',   label: '🏛️ מחקרים לפי מרכז מחקר' },
+                  { key: 'clusters', label: '🧬 קבוצות לפי דפוס הוצאות' },
                 ].map((m) => (
                   <button key={m.key} onClick={() => switchMode(m.key)}
                     className={`relative px-4 py-2 text-sm font-semibold rounded-lg transition-colors whitespace-nowrap ${
@@ -1005,7 +1046,7 @@ export default function ComparisonPage() {
                 </div>
               ) : (
                 <>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {recommendations.map((rec, i) => (
                       <RecommendationCard
                         key={i}
@@ -1132,6 +1173,38 @@ export default function ComparisonPage() {
                   ))}
                 </div>
               </>
+            )}
+          </div>
+        )}
+
+        {mode === 'clusters' && (
+          <div dir="rtl">
+            <div className="flex items-start gap-3 mb-4">
+              <span className="text-2xl mt-0.5">🧬</span>
+              <div>
+                <h2 className="text-base font-extrabold text-gray-800">קבוצות פרויקטים לפי דפוס הוצאות</h2>
+                <p className="text-sm text-gray-400 mt-0.5 leading-relaxed">
+                  המחקרים מקובצים אוטומטית לפי דמיון בדפוסי ניהול התקציב שלהם — קצב ההוצאה, מספר הבקשות ואחוז הניצול.
+                </p>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="w-7 h-7 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : clusterGroups.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+                <p className="text-4xl mb-3">🧬</p>
+                <p className="text-sm font-bold text-gray-700">לא נמצאו נתוני קיבוץ עבור המחקרים שלך</p>
+                <p className="text-xs text-gray-400 mt-1">ייתכן שהרכיב החכם עדיין מחשב את התוצאות — נסה לרענן בעוד רגע</p>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {clusterGroups.map((group, i) => (
+                  <SimilarityGroupCard key={i} group={group} navigate={navigate} />
+                ))}
+              </div>
             )}
           </div>
         )}

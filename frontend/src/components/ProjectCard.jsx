@@ -261,9 +261,28 @@ function PerformanceBadge({ score, project }) {
   );
 }
 
+function RiskBadge({ riskInsight }) {
+  if (!riskInsight || riskInsight.risk_score == null) return null;
+  const pct = Math.round(riskInsight.risk_score * 100);
+  const atRisk = riskInsight.risk_label === 'בסיכון';
+
+  return (
+    <div
+      className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold ${
+        atRisk
+          ? 'bg-orange-50 text-orange-700 border-orange-200'
+          : 'bg-gray-50 text-gray-500 border-gray-100'
+      }`}
+    >
+      <span>🤖</span>
+      <span>סיכון תקציבי חזוי: {atRisk ? 'גבוה' : 'נמוך'} ({pct}%)</span>
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function ProjectCard({ project }) {
+export default function ProjectCard({ project, riskInsight }) {
   const navigate  = useNavigate();
   const { dark }  = useTheme();
   const isActive  = getIsActive(project);
@@ -324,6 +343,9 @@ export default function ProjectCard({ project }) {
         {healthScore !== null && (
           <PerformanceBadge score={healthScore} project={project} />
         )}
+
+        {/* ML risk prediction — only for active projects */}
+        {isActive && <RiskBadge riskInsight={riskInsight} />}
 
         {/* Budget panel */}
         <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-100 space-y-3 mt-auto">

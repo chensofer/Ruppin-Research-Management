@@ -3,7 +3,7 @@ import { celebrate } from '../utils/celebrate';
 import { useAuth } from '../context/AuthContext';
 import ExportReportModal from '../components/ExportReportModal';
 import { exportDashboardReport } from '../utils/exportReport';
-import { getProjects } from '../api/projectsApi';
+import { getProjects, getMlInsights } from '../api/projectsApi';
 import { getMyNotifications, markAllRead } from '../api/notificationsApi';
 import Layout from '../components/Layout';
 import ProjectCard from '../components/ProjectCard';
@@ -116,6 +116,7 @@ export default function DashboardPage() {
   const [timeAlerts, setTimeAlerts]           = useState([]);
   const [transferNotifs, setTransferNotifs]   = useState([]);
   const [alertsSeen, setAlertsSeen]           = useState(false);
+  const [mlInsights, setMlInsights]           = useState(null);
 
   const handleDismissAlerts = () => {
     setAlertsOpen(false);
@@ -132,7 +133,7 @@ export default function DashboardPage() {
       getMyNotifications().catch(() => ({ data: [] })),
     ]).then(([res, notifRes]) => {
         const data = res.data ?? [];
-        const notifs = notifRes.data ?? [];
+        const notifs = Array.isArray(notifRes.data) ? notifRes.data : [];
         setProjects(data);
         setTransferNotifs(notifs);
         try {
@@ -151,6 +152,14 @@ export default function DashboardPage() {
   }, [user]);
 
   useEffect(() => { loadProjects(); }, [loadProjects]);
+
+  // תוצרי הרכיב החכם (Python) - ציון סיכון תקציבי לכל מחקר, נטען בנפרד כדי
+  // שלא לעכב את טעינת רשימת המחקרים עצמה
+  useEffect(() => {
+    getMlInsights()
+      .then((res) => setMlInsights(res.data))
+      .catch(() => setMlInsights(null));
+  }, []);
 
   const handleCreated = (newProject) => {
     setShowModal(false);
@@ -360,7 +369,11 @@ export default function DashboardPage() {
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                     {displayed.map((project) => (
-                      <ProjectCard key={project.projectId} project={project} />
+                      <ProjectCard
+                        key={project.projectId}
+                        project={project}
+                        riskInsight={mlInsights?.projects?.[project.projectId] ?? mlInsights?.projects?.[String(project.projectId)]}
+                      />
                     ))}
                   </div>
                 </>

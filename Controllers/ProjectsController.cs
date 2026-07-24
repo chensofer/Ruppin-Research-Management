@@ -604,7 +604,7 @@ namespace RupResearchAPI.Controllers
 
             var notification = new ResearchNotification
             {
-                RecipientUserId  = giverProject.PrincipalResearcherId!,
+                RecipientUserId  = giverPI.UserId,
                 SenderName       = requesterName,
                 Message          = $"{requesterName} מבקש/ת להעביר ₪{dto.Amount:N0} ממחקרך \"{giverProjectName}\" למחקר \"{receiverProjectName}\". יש לפנות למזכירות לביצוע ההעברה.",
                 NotificationType = "budget_transfer_request",

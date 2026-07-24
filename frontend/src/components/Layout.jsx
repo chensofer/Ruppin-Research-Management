@@ -23,8 +23,17 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen]       = useState(false);
-  const [pendingCount, setPendingCount]   = useState(0);
+  const [pendingCount, setPendingCount]   = useState(() => {
+    if (sessionStorage.getItem('approvals_badge_dismissed')) return 0;
+    const cached = sessionStorage.getItem('approvals_badge_count');
+    return cached !== null ? Number(cached) : 0;
+  });
   const [notifications, setNotifications] = useState([]);
+  const [notifBadgeCount, setNotifBadgeCount] = useState(() => {
+    if (sessionStorage.getItem('notif_badge_dismissed')) return 0;
+    const cached = sessionStorage.getItem('notif_badge_count');
+    return cached !== null ? Number(cached) : 0;
+  });
   const [notifOpen, setNotifOpen]         = useState(false);
 
   const role = user?.systemAuthorization;
@@ -58,43 +67,39 @@ export default function Layout({ children }) {
     ((user?.firstName?.[0] ?? '') + (user?.lastName?.[0] ?? '')).toUpperCase() ||
     (user?.userId?.[0] ?? '?').toUpperCase();
 
-  // Clear badge when the user opens the approvals page
+  // תג "אישורים ממתינים" — תמונת מצב חד-פעמית לסשן: נטענת פעם אחת בכניסה
+  // למערכת, ולא מתעדכנת יותר. בכניסה ללשונית האישורים היא נעלמת סופית עד
+  // ההתנתקות/כניסה הבאה (ראו SESSION_BADGE_KEYS ב-AuthContext).
   useEffect(() => {
-    if (location.pathname === '/approvals') setPendingCount(0);
+    if (location.pathname === '/approvals') {
+      sessionStorage.setItem('approvals_badge_dismissed', '1');
+      setPendingCount(0);
+    }
   }, [location.pathname]);
 
-  // Fetch pending approvals count — on mount, every 60s, and when window regains focus
   useEffect(() => {
     if (isAssistant || !user?.userId) return;
+    if (sessionStorage.getItem('approvals_badge_dismissed')) return;
+    if (sessionStorage.getItem('approvals_badge_count') !== null) return;
+    Promise.all([
+      getPendingPaymentRequests().catch(() => ({ data: [] })),
+      getPendingHourApprovals(user.userId).catch(() => ({ data: [] })),
+    ]).then(([pRes, hRes]) => {
+      const pendingPayments = (Array.isArray(pRes.data) ? pRes.data : []).filter(r => r.status === 'ממתין').length;
+      const count = pendingPayments + (Array.isArray(hRes.data) ? hRes.data.length : 0);
+      sessionStorage.setItem('approvals_badge_count', String(count));
+      setPendingCount(count);
+    });
+  }, [user, isAssistant]);
 
-    const fetchCount = () => {
-      if (location.pathname === '/approvals') return;
-      Promise.all([
-        getPendingPaymentRequests().catch(() => ({ data: [] })),
-        getPendingHourApprovals(user.userId).catch(() => ({ data: [] })),
-      ]).then(([pRes, hRes]) => {
-        const pendingPayments = (pRes.data ?? []).filter(r => r.status === 'ממתין').length;
-        setPendingCount(pendingPayments + (hRes.data?.length ?? 0));
-      });
-    };
-
-    fetchCount();
-    const interval = setInterval(fetchCount, 60_000);
-    window.addEventListener('focus', fetchCount);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', fetchCount);
-    };
-  }, [user, isAssistant, location.pathname]);
-
-  // טעינת התראות — בעת כניסה לאתר ובכל פוקוס חלון (רק לחוקרים)
+  // טעינת רשימת ההתראות בפועל (לתוכן הפאנל) — בעת כניסה לאתר ובכל פוקוס חלון
   const firstNotifLoad = useRef(true);
   useEffect(() => {
     if (isAssistant || !user?.userId) return;
     const fetchNotifs = (autoOpen = false) =>
       getMyNotifications()
         .then(r => {
-          const items = r.data ?? [];
+          const items = Array.isArray(r.data) ? r.data : [];
           setNotifications(items);
           // פתח אוטומטית את פאנל ההתראות בכניסה הראשונה אם יש התראות
           if (autoOpen && items.length > 0) setNotifOpen(true);
@@ -106,6 +111,24 @@ export default function Layout({ children }) {
     return () => window.removeEventListener('focus', fetchNotifs);
   }, [user, isAssistant]);
 
+  // תג המספר על הפעמון — כמו תג האישורים: תמונת מצב חד-פעמית לסשן שנעלמת בלחיצה
+  useEffect(() => {
+    if (isAssistant || !user?.userId) return;
+    if (sessionStorage.getItem('notif_badge_dismissed')) return;
+    if (sessionStorage.getItem('notif_badge_count') !== null) return;
+    getMyNotifications()
+      .then(r => {
+        const items = Array.isArray(r.data) ? r.data : [];
+        sessionStorage.setItem('notif_badge_count', String(items.length));
+        setNotifBadgeCount(items.length);
+      })
+      .catch(() => {});
+  }, [user, isAssistant]);
+
+  const dismissNotifBadge = () => {
+    sessionStorage.setItem('notif_badge_dismissed', '1');
+    setNotifBadgeCount(0);
+  };
 
   const handleMarkRead = async (id) => {
     await markNotificationRead(id).catch(() => {});
@@ -157,14 +180,14 @@ export default function Layout({ children }) {
       {!isAssistant && (
         <div className="px-3 pb-2">
           <button
-            onClick={() => setNotifOpen(v => !v)}
+            onClick={() => { setNotifOpen(v => !v); dismissNotifBadge(); }}
             className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-white/65 hover:bg-white/10 hover:text-white"
           >
             <div className="relative">
               <HiBell className="w-5 h-5 flex-shrink-0" />
-              {notifications.length > 0 && (
+              {notifBadgeCount > 0 && (
                 <span className="absolute -top-1.5 -left-1.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
-                  {notifications.length > 9 ? '9+' : notifications.length}
+                  {notifBadgeCount > 9 ? '9+' : notifBadgeCount}
                 </span>
               )}
             </div>

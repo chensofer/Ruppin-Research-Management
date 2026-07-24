@@ -222,7 +222,7 @@ export default function TabTeam({ projectId, teamMembers, principalResearcherId,
                     </p>
                   </div>
                   {m.isPI && PI_BADGE}
-                  {!m.isVirtual && (
+                  {!m.isVirtual && !readOnly && (
                     <button type="button" onClick={() => setConfirmRemove(m.userId)} disabled={saving}
                       className="p-1 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-40">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

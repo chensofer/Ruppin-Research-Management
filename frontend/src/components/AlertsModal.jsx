@@ -6,8 +6,11 @@ import { HiBell, HiXMark, HiExclamationTriangle, HiClock, HiArrowRight, HiArrows
 const fmt = (n) =>
   `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)}`;
 
-export default function AlertsModal({ budgetAlerts, timeAlerts, transferRequests = [], onClose }) {
+export default function AlertsModal({ budgetAlerts, timeAlerts, transferRequests, onClose }) {
   const navigate = useNavigate();
+  budgetAlerts = Array.isArray(budgetAlerts) ? budgetAlerts : [];
+  timeAlerts = Array.isArray(timeAlerts) ? timeAlerts : [];
+  transferRequests = Array.isArray(transferRequests) ? transferRequests : [];
   const total = budgetAlerts.length + timeAlerts.length + transferRequests.length;
 
   return (

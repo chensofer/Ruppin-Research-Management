@@ -48,6 +48,8 @@ const VIEW_ONLY_TABS = [
   { id: 'future',       label: 'הוצאות עתידיות' },
 ];
 
+const TODAY = new Date().toISOString().slice(0, 10);
+
 const fmt = (n) =>
   n != null ? `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)}` : '—';
 
@@ -66,14 +68,14 @@ function StatCard({ label, value, valueClass = 'text-gray-900', sub, icon, bg = 
   );
 }
 
-function StatusBadge({ status }) {
-  const isActive = status === 'פעיל' || status === 'Active' || status === 'active';
+function StatusBadge({ status, hasEnded }) {
+  const isActive = (status === 'פעיל' || status === 'Active' || status === 'active') && !hasEnded;
   return (
     <span className={`inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-full ${
       isActive ? 'bg-accent-light text-accent-dark' : 'bg-gray-100 text-gray-500'
     }`}>
       <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? 'bg-accent' : 'bg-gray-400'}`} />
-      {isActive ? 'פעיל' : (status || 'לא פעיל')}
+      {isActive ? 'פעיל' : hasEnded ? 'לא פעיל — הסתיים' : (status || 'לא פעיל')}
     </span>
   );
 }
@@ -81,7 +83,7 @@ function StatusBadge({ status }) {
 export default function ProjectPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { dark } = useTheme();
   const urlTab    = searchParams.get('tab');
@@ -218,7 +220,13 @@ export default function ProjectPage() {
   }
 
   const isArchived = detail.isArchived === true;
-  const readOnly = isArchived || !isMember;
+  // מחקר שתאריך הסיום שלו עבר נחשב "לא פעיל" — עקבי עם רשימת המחקרים
+  // (DashboardPage), שם הבדיקה כבר כוללת תאריך ולא רק את שדה ה-status.
+  const hasEnded = !!detail.endDate && String(detail.endDate).slice(0, 10) < TODAY;
+  // צפייה בלבד בכל הלשוניות עבור מחקר שהסתיים/בארכיון — חוץ מ"סקירה כללית"
+  // (שם עדיין אפשר לעדכן את תאריך הסיום) ומ"העברת תקציב" (שנשארת פתוחה כדי
+  // לפנות יתרה שנשארה במחקר שהסתיים; חסומה רק כשהמחקר בארכיון).
+  const readOnly = isArchived || !isMember || hasEnded;
   const activeTabs = isMember ? TABS : VIEW_ONLY_TABS;
   const budget = detail.totalBudget || 0;
   const totalPaid = detail.totalPaid || 0;
@@ -290,7 +298,7 @@ export default function ProjectPage() {
             <h1 className="text-base sm:text-2xl font-extrabold text-gray-900 leading-tight break-words">
               {detail.projectNameHe || detail.projectNameEn || `מחקר #${detail.projectId}`}
             </h1>
-            <StatusBadge status={detail.status} />
+            <StatusBadge status={detail.status} hasEnded={hasEnded} />
           </div>
           {detail.projectNameEn && detail.projectNameHe && (
             <p className="text-sm text-gray-400 font-medium">{detail.projectNameEn}</p>
@@ -308,6 +316,19 @@ export default function ProjectPage() {
           <p className="text-sm text-amber-700">
             <span className="font-bold">מחקר זה נמצא בארכיון.</span>
             {' '}הצפייה בנתונים מותרת. כדי לבצע פעולות יש לשחזר את המחקר תחילה.
+          </p>
+        </div>
+      )}
+
+      {/* Ended-project notice — text only, still allows editing the end date and transferring budget */}
+      {hasEnded && !isArchived && (
+        <div className="flex items-center gap-2 px-4 py-2.5 mb-4 bg-amber-50 border border-amber-200 rounded-2xl text-right" dir="rtl">
+          <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm text-amber-700">
+            <span className="font-bold">תאריך הסיום המשוערך של מחקר זה עבר.</span>
+            {' '}הצפייה בנתונים מותרת, ולא ניתן לבצע פעולות נוספות. ניתן עדיין לעדכן את תאריך הסיום (בלשונית "סקירה כללית") אם דרוש עוד זמן, וכן להעביר תקציב שנותר למחקר אחר.
           </p>
         </div>
       )}
@@ -585,7 +606,12 @@ export default function ProjectPage() {
 
       {/* Tab content */}
       {activeTab === 'overview' && (
-        <TabOverview detail={detail} onChanged={reloadDetail} readOnly={readOnly} />
+        <TabOverview
+          detail={detail}
+          onChanged={reloadDetail}
+          readOnly={isArchived || !isMember}
+          hasEnded={hasEnded}
+        />
       )}
       {activeTab === 'payments' && (
         <TabPayments
@@ -642,7 +668,16 @@ export default function ProjectPage() {
           projectId={id}
           projectName={detail.projectNameHe || detail.projectNameEn}
           availableBalance={available}
-          onTransferred={() => { reloadPayments(); reloadDetail(); }}
+          onTransferred={() => {
+            reloadPayments();
+            reloadDetail();
+            setSearchParams((prev) => {
+              const next = new URLSearchParams(prev);
+              next.delete('to');
+              next.delete('amount');
+              return next;
+            }, { replace: true });
+          }}
           readOnly={isArchived}
           initialTargetId={urlTo ? parseInt(urlTo, 10) : null}
           initialAmount={urlAmount ? parseFloat(urlAmount) : null}
