@@ -16,6 +16,7 @@ import ComparisonPage from './pages/ComparisonPage';
 import ArchivePage from './pages/ArchivePage';
 import HistoryPage from './pages/HistoryPage';
 import UsersPage from './pages/UsersPage';
+import HelpPage from './pages/HelpPage';
 
 // Redirects research assistants to their attendance page; secretaries stay in the app
 function RoleAwareRoute({ children }) {
@@ -31,6 +32,16 @@ function SecretaryRoute({ children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   if (user.systemAuthorization !== 'מזכירות') return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
+// Only for researchers / center managers — blocks assistants AND secretaries
+function ResearcherOnlyRoute({ children }) {
+  const { user } = useAuth();
+  const location = useLocation();
+  if (!user) return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />;
+  if (user.systemAuthorization === 'עוזר מחקר') return <Navigate to="/attendance" replace />;
+  if (user.systemAuthorization === 'מזכירות') return <Navigate to="/approvals" replace />;
   return children;
 }
 
@@ -65,16 +76,16 @@ export default function App() {
 
           {/* Protected routes — role-aware redirect for assistants */}
           <Route path="/dashboard" element={
-            <RoleAwareRoute><DashboardPage /></RoleAwareRoute>
+            <ResearcherOnlyRoute><DashboardPage /></ResearcherOnlyRoute>
           } />
           <Route path="/projects/:id" element={
-            <RoleAwareRoute><ProjectPage /></RoleAwareRoute>
+            <ResearcherOnlyRoute><ProjectPage /></ResearcherOnlyRoute>
           } />
           <Route path="/comparison" element={
-            <RoleAwareRoute><ComparisonPage /></RoleAwareRoute>
+            <ResearcherOnlyRoute><ComparisonPage /></ResearcherOnlyRoute>
           } />
           <Route path="/archive" element={
-            <RoleAwareRoute><ArchivePage /></RoleAwareRoute>
+            <ResearcherOnlyRoute><ArchivePage /></ResearcherOnlyRoute>
           } />
           <Route path="/approvals" element={
             <RoleAwareRoute><ApprovalsPage /></RoleAwareRoute>
@@ -99,6 +110,11 @@ export default function App() {
           {/* Profile — all authenticated users */}
           <Route path="/profile" element={
             <ProtectedRoute><ProfilePage /></ProtectedRoute>
+          } />
+
+          {/* Help — all authenticated users */}
+          <Route path="/help" element={
+            <ProtectedRoute><HelpPage /></ProtectedRoute>
           } />
 
           {/* Default redirect */}

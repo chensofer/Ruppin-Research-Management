@@ -5,7 +5,7 @@ import ExportReportModal from '../components/ExportReportModal';
 import { exportDashboardReport } from '../utils/exportReport';
 import { getProjects, getAllProjects, getMlInsights } from '../api/projectsApi';
 import { getCenters } from '../api/centersApi';
-import { getMyNotifications, markAllRead } from '../api/notificationsApi';
+import { getMyNotifications, markAllRead, deleteNotification } from '../api/notificationsApi';
 import { setCachedProjectData, getCachedProjectData } from '../utils/projectsCache';
 import Layout from '../components/Layout';
 import ProjectCard from '../components/ProjectCard';
@@ -111,6 +111,8 @@ export default function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState('active');
   const [sortBy, setSortBy]             = useState('default');
   const [loading, setLoading]           = useState(true);
+  const [centerFilter, setCenterFilter] = useState('');
+  const [centers, setCenters]           = useState([]);
   const [showModal, setShowModal]       = useState(false);
   const [alertsOpen, setAlertsOpen]     = useState(false);
   const [showExport, setShowExport]     = useState(false);
@@ -120,8 +122,18 @@ export default function DashboardPage() {
   const [alertsSeen, setAlertsSeen]           = useState(false);
   const [mlInsights, setMlInsights]           = useState(null);
 
+  const APPROVAL_NOTIF_TYPES = ['payment_approved', 'payment_rejected', 'hour_approved', 'hour_rejected'];
+
   const handleDismissAlerts = () => {
     setAlertsOpen(false);
+    markAllRead().catch(() => {});
+    // הסר מהחלון הנוכחי בלבד — לא נמחק מה-DB
+    setTransferNotifs(prev => prev.filter(n => !APPROVAL_NOTIF_TYPES.includes(n.notificationType)));
+  };
+
+  const handleDeleteNotif = async (id) => {
+    await deleteNotification(id).catch(() => {});
+    setTransferNotifs(prev => prev.filter(n => n.notificationId !== id));
   };
 
   const loadProjects = useCallback(() => {
@@ -138,8 +150,11 @@ export default function DashboardPage() {
           const { budgetAlerts: ba, timeAlerts: ta } = buildAlerts(data);
           setBudgetAlerts(ba);
           setTimeAlerts(ta);
-          if ((ba.length > 0 || ta.length > 0 || notifs.length > 0) && !sessionStorage.getItem('alerts_shown')) {
-            sessionStorage.setItem('alerts_shown', '1');
+          const unreadNotifs = notifs.filter(n => !n.isRead);
+          const hasSessionAlerts = (ba.length > 0 || ta.length > 0) && !sessionStorage.getItem('alerts_shown');
+          const hasUnread = unreadNotifs.length > 0;
+          if (hasSessionAlerts || hasUnread) {
+            if (hasSessionAlerts) sessionStorage.setItem('alerts_shown', '1');
             setAlertsOpen(true);
             setAlertsSeen(true);
           }
@@ -150,6 +165,10 @@ export default function DashboardPage() {
   }, [user]);
 
   useEffect(() => { loadProjects(); }, [loadProjects]);
+
+  useEffect(() => {
+    getCenters().then(r => setCenters(Array.isArray(r.data) ? r.data : [])).catch(() => {});
+  }, []);
 
   // prefetch נתוני השוואות ברקע מיד אחרי טעינת הדשבורד — כך שדף ההמלצות יהיה מהיר
   useEffect(() => {
@@ -179,9 +198,10 @@ export default function DashboardPage() {
     loadProjects();
   };
 
-  const resetFilters = () => { setSearch(''); setStatusFilter('active'); setSortBy('default'); };
-  const hasActiveFilters = search !== '' || statusFilter !== 'active' || sortBy !== 'default';
-  const totalAlerts = budgetAlerts.length + timeAlerts.length + transferNotifs.length;
+  const resetFilters = () => { setSearch(''); setStatusFilter('active'); setSortBy('default'); setCenterFilter(''); };
+  const hasActiveFilters = search !== '' || statusFilter !== 'active' || sortBy !== 'default' || centerFilter !== '';
+  const unreadTransferNotifs = transferNotifs.filter(n => !n.isRead);
+  const totalAlerts = budgetAlerts.length + timeAlerts.length + unreadTransferNotifs.length;
 
   const afterSearch = projects.filter((p) => {
     const q = search.toLowerCase();
@@ -197,7 +217,11 @@ export default function DashboardPage() {
     statusFilter === 'inactive' ? afterSearch.filter((p) => !isActive(p)) :
     afterSearch;
 
-  const displayed   = sortProjects(afterStatus, sortBy);
+  const afterCenter = centerFilter
+    ? afterStatus.filter(p => String(p.centerId) === centerFilter)
+    : afterStatus;
+
+  const displayed = sortProjects(afterCenter, sortBy);
   const totalActive = projects.filter(isActive).length;
 
   return (
@@ -323,8 +347,29 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Sort */}
-            <div className="flex items-center gap-2 self-start sm:self-auto">
+            {/* Center filter + Sort */}
+            <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
+              {centers.length > 0 && (
+                <div className="relative">
+                  <select
+                    value={centerFilter}
+                    onChange={(e) => setCenterFilter(e.target.value)}
+                    className={`border rounded-xl pr-3 pl-7 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all appearance-none ${
+                      centerFilter ? 'border-primary text-primary font-semibold' : 'border-gray-200 text-gray-600'
+                    }`}
+                    dir="rtl"
+                  >
+                    <option value="">כל המרכזים</option>
+                    {centers.map(c => (
+                      <option key={c.centerId} value={String(c.centerId)}>{c.centerName}</option>
+                    ))}
+                  </select>
+                  <svg className="w-3.5 h-3.5 text-gray-400 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              )}
               <span className="text-sm text-gray-400 whitespace-nowrap">מיון:</span>
               <div className="relative">
                 <select
@@ -357,9 +402,7 @@ export default function DashboardPage() {
             <>
               {/* Results label */}
               <p className="text-sm text-gray-400 mb-3 font-medium">
-                {hasActiveFilters
-                  ? `מציג ${displayed.length} מתוך ${projects.length} מחקרים`
-                  : `${projects.length} מחקרים`}
+                מציג {displayed.length} מתוך {projects.length} מחקרים
               </p>
 
               {displayed.length === 0 ? (
@@ -399,7 +442,7 @@ export default function DashboardPage() {
         <CreateProjectModal onClose={() => setShowModal(false)} onCreated={handleCreated} />
       )}
       {alertsOpen && (
-        <AlertsModal budgetAlerts={budgetAlerts} timeAlerts={timeAlerts} transferRequests={transferNotifs} onClose={handleDismissAlerts} />
+        <AlertsModal budgetAlerts={budgetAlerts} timeAlerts={timeAlerts} transferRequests={transferNotifs} onDeleteNotif={handleDeleteNotif} onClose={handleDismissAlerts} />
       )}
       {showExport && (
         <ExportReportModal

@@ -312,29 +312,29 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
           <p className="text-sm text-gray-400 text-center py-12">אין התחייבויות עתידיות</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[420px]">
               <thead className="bg-gray-50 text-gray-500 text-sm">
                 <tr>
-                  <th className="px-5 py-3 text-right font-medium">קטגוריה</th>
-                  <th className="px-5 py-3 text-right font-medium">תיאור</th>
-                  <th className="px-5 py-3 text-right font-medium">תאריך צפוי</th>
-                  <th className="px-5 py-3 text-right font-medium">סכום</th>
-                  <th className="px-5 py-3 text-right font-medium">סטטוס</th>
-                  <th className="px-5 py-3 text-right font-medium">קבצים</th>
-                  <th className="px-5 py-3" />
+                  <th className="px-3 sm:px-5 py-3 text-right font-medium">קטגוריה</th>
+                  <th className="px-3 sm:px-5 py-3 text-right font-medium hidden sm:table-cell">תיאור</th>
+                  <th className="px-3 sm:px-5 py-3 text-right font-medium hidden sm:table-cell">תאריך צפוי</th>
+                  <th className="px-3 sm:px-5 py-3 text-right font-medium">סכום</th>
+                  <th className="px-3 sm:px-5 py-3 text-right font-medium">סטטוס</th>
+                  <th className="px-3 sm:px-5 py-3 text-right font-medium hidden sm:table-cell">קבצים</th>
+                  <th className="px-3 sm:px-5 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {commitments.map((c) => (
                   <tr key={c.commitmentId} className="hover:bg-gray-50">
-                    <td className="px-5 py-3.5 font-medium text-gray-800">{c.categoryName || '—'}</td>
-                    <td className="px-5 py-3.5 text-gray-500">{c.commitmentDescription || '—'}</td>
-                    <td className="px-5 py-3.5 text-gray-500">{fmtDate(c.expectedDate)}</td>
-                    <td className="px-5 py-3.5 font-medium text-orange-600">{fmt(c.expectedAmount)}</td>
-                    <td className="px-5 py-3.5">
-                      <span className="text-sm bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{c.status}</span>
+                    <td className="px-3 sm:px-5 py-3.5 font-medium text-gray-800">{c.categoryName || '—'}</td>
+                    <td className="px-3 sm:px-5 py-3.5 text-gray-500 hidden sm:table-cell">{c.commitmentDescription || '—'}</td>
+                    <td className="px-3 sm:px-5 py-3.5 text-gray-500 whitespace-nowrap hidden sm:table-cell">{fmtDate(c.expectedDate)}</td>
+                    <td className="px-3 sm:px-5 py-3.5 font-medium text-orange-600 whitespace-nowrap">{fmt(c.expectedAmount)}</td>
+                    <td className="px-3 sm:px-5 py-3.5">
+                      <span className="text-xs sm:text-sm bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full whitespace-nowrap">{c.status}</span>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-3 sm:px-5 py-3.5 hidden sm:table-cell">
                       {c.filePath ? (
                         <div className="flex flex-wrap gap-1">
                           {c.filePath.split(';').filter(Boolean).map((path, i) => {
@@ -360,7 +360,7 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
                         <span className="text-sm text-gray-300">—</span>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-left">
+                    <td className="px-3 sm:px-5 py-3.5 text-left">
                       <div className="flex items-center gap-1 justify-end">
                         {!readOnly && <>
                           <button type="button" onClick={() => openEdit(c)}

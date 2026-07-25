@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getPendingPaymentRequests, getAllPaymentRequests, updatePaymentRequestStatus } from '../api/paymentRequestsApi';
+import { getPendingPaymentRequests, updatePaymentRequestStatus } from '../api/paymentRequestsApi';
 import { getPendingHourApprovals, decideMonthlyApproval } from '../api/hourReportsApi';
 import { getMlInsights } from '../api/projectsApi';
 import Layout from '../components/Layout';
@@ -148,7 +148,7 @@ function MlInsightBadge({ mlInfo }) {
 
 function RequestCard({ request, onApprove, onReject, showProject, highlighted, mlInfo }) {
   const [busy, setBusy] = useState(false);
-  const [expanded, setExpanded] = useState(highlighted || false);
+  const [expanded, setExpanded] = useState(true);
 
   const quotationFiles = request.quotationFilePath
     ? request.quotationFilePath.split(';').filter(Boolean)
@@ -379,6 +379,16 @@ export default function ApprovalsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [toastMsg, setToastMsg] = useState('');
+  const [search, setSearch] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterAmountMin, setFilterAmountMin] = useState('');
+  const [filterAmountMax, setFilterAmountMax] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+  const [filterMonth, setFilterMonth] = useState('');
+  const [filterYear, setFilterYear] = useState('');
+  const [filterProjectLocal, setFilterProjectLocal] = useState('');
   // If we arrived via a direct link to a specific request, show all statuses so it's always visible
   const [statusFilter, setStatusFilter] = useState(highlightId ? '' : 'ממתין');
 
@@ -478,14 +488,82 @@ export default function ApprovalsPage() {
 
   const clearFilter = () => setSearchParams({});
 
-  const paymentGroups = Object.values(visibleRequests.reduce((acc, req) => {
+  const clearAllFilters = () => {
+    setSearch('');
+    setFilterCategory('');
+    setFilterAmountMin('');
+    setFilterAmountMax('');
+    setFilterDateFrom('');
+    setFilterDateTo('');
+    setFilterMonth('');
+    setFilterYear('');
+    setFilterProjectLocal('');
+  };
+
+  const availableCategories = useMemo(() =>
+    [...new Set(visibleRequests.map((r) => r.categoryName).filter(Boolean))].sort()
+  , [visibleRequests]);
+
+  const availableYears = useMemo(() =>
+    [...new Set(visibleHourRecords.map((r) => r.year).filter(Boolean))].sort((a, b) => b - a)
+  , [visibleHourRecords]);
+
+  const availableProjects = useMemo(() => {
+    const map = new Map();
+    [...visibleRequests, ...visibleHourRecords].forEach((r) => {
+      if (r.projectId != null && !map.has(r.projectId)) {
+        map.set(r.projectId, r.projectNameHe || r.projectNameEn || `מחקר ${r.projectId}`);
+      }
+    });
+    return [...map.entries()].map(([id, name]) => ({ id: String(id), name })).sort((a, b) => a.name.localeCompare(b.name, 'he'));
+  }, [visibleRequests, visibleHourRecords]);
+
+  const q = search.trim().toLowerCase();
+  const searchedRequests = q
+    ? visibleRequests.filter((r) =>
+        [r.requestTitle, r.providerName, r.requestDescription, r.requestedByUserName, r.categoryName, r.projectNameHe, r.projectNameEn]
+          .some((v) => v?.toLowerCase().includes(q))
+      )
+    : visibleRequests;
+
+  const searchedHourRecords = q
+    ? visibleHourRecords.filter((r) =>
+        [r.userName, r.userId, r.projectNameHe, r.projectNameEn, r.comments]
+          .some((v) => v?.toLowerCase().includes(q))
+      )
+    : visibleHourRecords;
+
+  const filteredRequests = searchedRequests.filter((r) => {
+    if (filterProjectLocal && String(r.projectId) !== filterProjectLocal) return false;
+    if (filterCategory && r.categoryName !== filterCategory) return false;
+    if (filterAmountMin !== '' && (r.requestedAmount ?? 0) < Number(filterAmountMin)) return false;
+    if (filterAmountMax !== '' && (r.requestedAmount ?? 0) > Number(filterAmountMax)) return false;
+    if (filterDateFrom && r.requestDate && r.requestDate.slice(0, 10) < filterDateFrom) return false;
+    if (filterDateTo && r.requestDate && r.requestDate.slice(0, 10) > filterDateTo) return false;
+    return true;
+  });
+
+  const filteredHourRecords = searchedHourRecords.filter((r) => {
+    if (filterProjectLocal && String(r.projectId) !== filterProjectLocal) return false;
+    if (filterMonth && String(r.month) !== filterMonth) return false;
+    if (filterYear && String(r.year) !== filterYear) return false;
+    return true;
+  });
+
+  const activePaymentFilterCount = [filterProjectLocal, filterCategory, filterAmountMin, filterAmountMax, filterDateFrom, filterDateTo].filter(Boolean).length;
+  const activeHourFilterCount = [filterProjectLocal, filterMonth, filterYear].filter(Boolean).length;
+  const activeFilterCount = tab === 'payments' ? activePaymentFilterCount : activeHourFilterCount;
+  const hasActiveFilters = q || activePaymentFilterCount > 0;
+  const hasActiveHourFilters = q || activeHourFilterCount > 0;
+
+  const paymentGroups = Object.values(filteredRequests.reduce((acc, req) => {
     const key = req.projectId ?? 0;
     if (!acc[key]) acc[key] = { name: req.projectNameHe || req.projectNameEn || `מחקר ${key}`, items: [] };
     acc[key].items.push(req);
     return acc;
   }, {}));
 
-  const hourGroups = Object.values(visibleHourRecords.reduce((acc, rec) => {
+  const hourGroups = Object.values(filteredHourRecords.reduce((acc, rec) => {
     const key = rec.projectId ?? 0;
     if (!acc[key]) acc[key] = { name: rec.projectNameHe || rec.projectNameEn || `מחקר ${key}`, items: [] };
     acc[key].items.push(rec);
@@ -584,6 +662,182 @@ export default function ApprovalsPage() {
           ))}
         </div>
 
+        {/* Search + Filter toggle */}
+        <div className="flex gap-2 mb-3">
+          <div className="relative flex-1">
+            <svg className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 0 5 11a6 6 0 0 0 12 0z" />
+            </svg>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={tab === 'payments' ? 'חיפוש לפי שם מחקר, ספק, מגיש, קטגוריה...' : 'חיפוש לפי שם עוזר מחקר...'}
+              className="w-full pr-10 pl-9 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary placeholder-gray-400 transition-all"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <button
+            onClick={() => setShowFilters((v) => !v)}
+            className={`relative flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl border transition-colors whitespace-nowrap ${
+              showFilters || activeFilterCount > 0
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-primary hover:text-primary'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+            </svg>
+            סינון
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Filter panel */}
+        {showFilters && (
+          <div className="bg-gray-50/80 border border-gray-200 rounded-2xl p-4 mb-5 space-y-4">
+
+            {/* Project filter — shown for both tabs */}
+            {availableProjects.length > 1 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 mb-2">מחקר</p>
+                <select
+                  value={filterProjectLocal}
+                  onChange={(e) => setFilterProjectLocal(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                >
+                  <option value="">כל המחקרים</option>
+                  {availableProjects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {tab === 'payments' && (
+              <>
+                {/* Category */}
+                {availableCategories.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 mb-2">קטגוריה</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        onClick={() => setFilterCategory('')}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-xl border transition-colors ${!filterCategory ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary hover:text-primary'}`}
+                      >
+                        הכל
+                      </button>
+                      {availableCategories.map((cat) => (
+                        <button
+                          key={cat}
+                          onClick={() => setFilterCategory(filterCategory === cat ? '' : cat)}
+                          className={`px-3 py-1.5 text-sm font-medium rounded-xl border transition-colors ${filterCategory === cat ? 'bg-primary text-white border-primary' : 'bg-white text-gray-500 border-gray-200 hover:border-primary hover:text-primary'}`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Amount range */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 mb-2">טווח סכום (₪)</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      value={filterAmountMin}
+                      onChange={(e) => setFilterAmountMin(e.target.value)}
+                      placeholder="מינימום"
+                      className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary placeholder-gray-400"
+                    />
+                    <span className="flex items-center text-gray-400 text-sm">—</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={filterAmountMax}
+                      onChange={(e) => setFilterAmountMax(e.target.value)}
+                      placeholder="מקסימום"
+                      className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary placeholder-gray-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Date range */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 mb-2">טווח תאריכים</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      value={filterDateFrom}
+                      onChange={(e) => setFilterDateFrom(e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                    />
+                    <span className="flex items-center text-gray-400 text-sm">—</span>
+                    <input
+                      type="date"
+                      value={filterDateTo}
+                      onChange={(e) => setFilterDateTo(e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {tab === 'hours' && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 mb-2">תקופה</p>
+                <div className="flex gap-2">
+                  <select
+                    value={filterMonth}
+                    onChange={(e) => setFilterMonth(e.target.value)}
+                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  >
+                    <option value="">כל החודשים</option>
+                    {MONTH_NAMES.slice(1).map((name, i) => (
+                      <option key={i + 1} value={String(i + 1)}>{name}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={filterYear}
+                    onChange={(e) => setFilterYear(e.target.value)}
+                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                  >
+                    <option value="">כל השנים</option>
+                    {availableYears.map((y) => (
+                      <option key={y} value={String(y)}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {activeFilterCount > 0 && (
+              <button
+                onClick={clearAllFilters}
+                className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 font-semibold transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                נקה את כל הסינונים
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Error */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl mb-6 text-sm">
@@ -610,7 +864,7 @@ export default function ApprovalsPage() {
         {/* Payment requests */}
         {!loading && tab === 'payments' && (
           paymentGroups.length === 0
-            ? <EmptyState text="אין בקשות תשלום הממתינות לאישורך" />
+            ? <EmptyState text={hasActiveFilters ? 'לא נמצאו בקשות תואמות לסינון הנוכחי' : 'אין בקשות תשלום הממתינות לאישורך'} />
             : paymentGroups.map((group) => (
               <div key={group.name} className="mb-9">
                 <div className="flex items-center gap-2.5 mb-4">
@@ -638,7 +892,7 @@ export default function ApprovalsPage() {
         {/* Hour approvals */}
         {!loading && tab === 'hours' && (
           hourGroups.length === 0
-            ? <EmptyState text={filterProjectId ? 'אין דוחות שעות ממתינים עבור מחקר זה' : 'אין דוחות שעות הממתינים לאישורך'} />
+            ? <EmptyState text={hasActiveHourFilters ? 'לא נמצאו דוחות שעות תואמים לסינון הנוכחי' : filterProjectId ? 'אין דוחות שעות ממתינים עבור מחקר זה' : 'אין דוחות שעות הממתינים לאישורך'} />
             : hourGroups.map((group) => (
               <div key={group.name} className="mb-9">
                 <div className="flex items-center gap-2.5 mb-4">

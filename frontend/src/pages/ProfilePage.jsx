@@ -207,8 +207,11 @@ export default function ProfilePage() {
             </p>
           )}
           {profileSuccess && (
-            <p className="mb-4 text-sm text-accent bg-accent-light border border-accent/20 rounded-xl px-4 py-3">
-              ✓ {profileSuccess}
+            <p className="mb-4 text-sm text-accent bg-accent-light border border-accent/20 rounded-xl px-4 py-3 flex items-center gap-2">
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+              {profileSuccess}
             </p>
           )}
 
@@ -275,8 +278,11 @@ export default function ProfilePage() {
             </p>
           )}
           {pwSuccess && (
-            <p className="mb-4 text-sm text-accent bg-accent-light border border-accent/20 rounded-xl px-4 py-3">
-              ✓ {pwSuccess}
+            <p className="mb-4 text-sm text-accent bg-accent-light border border-accent/20 rounded-xl px-4 py-3 flex items-center gap-2">
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+              {pwSuccess}
             </p>
           )}
 

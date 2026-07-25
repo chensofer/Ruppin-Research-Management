@@ -403,15 +403,15 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[420px]">
               <thead className="bg-gray-50 text-gray-500 text-sm">
                 <tr>
-                  <th className="px-5 py-3 text-right font-medium w-8"></th>
-                  <th className="px-5 py-3 text-right font-medium">כותרת</th>
-                  <th className="px-5 py-3 text-right font-medium">קטגורית הוצאה</th>
-                  <th className="px-5 py-3 text-right font-medium">סכום</th>
-                  <th className="px-5 py-3 text-right font-medium">תאריך שליחת בקשה</th>
-                  <th className="px-5 py-3 text-right font-medium">סטטוס</th>
+                  <th className="px-3 sm:px-5 py-3 text-right font-medium w-8"></th>
+                  <th className="px-3 sm:px-5 py-3 text-right font-medium">כותרת</th>
+                  <th className="px-3 sm:px-5 py-3 text-right font-medium hidden sm:table-cell">קטגורית הוצאה</th>
+                  <th className="px-3 sm:px-5 py-3 text-right font-medium">סכום</th>
+                  <th className="px-3 sm:px-5 py-3 text-right font-medium hidden sm:table-cell">תאריך שליחת בקשה</th>
+                  <th className="px-3 sm:px-5 py-3 text-right font-medium">סטטוס</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -422,7 +422,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                       className="hover:bg-gray-50 transition-colors cursor-pointer"
                       onClick={() => setExpandedRow(expandedRow === p.paymentRequestId ? null : p.paymentRequestId)}
                     >
-                      <td className="px-5 py-3.5 text-gray-400">
+                      <td className="px-3 sm:px-5 py-3.5 text-gray-400">
                         <svg
                           className={`w-4 h-4 transition-transform ${expandedRow === p.paymentRequestId ? 'rotate-180' : ''}`}
                           fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -430,13 +430,27 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       </td>
-                      <td className="px-5 py-3.5 font-medium text-gray-900">
-                        {p.requestTitle || `בקשה #${p.paymentRequestId}`}
+                      <td className="px-3 sm:px-5 py-3.5">
+                        <div className="font-medium text-gray-900 truncate max-w-[120px] sm:max-w-none">{p.requestTitle || `בקשה #${p.paymentRequestId}`}</div>
+                        {p.quotationFilePath && (
+                          <div className="flex flex-wrap gap-1.5 mt-1.5" onClick={e => e.stopPropagation()}>
+                            {p.quotationFilePath.split(';').filter(Boolean).map((path, i) => (
+                              <a key={i} href={fileUrl(path)} target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-primary bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded-lg text-xs font-medium transition-colors">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                </svg>
+                                {path.split('/').pop()}
+                              </a>
+                            ))}
+                          </div>
+                        )}
                       </td>
-                      <td className="px-5 py-3.5 text-gray-500">{p.categoryName || '—'}</td>
-                      <td className="px-5 py-3.5 font-medium text-gray-900">{fmt(p.requestedAmount)}</td>
-                      <td className="px-5 py-3.5 text-gray-500">{fmtDate(p.requestDate)}</td>
-                      <td className="px-5 py-3.5"><StatusBadge status={p.status} /></td>
+                      <td className="px-3 sm:px-5 py-3.5 text-gray-500 hidden sm:table-cell">{p.categoryName || '—'}</td>
+                      <td className="px-3 sm:px-5 py-3.5 font-medium text-gray-900 whitespace-nowrap">{fmt(p.requestedAmount)}</td>
+                      <td className="px-3 sm:px-5 py-3.5 text-gray-500 whitespace-nowrap hidden sm:table-cell">{fmtDate(p.requestDate)}</td>
+                      <td className="px-3 sm:px-5 py-3.5"><StatusBadge status={p.status} /></td>
                     </tr>
                     {expandedRow === p.paymentRequestId && (
                       <tr key={`${p.paymentRequestId}-expanded`} className="bg-blue-50/40">

@@ -1,16 +1,23 @@
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 import { Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HiBell, HiXMark, HiExclamationTriangle, HiClock, HiArrowRight, HiArrowsRightLeft, HiArrowTopRightOnSquare } from 'react-icons/hi2';
+import { HiBell, HiXMark, HiExclamationTriangle, HiClock, HiArrowRight, HiArrowsRightLeft, HiArrowTopRightOnSquare, HiCheckCircle } from 'react-icons/hi2';
 
 const fmt = (n) =>
   `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)}`;
 
-export default function AlertsModal({ budgetAlerts, timeAlerts, transferRequests, onClose }) {
+const APPROVAL_TYPES = ['payment_approved', 'payment_rejected', 'hour_approved', 'hour_rejected'];
+
+export default function AlertsModal({ budgetAlerts, timeAlerts, transferRequests, onDeleteNotif, onClose }) {
   const navigate = useNavigate();
   budgetAlerts = Array.isArray(budgetAlerts) ? budgetAlerts : [];
   timeAlerts = Array.isArray(timeAlerts) ? timeAlerts : [];
   transferRequests = Array.isArray(transferRequests) ? transferRequests : [];
+
+  const budgetTransfers = transferRequests.filter(n => !APPROVAL_TYPES.includes(n.notificationType));
+  const approvedNotifs  = transferRequests.filter(n => n.notificationType === 'payment_approved' || n.notificationType === 'hour_approved');
+  const rejectedNotifs  = transferRequests.filter(n => n.notificationType === 'payment_rejected' || n.notificationType === 'hour_rejected');
+
   const total = budgetAlerts.length + timeAlerts.length + transferRequests.length;
 
   return (
@@ -138,8 +145,8 @@ export default function AlertsModal({ budgetAlerts, timeAlerts, transferRequests
                   </section>
                 )}
 
-                {/* Transfer request alerts */}
-                {transferRequests.length > 0 && (
+                {/* Budget transfer alerts */}
+                {budgetTransfers.length > 0 && (
                   <section>
                     <div className="flex items-center gap-2 mb-2.5">
                       <div className="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -148,15 +155,12 @@ export default function AlertsModal({ budgetAlerts, timeAlerts, transferRequests
                       <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">בקשות להעברת תקציב</h3>
                     </div>
                     <div className="space-y-2">
-                      {transferRequests.map((n) => {
+                      {budgetTransfers.map((n) => {
                         let parsed = null;
                         try { parsed = JSON.parse(n.data); } catch {}
                         const dateStr = n.createdAt && !n.createdAt.endsWith('Z') ? n.createdAt + 'Z' : n.createdAt;
                         return (
-                          <div
-                            key={n.notificationId}
-                            className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 border-r-[3px] border-r-purple-400"
-                          >
+                          <div key={n.notificationId} className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-3 border-r-[3px] border-r-purple-400">
                             <p className="text-sm font-semibold text-purple-700 mb-1 flex items-center gap-1">
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -173,9 +177,82 @@ export default function AlertsModal({ budgetAlerts, timeAlerts, transferRequests
                                 עבור לביצוע ההעברה
                               </button>
                             )}
-                            <p className="text-xs text-gray-400 mt-2">
-                              {new Date(dateStr).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            <div className="flex items-center justify-between mt-2">
+                              <p className="text-xs text-gray-400">
+                                {new Date(dateStr).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                              {onDeleteNotif && (
+                                <button onClick={() => onDeleteNotif(n.notificationId)} className="text-xs text-gray-400 hover:text-red-500 underline transition-colors">סגור</button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+
+                {/* Approved requests */}
+                {approvedNotifs.length > 0 && (
+                  <section>
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <HiCheckCircle className="w-3.5 h-3.5 text-green-600" />
+                      </div>
+                      <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">בקשות שאושרו</h3>
+                    </div>
+                    <div className="space-y-2">
+                      {approvedNotifs.map((n) => {
+                        const dateStr = n.createdAt && !n.createdAt.endsWith('Z') ? n.createdAt + 'Z' : n.createdAt;
+                        return (
+                          <div key={n.notificationId} className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 border-r-[3px] border-r-green-400">
+                            <p className="text-sm font-semibold text-green-700 mb-1 flex items-center gap-1.5">
+                              <HiCheckCircle className="w-4 h-4 flex-shrink-0" />
+                              {n.notificationType === 'hour_approved' ? 'דוח שעות אושר' : 'בקשת תשלום אושרה'}
                             </p>
+                            <p className="text-sm text-gray-700 leading-relaxed">{n.message}</p>
+                            <div className="flex items-center justify-between mt-2">
+                              <p className="text-xs text-gray-400">
+                                {new Date(dateStr).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                              {onDeleteNotif && (
+                                <button onClick={() => onDeleteNotif(n.notificationId)} className="text-xs text-gray-400 hover:text-red-500 underline transition-colors">סגור</button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+
+                {/* Rejected requests */}
+                {rejectedNotifs.length > 0 && (
+                  <section>
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <div className="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <HiXMark className="w-3.5 h-3.5 text-red-600" />
+                      </div>
+                      <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">בקשות שנדחו</h3>
+                    </div>
+                    <div className="space-y-2">
+                      {rejectedNotifs.map((n) => {
+                        const dateStr = n.createdAt && !n.createdAt.endsWith('Z') ? n.createdAt + 'Z' : n.createdAt;
+                        return (
+                          <div key={n.notificationId} className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 border-r-[3px] border-r-red-400">
+                            <p className="text-sm font-semibold text-red-700 mb-1 flex items-center gap-1.5">
+                              <HiXMark className="w-4 h-4 flex-shrink-0" />
+                              {n.notificationType === 'hour_rejected' ? 'דוח שעות נדחה' : 'בקשת תשלום נדחתה'}
+                            </p>
+                            <p className="text-sm text-gray-700 leading-relaxed">{n.message}</p>
+                            <div className="flex items-center justify-between mt-2">
+                              <p className="text-xs text-gray-400">
+                                {new Date(dateStr).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                              {onDeleteNotif && (
+                                <button onClick={() => onDeleteNotif(n.notificationId)} className="text-xs text-gray-400 hover:text-red-500 underline transition-colors">סגור</button>
+                              )}
+                            </div>
                           </div>
                         );
                       })}

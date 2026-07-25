@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getMySubmissions, getHourReports } from '../api/hourReportsApi';
 import Layout from '../components/Layout';
+import ExcelJS from 'exceljs';
 
 const MONTH_NAMES = [
   'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
@@ -49,6 +50,115 @@ function StatusBadge({ status }) {
 function parseDayFromDate(dateStr) {
   if (!dateStr) return null;
   return parseInt(String(dateStr).slice(8, 10), 10);
+}
+
+// ── Export helpers ────────────────────────────────────────────────────────────
+const PRIMARY  = '003478';
+const ACCENT   = '5CB800';
+const ALT_BG   = 'EBF0FA';
+
+function styleHeader(cell) {
+  cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+  cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + PRIMARY } };
+  cell.alignment = { horizontal: 'right', vertical: 'middle', readingOrder: 'rightToLeft' };
+  cell.border    = { bottom: { style: 'thin', color: { argb: 'FFD1D5DB' } } };
+}
+function styleData(cell, isAlt) {
+  cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: isAlt ? 'FF' + ALT_BG : 'FFFFFFFF' } };
+  cell.alignment = { horizontal: 'right', vertical: 'middle', readingOrder: 'rightToLeft' };
+  cell.border    = { bottom: { style: 'hair', color: { argb: 'FFE2E8F0' } } };
+}
+
+async function exportSubmissionsExcel(submissions, userName) {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'RupResearch';
+  wb.modified = new Date();
+
+  const ws = wb.addWorksheet('הדוחות שלי');
+  ws.views = [{ rightToLeft: true, state: 'frozen', xSplit: 0, ySplit: 4 }];
+
+  const todayStr = new Date().toLocaleDateString('he-IL');
+
+  ws.mergeCells('A1:F1');
+  const t = ws.getCell('A1');
+  t.value = `הדוחות שלי — ${userName || ''}`;
+  t.font      = { bold: true, size: 14, color: { argb: 'FF' + PRIMARY } };
+  t.alignment = { horizontal: 'right', vertical: 'middle', readingOrder: 'rightToLeft' };
+  ws.getRow(1).height = 28;
+
+  ws.mergeCells('A2:F2');
+  const s = ws.getCell('A2');
+  s.value = `יוצא בתאריך: ${todayStr}`;
+  s.font      = { size: 10, color: { argb: 'FF64748B' } };
+  s.alignment = { horizontal: 'right', vertical: 'middle', readingOrder: 'rightToLeft' };
+  ws.getRow(2).height = 18;
+  ws.addRow([]);
+
+  const headers = ['חודש', 'שנה', 'מחקר', 'שעות כולל', 'סטטוס', 'הערות'];
+  const hRow = ws.addRow(headers);
+  hRow.height = 22;
+  hRow.eachCell(c => styleHeader(c));
+  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: headers.length } };
+
+  submissions.forEach((s, i) => {
+    const r = ws.addRow([
+      MONTH_NAMES[(s.month ?? 1) - 1],
+      s.year ?? '',
+      s.projectNameHe || `מחקר ${s.projectId}`,
+      s.totalWorkedHours != null ? Number(s.totalWorkedHours) : '',
+      s.approvalStatus || '',
+      s.comments || '',
+    ]);
+    r.height = 20;
+    r.eachCell((c, col) => {
+      styleData(c, i % 2 === 1);
+      if (col === 4 && typeof r.values[4] === 'number') { c.numFmt = '#,##0.0'; c.alignment = { horizontal: 'left' }; }
+    });
+  });
+
+  ws.columns = [{ width: 12 }, { width: 8 }, { width: 32 }, { width: 14 }, { width: 12 }, { width: 28 }];
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url    = URL.createObjectURL(blob);
+  const a      = document.createElement('a');
+  a.href = url;
+  a.download = `הדוחות_שלי_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportSubmissionsPDF(submissions, userName) {
+  const todayStr = new Date().toLocaleDateString('he-IL');
+  const rows = submissions.map(s => {
+    const hours = s.totalWorkedHours != null ? Number(s.totalWorkedHours).toFixed(1) : '—';
+    const statusColor = s.approvalStatus === 'אושר' ? '#16a34a' : s.approvalStatus === 'נדחה' ? '#dc2626' : '#b45309';
+    return `<tr>
+      <td>${MONTH_NAMES[(s.month ?? 1) - 1]} ${s.year ?? ''}</td>
+      <td>${s.projectNameHe || `מחקר ${s.projectId}`}</td>
+      <td class="num">${hours}</td>
+      <td style="color:${statusColor};font-weight:600">${s.approvalStatus || ''}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"><title>הדוחות שלי</title>
+  <style>@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap');
+  body{font-family:'Assistant',Arial,sans-serif;direction:rtl;font-size:12px;color:#1e293b;padding:24px;}
+  h1{font-size:18px;font-weight:700;color:#003478;margin-bottom:2px;}.sub{font-size:10px;color:#64748b;margin-bottom:16px;}
+  table{width:100%;border-collapse:collapse;}
+  th{background:#003478;color:white;padding:7px 10px;font-size:11px;text-align:right;}
+  td{padding:6px 10px;border-bottom:1px solid #f1f5f9;font-size:11px;text-align:right;}
+  tr:nth-child(even){background:#f8fafc;}.num{text-align:left;}
+  @media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact;}thead{display:table-header-group;}tr{page-break-inside:avoid;}}
+  </style></head><body>
+  <h1>הדוחות שלי — ${userName || ''}</h1>
+  <div class="sub">יוצא בתאריך: ${todayStr} · ${submissions.length} דוחות</div>
+  <table><thead><tr><th>תקופה</th><th>מחקר</th><th>שעות</th><th>סטטוס</th></tr></thead><tbody>${rows}</tbody></table>
+  <script>window.onload=()=>window.print();</script></body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
 }
 
 function DayReportsTable({ userId, projectId, month, year }) {
@@ -132,6 +242,7 @@ export default function MyReportsPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [projectFilter, setProjectFilter] = useState('all');
+  const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
@@ -155,7 +266,10 @@ export default function MyReportsPage() {
   const filtered = submissions.filter((s) => {
     const matchStatus  = statusFilter === 'all' || s.approvalStatus === statusFilter;
     const matchProject = projectFilter === 'all' || String(s.projectId) === projectFilter;
-    return matchStatus && matchProject;
+    const q = search.trim().toLowerCase();
+    const matchSearch  = !q || (s.projectNameHe || '').toLowerCase().includes(q) ||
+      MONTH_NAMES[(s.month ?? 1) - 1].includes(q);
+    return matchStatus && matchProject && matchSearch;
   });
 
   // Count badges — reflect the current project filter
@@ -178,15 +292,39 @@ export default function MyReportsPage() {
               {user?.firstName} {user?.lastName} — כל הדוחות החודשיים שנשלחו לאישור
             </p>
           </div>
-          <button
-            onClick={() => navigate('/attendance')}
-            className="flex items-center gap-2 text-sm text-primary hover:text-primary-dark font-medium transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            חזרה לדיווח נוכחות
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {submissions.length > 0 && (
+              <>
+                <button
+                  onClick={() => exportSubmissionsExcel(filtered, `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim())}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-green-200 bg-green-50 text-green-700 text-sm font-semibold hover:bg-green-100 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Excel
+                </button>
+                <button
+                  onClick={() => exportSubmissionsPDF(filtered, `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim())}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 text-sm font-semibold hover:bg-red-100 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  PDF
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => navigate('/attendance')}
+              className="flex items-center gap-2 text-sm text-primary hover:text-primary-dark font-medium transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              חזרה לדיווח נוכחות
+            </button>
+          </div>
         </div>
 
         {/* Summary cards — also serve as status filter */}
@@ -221,18 +359,45 @@ export default function MyReportsPage() {
             );
           })}
 
-          {/* Project filter — only when user has multiple projects */}
-          {projects.length > 1 && (
+          {/* Project filter */}
+          {projects.length > 0 && (
             <select
               value={projectFilter}
               onChange={(e) => setProjectFilter(e.target.value)}
-              className="mr-auto border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary text-gray-700"
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary text-gray-700"
             >
               <option value="all">כל המחקרים</option>
               {projects.map((p) => (
                 <option key={p.projectId} value={String(p.projectId)}>{p.name}</option>
               ))}
             </select>
+          )}
+        </div>
+
+        {/* Search */}
+        <div className="relative mb-4">
+          <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="חיפוש לפי שם מחקר או חודש..."
+            className="w-full pr-9 pl-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary placeholder-gray-400"
+            dir="rtl"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           )}
         </div>
 

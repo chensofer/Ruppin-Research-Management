@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { addHistorySheet } from '../utils/exportReport';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { getAuditLogs, getAllAuditLogs } from '../api/auditApi';
@@ -105,30 +106,30 @@ const IconFile     = () => <svg className="w-3.5 h-3.5" fill="none" stroke="curr
 const CATEGORY_ICONS = { project: IconProject, team: IconTeam, payment: IconPayment, hours: IconHours, budget: IconBudget, files: IconFile };
 
 // ── Excel export ─────────────────────────────────────────────────────────────
-function exportToExcel(logs, projectName, allProjects) {
-  const rows = logs.map(log => {
-    const row = {
-      'תאריך ושעה':   formatDateTime(log.createdAt),
-      'מבצע הפעולה':  log.performedByName || log.performedByUserId,
-      'מזהה משתמש':   log.performedByUserId,
-      'סוג פעולה':    getActionMeta(log.actionType).label,
-      'תיאור הפעולה': log.actionDescription,
-    };
-    if (allProjects) row['מחקר'] = log.projectNameHe || log.projectNameEn || `מחקר #${log.projectId}`;
-    return row;
-  });
+async function exportToExcel(logs, projectName, allProjects) {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'RupResearch';
+  wb.modified = new Date();
 
-  const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!sheetViews'] = [{ rightToLeft: true }];
-  ws['!cols'] = allProjects
-    ? [{ wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 60 }, { wch: 30 }]
-    : [{ wch: 22 }, { wch: 22 }, { wch: 14 }, { wch: 20 }, { wch: 60 }];
+  const adaptedLogs = logs.map(log => ({
+    createdAt:         log.createdAt,
+    performedByName:   log.performedByName || log.performedByUserId || '',
+    performedByUserId: log.performedByUserId || '',
+    actionType:        log.actionType,
+    actionDescription: log.actionDescription || '',
+  }));
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'היסטוריית שינויים');
+  const label = projectName || (allProjects ? 'כל המחקרים' : 'מחקר');
+  addHistorySheet(wb, adaptedLogs, label);
 
-  const safeProjectName = (projectName || (allProjects ? 'כל-המחקרים' : 'מחקר')).replace(/[\\/:*?"<>|]/g, '_');
-  XLSX.writeFile(wb, `היסטוריית_שינויים_${safeProjectName}.xlsx`);
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url    = URL.createObjectURL(blob);
+  const a      = document.createElement('a');
+  a.href       = url;
+  a.download   = `היסטוריית_שינויים_${label.replace(/[\\/:*?"<>|]/g, '_')}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────

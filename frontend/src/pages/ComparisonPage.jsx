@@ -7,7 +7,7 @@ import {
   Legend, ResponsiveContainer, LineChart, Line,
 } from 'recharts';
 import { getAllProjects, getProjects, getCommitments, getMlInsights, requestBudgetTransfer } from '../api/projectsApi';
-import { getCachedProjectData, setCachedProjectData, invalidateProjectCache } from '../utils/projectsCache';
+import { getCachedProjectData, setCachedProjectData } from '../utils/projectsCache';
 import { getPaymentRequestsByProject } from '../api/paymentRequestsApi';
 import { getCenters } from '../api/centersApi';
 import Layout from '../components/Layout';

@@ -269,8 +269,44 @@ namespace RupResearchAPI.Services
             }
 
             var project = await _db.ResearchProjects.FindAsync(record.ProjectId);
-            var userRecord = record.UserId != null ? await _db.ResearchUsers.FindAsync(record.UserId) : null;
+            var userRecord = record.UserId != null
+                ? (await _db.ResearchUsers.ToListAsync()).FirstOrDefault(u => u.UserId?.Trim() == record.UserId.Trim())
+                : null;
             string? userName = userRecord != null ? $"{userRecord.FirstName} {userRecord.LastName}".Trim() : null;
+
+            // שלח התראה לעוזר המחקר על תוצאת האישור
+            var recipientId = record.UserId?.Trim();
+            if (!string.IsNullOrEmpty(recipientId))
+            {
+                var monthNames = new[] { "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני",
+                                         "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר" };
+                var monthName = record.Month.HasValue && record.Month >= 1 && record.Month <= 12
+                    ? monthNames[record.Month.Value - 1] : $"חודש {record.Month}";
+                var projectName = project?.ProjectNameHe ?? $"מחקר {record.ProjectId}";
+                var approverRecord = dto.ApprovedByUserId != null
+                    ? (await _db.ResearchUsers.ToListAsync()).FirstOrDefault(u => u.UserId?.Trim() == dto.ApprovedByUserId.Trim())
+                    : null;
+                var approverName = approverRecord != null
+                    ? $"{approverRecord.FirstName} {approverRecord.LastName}".Trim()
+                    : dto.ApprovedByUserId ?? "מזכירות";
+
+                var notifMsg = dto.ApprovalStatus == "אושר"
+                    ? $"דוח השעות לחודש {monthName} {record.Year} במחקר \"{projectName}\" אושר על ידי {approverName}"
+                    : $"דוח השעות לחודש {monthName} {record.Year} במחקר \"{projectName}\" נדחה" +
+                      (string.IsNullOrEmpty(dto.Comments) ? "" : $" — {dto.Comments}");
+
+                _db.ResearchNotifications.Add(new ResearchNotification
+                {
+                    RecipientUserId  = recipientId,
+                    SenderName       = approverName,
+                    Message          = notifMsg,
+                    NotificationType = dto.ApprovalStatus == "אושר" ? "hour_approved" : "hour_rejected",
+                    Data             = System.Text.Json.JsonSerializer.Serialize(new { projectId = record.ProjectId, approvalId = id }),
+                    IsRead           = false,
+                    CreatedAt        = DateTime.UtcNow,
+                });
+                await _db.SaveChangesAsync();
+            }
 
             return ToApprovalDto(record, project?.ProjectNameHe, userName);
         }

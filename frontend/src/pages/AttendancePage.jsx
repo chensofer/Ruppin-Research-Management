@@ -470,36 +470,42 @@ export default function AttendancePage() {
                           dayErrors[day] ? 'bg-red-50/70' : isWeekend ? 'bg-gray-50/60' : hasData ? 'bg-primary-light/20' : ''
                         }`}
                       >
-                        {/* Mobile layout: stacked */}
-                        <div className="flex sm:hidden items-center gap-2 px-3 pt-2.5 pb-1">
-                          <div className="w-10 flex-shrink-0 text-center">
-                            <p className={`text-sm font-bold leading-none ${isWeekend ? 'text-gray-400' : 'text-gray-800'}`}>{day}</p>
-                            <p className={`text-sm font-medium mt-0.5 ${isWeekend ? 'text-orange-400' : 'text-gray-400'}`}>{DAY_NAMES[dayOfWeek]}</p>
+                        {/* Mobile layout: stacked rows */}
+                        <div className="flex sm:hidden flex-col gap-1.5 px-3 pt-2.5 pb-2">
+                          {/* Row 1: day + status */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 flex-shrink-0 text-center">
+                                <p className={`text-sm font-bold leading-none ${isWeekend ? 'text-gray-400' : 'text-gray-800'}`}>{day}</p>
+                                <p className={`text-xs font-medium mt-0.5 ${isWeekend ? 'text-orange-400' : 'text-gray-400'}`}>{DAY_NAMES[dayOfWeek]}</p>
+                              </div>
+                            </div>
+                            <StatusIndicator />
                           </div>
-                          <div className="flex flex-1 items-center gap-1.5 flex-wrap">
+                          {/* Row 2: time inputs + hours + comments */}
+                          <div className="flex items-center gap-2 flex-wrap">
                             <div className="flex items-center gap-1">
-                              <label className="text-sm text-gray-400 whitespace-nowrap">משעה</label>
+                              <label className="text-xs text-gray-400 whitespace-nowrap">משעה</label>
                               <input type="time" value={draft?.fromHour || ''} onChange={(e) => setDayField(day, 'fromHour', e.target.value)}
                                 disabled={locked}
-                                className="border border-gray-200 rounded-md px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-[90px]" />
+                                className="border border-gray-200 rounded-md px-1.5 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-[90px]" />
                             </div>
                             <div className="flex items-center gap-1">
-                              <label className="text-sm text-gray-400 whitespace-nowrap">עד</label>
+                              <label className="text-xs text-gray-400 whitespace-nowrap">עד</label>
                               <input type="time" value={draft?.toHour || ''} onChange={(e) => setDayField(day, 'toHour', e.target.value)}
                                 disabled={locked}
-                                className="border border-gray-200 rounded-md px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-[90px]" />
+                                className="border border-gray-200 rounded-md px-1.5 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-[90px]" />
                             </div>
                             <div className="flex items-center gap-1">
-                              <label className="text-sm text-gray-400 whitespace-nowrap">שעות</label>
+                              <label className="text-xs text-gray-400 whitespace-nowrap">שעות</label>
                               <input type="number" step="0.5" min="0" max="24" value={draft?.workedHours || ''} onChange={(e) => setDayField(day, 'workedHours', e.target.value)}
                                 placeholder="0" disabled={locked}
-                                className="border border-gray-200 rounded-md px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-12" />
+                                className="border border-gray-200 rounded-md px-1.5 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white w-14" />
                             </div>
                             <input type="text" value={draft?.comments || ''} onChange={(e) => setDayField(day, 'comments', e.target.value)}
                               placeholder="הערות..." disabled={locked}
-                              className="flex-1 min-w-[80px] border border-gray-200 rounded-md px-1.5 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white placeholder-gray-300" />
+                              className="flex-1 min-w-[100px] border border-gray-200 rounded-md px-1.5 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-300 bg-white placeholder-gray-300" />
                           </div>
-                          <StatusIndicator />
                         </div>
 
                         {/* Desktop layout: single row */}

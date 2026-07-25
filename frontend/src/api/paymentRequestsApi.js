@@ -12,9 +12,6 @@ export const updatePaymentRequestStatus = (id, data) =>
 export const getPendingPaymentRequests = () =>
   axiosInstance.get('/payment-requests/pending');
 
-export const getAllPaymentRequests = () =>
-  axiosInstance.get('/payment-requests/all');
-
 export const notifyPaymentRequest = (id) =>
   axiosInstance.post(`/payment-requests/${id}/notify`);
 

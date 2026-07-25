@@ -303,14 +303,14 @@ export default function UsersPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[500px]">
+              <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/60">
-                    <th className="text-right text-sm font-semibold text-gray-500 px-5 py-3">שם</th>
-                    <th className="text-right text-sm font-semibold text-gray-500 px-5 py-3">ת.ז.</th>
-                    <th className="text-right text-sm font-semibold text-gray-500 px-5 py-3 hidden sm:table-cell">דוא״ל</th>
-                    <th className="text-right text-sm font-semibold text-gray-500 px-5 py-3">תפקיד</th>
-                    <th className="px-5 py-3" />
+                    <th className="text-right text-sm font-semibold text-gray-500 px-3 sm:px-5 py-3">שם</th>
+                    <th className="text-right text-sm font-semibold text-gray-500 px-3 sm:px-5 py-3 hidden sm:table-cell">ת.ז.</th>
+                    <th className="text-right text-sm font-semibold text-gray-500 px-3 sm:px-5 py-3 hidden sm:table-cell">דוא״ל</th>
+                    <th className="text-right text-sm font-semibold text-gray-500 px-3 sm:px-5 py-3">תפקיד</th>
+                    <th className="px-3 sm:px-5 py-3" />
                   </tr>
                 </thead>
                 <tbody>
@@ -319,23 +319,23 @@ export default function UsersPage() {
                     const isDeleting = deletingId === u.userId;
                     return (
                       <tr key={u.userId} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors last:border-0">
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-2.5">
+                        <td className="px-3 sm:px-5 py-3.5">
+                          <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-full bg-primary-light text-primary flex items-center justify-center text-sm font-bold flex-shrink-0">
                               {((u.firstName?.[0] ?? '') + (u.lastName?.[0] ?? '')).toUpperCase() || '?'}
                             </div>
-                            <span className="text-sm font-semibold text-gray-800">
+                            <span className="text-sm font-semibold text-gray-800 truncate max-w-[100px] sm:max-w-none">
                               {u.firstName} {u.lastName}
                               {isSelf && <span className="mr-1.5 text-sm text-primary font-medium">(אני)</span>}
                             </span>
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 text-sm text-gray-500 tabular-nums">{u.userId?.trim()}</td>
-                        <td className="px-5 py-3.5 text-sm text-gray-500 hidden sm:table-cell">{u.email || '—'}</td>
-                        <td className="px-5 py-3.5">
+                        <td className="px-3 sm:px-5 py-3.5 text-sm text-gray-500 tabular-nums hidden sm:table-cell">{u.userId?.trim()}</td>
+                        <td className="px-3 sm:px-5 py-3.5 text-sm text-gray-500 hidden sm:table-cell">{u.email || '—'}</td>
+                        <td className="px-3 sm:px-5 py-3.5">
                           <RoleBadge role={u.systemAuthorization} />
                         </td>
-                        <td className="px-5 py-3.5">
+                        <td className="px-3 sm:px-5 py-3.5">
                           <div className="flex items-center gap-1 justify-end">
                             <button
                               onClick={() => setEditUser(u)}

@@ -349,8 +349,8 @@ function TrackingModal({ assistant, projectId, onClose }) {
                 {data.monthlyApprovals.length === 0 ? (
                   <p className="text-sm text-gray-400 py-4 text-center">אין אישורים חודשיים</p>
                 ) : (
-                  <div className="rounded-xl border border-gray-100 overflow-hidden">
-                    <table className="w-full text-sm">
+                  <div className="rounded-xl border border-gray-100 overflow-hidden overflow-x-auto">
+                    <table className="w-full text-sm min-w-[380px]">
                       <thead className="bg-gray-50 text-sm text-gray-500">
                         <tr>
                           <th className="px-4 py-2.5 text-right font-medium">חודש</th>
@@ -397,14 +397,14 @@ function TrackingModal({ assistant, projectId, onClose }) {
                 </button>
 
                 {showReports && (
-                  <div className="mt-3 rounded-xl border border-gray-100 overflow-hidden">
+                  <div className="mt-3 rounded-xl border border-gray-100 overflow-hidden overflow-x-auto">
                     {data.hourReports.length === 0 ? (
                       <div className="py-6 text-center">
                         <p className="text-sm text-gray-400">אין דיווחי שעות ממתינים לשליחה</p>
                         <p className="text-sm text-gray-300 mt-1">כל הדיווחים נשלחו לאישור או אושרו</p>
                       </div>
                     ) : (
-                      <table className="w-full text-sm">
+                      <table className="w-full text-sm min-w-[340px]">
                         <thead className="bg-gray-50 text-sm text-gray-500">
                           <tr>
                             <th className="px-4 py-2.5 text-right font-medium">תאריך</th>

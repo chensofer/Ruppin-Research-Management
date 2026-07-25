@@ -95,11 +95,16 @@ export default function StepBudget({ data, onChange, totalBudget, errors = {} })
             ? 'bg-blue-50 border-blue-200'
             : 'bg-red-50 border-red-200'
         }`}>
-          <span className={`text-sm font-semibold ${
+          <span className={`flex items-center gap-1.5 text-sm font-semibold ${
             balanced ? 'text-green-700' : remaining > 0 ? 'text-blue-700' : 'text-red-700'
           }`}>
+            {balanced && (
+              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
             {balanced
-              ? 'התקציב מאוזן במלואו ✓'
+              ? 'התקציב מאוזן במלואו'
               : remaining > 0
               ? `נותר לחלוקה: ${fmt(remaining)}`
               : `חריגה מהתקציב: ${fmt(Math.abs(remaining))}`}

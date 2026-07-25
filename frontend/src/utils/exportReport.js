@@ -277,7 +277,7 @@ function addDocumentsSheet(wb, files, projectName) {
 }
 
 // ─── History sheet ────────────────────────────────────────────────────────────
-function addHistorySheet(wb, auditLogs, projectName) {
+export function addHistorySheet(wb, auditLogs, projectName) {
   const ws = wb.addWorksheet('היסטוריית שינויים');
   ws.views = [{ rightToLeft: true, state: 'frozen', xSplit: 0, ySplit: 4 }];
 

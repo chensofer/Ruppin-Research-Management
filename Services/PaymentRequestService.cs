@@ -127,8 +127,9 @@ namespace RupResearchAPI.Services
 
             if (request.ProjectId.HasValue)
             {
+                var allUsers = await _db.ResearchUsers.ToListAsync();
                 var approver = dto.ApprovedByUserId != null
-                    ? (await _db.ResearchUsers.ToListAsync()).FirstOrDefault(u => u.UserId?.Trim() == dto.ApprovedByUserId.Trim())
+                    ? allUsers.FirstOrDefault(u => u.UserId?.Trim() == dto.ApprovedByUserId.Trim())
                     : null;
                 var approverName = approver != null ? $"{approver.FirstName} {approver.LastName}".Trim() : dto.ApprovedByUserId;
                 var actionType = dto.Status == "אושר" ? "בקשת_תשלום_אושרה" : "בקשת_תשלום_נדחתה";
@@ -136,6 +137,42 @@ namespace RupResearchAPI.Services
                     ? $"בקשת תשלום אושרה: \"{request.RequestTitle}\" — ₪{request.RequestedAmount:N0}"
                     : $"בקשת תשלום נדחתה: \"{request.RequestTitle}\"" + (string.IsNullOrEmpty(dto.RejectionReason) ? "" : $" — {dto.RejectionReason}");
                 await _log.LogAsync(request.ProjectId.Value, actionType, desc, dto.ApprovedByUserId, approverName);
+
+                // שלח התראה לכל החוקרים במחקר + למגיש הבקשה ישירות
+                if (request.ProjectId.HasValue)
+                {
+                    var project = await _db.ResearchProjects.FindAsync(request.ProjectId.Value);
+                    var projectName = project?.ProjectNameHe ?? $"מחקר {request.ProjectId}";
+                    var notifMsg = dto.Status == "אושר"
+                        ? $"בקשת התשלום \"{request.RequestTitle}\" במחקר \"{projectName}\" אושרה על ידי {approverName}"
+                        : $"בקשת התשלום \"{request.RequestTitle}\" במחקר \"{projectName}\" נדחתה" +
+                          (string.IsNullOrEmpty(dto.RejectionReason) ? "" : $" — {dto.RejectionReason}");
+
+                    var projectUserIds = await _db.ResearchUsersProjects
+                        .Where(up => up.ProjectId == request.ProjectId.Value)
+                        .Select(up => up.UserId.Trim())
+                        .ToListAsync();
+
+                    // מוודא שמגיש הבקשה תמיד ברשימה (גם אם אינו ב-ResearchUsersProjects)
+                    var requesterId = request.RequestedByUserId?.Trim();
+                    if (!string.IsNullOrEmpty(requesterId) && !projectUserIds.Contains(requesterId))
+                        projectUserIds.Add(requesterId);
+
+                    foreach (var uid in projectUserIds)
+                    {
+                        _db.ResearchNotifications.Add(new ResearchNotification
+                        {
+                            RecipientUserId  = uid,
+                            SenderName       = approverName ?? "מזכירות",
+                            Message          = notifMsg,
+                            NotificationType = dto.Status == "אושר" ? "payment_approved" : "payment_rejected",
+                            Data             = System.Text.Json.JsonSerializer.Serialize(new { projectId = request.ProjectId, requestId = id }),
+                            IsRead           = false,
+                            CreatedAt        = DateTime.UtcNow,
+                        });
+                    }
+                    await _db.SaveChangesAsync();
+                }
             }
 
             return ToDto(request);

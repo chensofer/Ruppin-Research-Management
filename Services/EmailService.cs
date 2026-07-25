@@ -169,7 +169,7 @@ namespace RupResearchAPI.Services
 
   <!-- CTA -->
   <tr><td style='background:white;padding:24px 28px 28px;text-align:center;'>
-    <a href='{siteUrl}/approvals?requestId={requestId}' style='display:inline-block;background:#003478;color:white;padding:15px 40px;border-radius:10px;text-decoration:none;font-weight:bold;font-size:16px;letter-spacing:0.3px;'>🔍 פתח את הבקשה במערכת</a>
+    <a href='{siteUrl}/login?requestId={requestId}' style='display:inline-block;background:#003478;color:white;padding:15px 40px;border-radius:10px;text-decoration:none;font-weight:bold;font-size:16px;letter-spacing:0.3px;'>🔍 פתח את הבקשה במערכת</a>
   </td></tr>
 
   <!-- Footer -->

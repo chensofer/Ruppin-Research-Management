@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { login as loginApi } from '../api/authApi';
 import Logo from '../components/Logo';
@@ -8,6 +8,8 @@ export default function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const requestId = searchParams.get('requestId');
   const from = location.state?.from ?? null;
   const prefill = typeof location.state === 'object' && !location.state?.from ? (location.state ?? {}) : {};
   const [form, setForm] = useState({ userId: prefill.userId ?? '', password: prefill.password ?? '' });
@@ -15,11 +17,17 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // אם כבר מחובר ויש כתובת לחזור אליה — עבור ישירות
+  // אם כבר מחובר: מזכירות עם requestId — מפנה ישירות לבקשה.
+  // כל תפקיד אחר עם requestId — נשאר בדף ההתחברות (כי הלינק מיועד למזכירות).
   useEffect(() => {
-    if (user) {
-      navigate(user.systemAuthorization === 'עוזר מחקר' ? '/attendance' : user.systemAuthorization === 'מזכירות' ? (from ?? '/history') : '/dashboard', { replace: true });
+    if (!user) return;
+    if (requestId) {
+      if (user.systemAuthorization === 'מזכירות') {
+        navigate(`/approvals?requestId=${requestId}`, { replace: true });
+      }
+      return;
     }
+    navigate(user.systemAuthorization === 'עוזר מחקר' ? '/attendance' : user.systemAuthorization === 'מזכירות' ? (from ?? '/approvals') : '/dashboard', { replace: true });
   }, [user]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -32,7 +40,11 @@ export default function LoginPage() {
       const res = await loginApi(form);
       login(res.data);
       const role = res.data.systemAuthorization;
-      navigate(role === 'עוזר מחקר' ? '/attendance' : role === 'מזכירות' ? (from ?? '/approvals') : '/dashboard', { replace: true });
+      if (requestId && role === 'מזכירות') {
+        navigate(`/approvals?requestId=${requestId}`, { replace: true });
+      } else {
+        navigate(role === 'עוזר מחקר' ? '/attendance' : role === 'מזכירות' ? (from ?? '/approvals') : '/dashboard', { replace: true });
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'שם משתמש או סיסמה שגויים');
     } finally {

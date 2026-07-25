@@ -296,15 +296,15 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[480px]">
             <thead className="bg-gray-50 text-gray-500 text-sm">
               <tr>
-                <th className="px-5 py-3 text-right font-medium w-8" />
-                <th className="px-5 py-3 text-right font-medium">תאריך</th>
-                <th className="px-5 py-3 text-right font-medium">כותרת</th>
-                <th className="px-5 py-3 text-right font-medium">קטגוריה</th>
-                <th className="px-5 py-3 text-right font-medium">סכום</th>
-                <th className="px-5 py-3 text-right font-medium">יתרה</th>
+                <th className="px-3 sm:px-5 py-3 text-right font-medium w-8" />
+                <th className="px-3 sm:px-5 py-3 text-right font-medium">תאריך</th>
+                <th className="px-3 sm:px-5 py-3 text-right font-medium">כותרת</th>
+                <th className="px-3 sm:px-5 py-3 text-right font-medium hidden sm:table-cell">קטגוריה</th>
+                <th className="px-3 sm:px-5 py-3 text-right font-medium">סכום</th>
+                <th className="px-3 sm:px-5 py-3 text-right font-medium">יתרה</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -317,7 +317,7 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
                       setExpandedRow(expandedRow === r.paymentRequestId ? null : r.paymentRequestId)
                     }
                   >
-                    <td className="px-5 py-3.5 text-gray-400">
+                    <td className="px-3 sm:px-5 py-3.5 text-gray-400">
                       <svg
                         className={`w-4 h-4 transition-transform ${expandedRow === r.paymentRequestId ? 'rotate-180' : ''}`}
                         fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -325,12 +325,12 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </td>
-                    <td className="px-5 py-3.5 text-gray-500">{fmtDate(r.requestDate)}</td>
-                    <td className="px-5 py-3.5 font-medium text-gray-900">
+                    <td className="px-3 sm:px-5 py-3.5 text-gray-500 whitespace-nowrap">{fmtDate(r.requestDate)}</td>
+                    <td className="px-3 sm:px-5 py-3.5 font-medium text-gray-900 max-w-[120px] sm:max-w-none truncate">
                       {r.requestTitle || `בקשה #${r.paymentRequestId}`}
                     </td>
-                    <td className="px-5 py-3.5 text-gray-500">{r.categoryName || '—'}</td>
-                    <td className={`px-5 py-3.5 font-medium ${
+                    <td className="px-3 sm:px-5 py-3.5 text-gray-500 hidden sm:table-cell">{r.categoryName || '—'}</td>
+                    <td className={`px-3 sm:px-5 py-3.5 font-medium whitespace-nowrap ${
                       r.isTransfer
                         ? r.amount < 0 ? 'text-blue-600' : 'text-blue-500'
                         : r.amount < 0 ? 'text-green-600' : 'text-red-600'
@@ -341,7 +341,7 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
                           ? `+${fmt(-r.amount)}`
                           : '—'}
                     </td>
-                    <td className={`px-5 py-3.5 font-semibold ${r.balance == null ? 'text-gray-400' : r.balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    <td className={`px-3 sm:px-5 py-3.5 font-semibold whitespace-nowrap ${r.balance == null ? 'text-gray-400' : r.balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
                       {r.balance == null ? '—' : fmt(r.balance)}
                     </td>
                   </tr>
