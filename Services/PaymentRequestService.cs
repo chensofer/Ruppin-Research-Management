@@ -138,27 +138,43 @@ namespace RupResearchAPI.Services
                     : $"בקשת תשלום נדחתה: \"{request.RequestTitle}\"" + (string.IsNullOrEmpty(dto.RejectionReason) ? "" : $" — {dto.RejectionReason}");
                 await _log.LogAsync(request.ProjectId.Value, actionType, desc, dto.ApprovedByUserId, approverName);
 
-                // שלח התראה לכל החוקרים במחקר + למגיש הבקשה ישירות
+                // שלח התראה לחוקרים בלבד במחקר (לא מזכירות / עוזרי מחקר)
                 if (request.ProjectId.HasValue)
                 {
-                    var project = await _db.ResearchProjects.FindAsync(request.ProjectId.Value);
-                    var projectName = project?.ProjectNameHe ?? $"מחקר {request.ProjectId}";
+                    var amountFormatted = $"₪{request.RequestedAmount:N0}";
                     var notifMsg = dto.Status == "אושר"
-                        ? $"בקשת התשלום \"{request.RequestTitle}\" במחקר \"{projectName}\" אושרה על ידי {approverName}"
-                        : $"בקשת התשלום \"{request.RequestTitle}\" במחקר \"{projectName}\" נדחתה" +
-                          (string.IsNullOrEmpty(dto.RejectionReason) ? "" : $" — {dto.RejectionReason}");
+                        ? $"בקשת התשלום בסך {amountFormatted} עבור \"{request.RequestTitle}\" אושרה על ידי המזכירות."
+                        : $"בקשת התשלום בסך {amountFormatted} עבור \"{request.RequestTitle}\" נדחתה על ידי המזכירות." +
+                          (string.IsNullOrEmpty(dto.RejectionReason) ? "" : $" סיבה: {dto.RejectionReason}");
 
-                    var projectUserIds = await _db.ResearchUsersProjects
+                    // רק חוקרים שמשויכים למחקר — טעינה בזיכרון כדי למנוע בעיות char/nvarchar
+                    var project = await _db.ResearchProjects.FindAsync(request.ProjectId.Value);
+
+                    var projectMembers = await _db.ResearchUsersProjects
                         .Where(up => up.ProjectId == request.ProjectId.Value)
-                        .Select(up => up.UserId.Trim())
                         .ToListAsync();
 
-                    // מוודא שמגיש הבקשה תמיד ברשימה (גם אם אינו ב-ResearchUsersProjects)
-                    var requesterId = request.RequestedByUserId?.Trim();
-                    if (!string.IsNullOrEmpty(requesterId) && !projectUserIds.Contains(requesterId))
-                        projectUserIds.Add(requesterId);
+                    // כולל חוקר ראשי (PrincipalResearcherId) + חברי הצוות מה-join table
+                    var candidateIds = projectMembers
+                        .Select(up => up.UserId?.Trim() ?? "")
+                        .Where(uid => !string.IsNullOrEmpty(uid))
+                        .ToHashSet();
 
-                    foreach (var uid in projectUserIds)
+                    if (!string.IsNullOrEmpty(project?.PrincipalResearcherId))
+                        candidateIds.Add(project.PrincipalResearcherId.Trim());
+
+                    var researcherIds = allUsers
+                        .Where(u => {
+                            var uid = u.UserId?.Trim() ?? "";
+                            if (!candidateIds.Contains(uid)) return false;
+                            var role = u.SystemAuthorization?.Trim() ?? "";
+                            return role != "מזכירות" && role != "עוזר מחקר";
+                        })
+                        .Select(u => u.UserId!.Trim())
+                        .Distinct()
+                        .ToList();
+
+                    foreach (var uid in researcherIds)
                     {
                         _db.ResearchNotifications.Add(new ResearchNotification
                         {

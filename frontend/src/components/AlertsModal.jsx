@@ -68,6 +68,74 @@ export default function AlertsModal({ budgetAlerts, timeAlerts, transferRequests
               {/* Body */}
               <div className="px-5 py-4 space-y-5 max-h-[60vh] overflow-y-auto">
 
+                {/* Approved requests */}
+                {approvedNotifs.length > 0 && (
+                  <section>
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <HiCheckCircle className="w-3.5 h-3.5 text-green-600" />
+                      </div>
+                      <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">בקשות שאושרו</h3>
+                    </div>
+                    <div className="space-y-2">
+                      {approvedNotifs.map((n) => {
+                        const dateStr = n.createdAt && !n.createdAt.endsWith('Z') ? n.createdAt + 'Z' : n.createdAt;
+                        return (
+                          <div key={n.notificationId} className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 border-r-[3px] border-r-green-400">
+                            <p className="text-sm font-semibold text-green-700 mb-1 flex items-center gap-1.5">
+                              <HiCheckCircle className="w-4 h-4 flex-shrink-0" />
+                              {n.notificationType === 'hour_approved' ? 'דוח שעות אושר' : 'בקשת תשלום אושרה'}
+                            </p>
+                            <p className="text-sm text-gray-700 leading-relaxed">{n.message}</p>
+                            <div className="flex items-center justify-between mt-2">
+                              <p className="text-xs text-gray-400">
+                                {new Date(dateStr).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                              {onDeleteNotif && (
+                                <button onClick={() => onDeleteNotif(n.notificationId)} className="text-xs text-gray-400 hover:text-red-500 underline transition-colors">סגור</button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+
+                {/* Rejected requests */}
+                {rejectedNotifs.length > 0 && (
+                  <section>
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <div className="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <HiXMark className="w-3.5 h-3.5 text-red-600" />
+                      </div>
+                      <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">בקשות שנדחו</h3>
+                    </div>
+                    <div className="space-y-2">
+                      {rejectedNotifs.map((n) => {
+                        const dateStr = n.createdAt && !n.createdAt.endsWith('Z') ? n.createdAt + 'Z' : n.createdAt;
+                        return (
+                          <div key={n.notificationId} className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 border-r-[3px] border-r-red-400">
+                            <p className="text-sm font-semibold text-red-700 mb-1 flex items-center gap-1.5">
+                              <HiXMark className="w-4 h-4 flex-shrink-0" />
+                              {n.notificationType === 'hour_rejected' ? 'דוח שעות נדחה' : 'בקשת תשלום נדחתה'}
+                            </p>
+                            <p className="text-sm text-gray-700 leading-relaxed">{n.message}</p>
+                            <div className="flex items-center justify-between mt-2">
+                              <p className="text-xs text-gray-400">
+                                {new Date(dateStr).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                              {onDeleteNotif && (
+                                <button onClick={() => onDeleteNotif(n.notificationId)} className="text-xs text-gray-400 hover:text-red-500 underline transition-colors">סגור</button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+
                 {/* Budget alerts */}
                 {budgetAlerts.length > 0 && (
                   <section>
@@ -192,73 +260,6 @@ export default function AlertsModal({ budgetAlerts, timeAlerts, transferRequests
                   </section>
                 )}
 
-                {/* Approved requests */}
-                {approvedNotifs.length > 0 && (
-                  <section>
-                    <div className="flex items-center gap-2 mb-2.5">
-                      <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <HiCheckCircle className="w-3.5 h-3.5 text-green-600" />
-                      </div>
-                      <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">בקשות שאושרו</h3>
-                    </div>
-                    <div className="space-y-2">
-                      {approvedNotifs.map((n) => {
-                        const dateStr = n.createdAt && !n.createdAt.endsWith('Z') ? n.createdAt + 'Z' : n.createdAt;
-                        return (
-                          <div key={n.notificationId} className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 border-r-[3px] border-r-green-400">
-                            <p className="text-sm font-semibold text-green-700 mb-1 flex items-center gap-1.5">
-                              <HiCheckCircle className="w-4 h-4 flex-shrink-0" />
-                              {n.notificationType === 'hour_approved' ? 'דוח שעות אושר' : 'בקשת תשלום אושרה'}
-                            </p>
-                            <p className="text-sm text-gray-700 leading-relaxed">{n.message}</p>
-                            <div className="flex items-center justify-between mt-2">
-                              <p className="text-xs text-gray-400">
-                                {new Date(dateStr).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                              </p>
-                              {onDeleteNotif && (
-                                <button onClick={() => onDeleteNotif(n.notificationId)} className="text-xs text-gray-400 hover:text-red-500 underline transition-colors">סגור</button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                )}
-
-                {/* Rejected requests */}
-                {rejectedNotifs.length > 0 && (
-                  <section>
-                    <div className="flex items-center gap-2 mb-2.5">
-                      <div className="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <HiXMark className="w-3.5 h-3.5 text-red-600" />
-                      </div>
-                      <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide">בקשות שנדחו</h3>
-                    </div>
-                    <div className="space-y-2">
-                      {rejectedNotifs.map((n) => {
-                        const dateStr = n.createdAt && !n.createdAt.endsWith('Z') ? n.createdAt + 'Z' : n.createdAt;
-                        return (
-                          <div key={n.notificationId} className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 border-r-[3px] border-r-red-400">
-                            <p className="text-sm font-semibold text-red-700 mb-1 flex items-center gap-1.5">
-                              <HiXMark className="w-4 h-4 flex-shrink-0" />
-                              {n.notificationType === 'hour_rejected' ? 'דוח שעות נדחה' : 'בקשת תשלום נדחתה'}
-                            </p>
-                            <p className="text-sm text-gray-700 leading-relaxed">{n.message}</p>
-                            <div className="flex items-center justify-between mt-2">
-                              <p className="text-xs text-gray-400">
-                                {new Date(dateStr).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                              </p>
-                              {onDeleteNotif && (
-                                <button onClick={() => onDeleteNotif(n.notificationId)} className="text-xs text-gray-400 hover:text-red-500 underline transition-colors">סגור</button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                )}
               </div>
 
               {/* Footer */}

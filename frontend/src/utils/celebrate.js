@@ -50,7 +50,7 @@ const THEMES = {
   payment_submitted: {
     icon: '📬',
     title: 'הבקשה נשלחה!',
-    sub: 'הבקשה ממתינה לאישור החוקר',
+    sub: 'הבקשה ממתינה לאישור המזכירות',
     gradient: 'linear-gradient(135deg, #1D4ED8 0%, #4338CA 100%)',
     ring: '#60A5FA',
     confetti: () => stdBurst(),

@@ -169,7 +169,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
       try {
         const notifyRes = await notifyPaymentRequest(newId);
         if (notifyRes?.data?.success === false) {
-          setError('הבקשה נשמרה, אך שליחת המייל נכשלה: ' + (notifyRes.data.error ?? 'שגיאה לא ידועה'));
+          setError('הבקשה נשמרה בהצלחה, אך שליחת המייל למזכירות נכשלה. ניתן לפנות למזכירות ישירות.');
           setShowForm(true);
         }
       } catch { /* ignore network errors */ }
