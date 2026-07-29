@@ -146,8 +146,8 @@ export default function ArchivePage() {
       </div>
       {/* Restore confirmation dialog */}
       {confirmProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" dir="rtl">
-          <div className="bg-white rounded-2xl shadow-modal w-full max-w-sm p-6 text-center">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/40 backdrop-blur-sm" dir="rtl">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-modal w-full max-w-sm p-6 text-center">
             <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

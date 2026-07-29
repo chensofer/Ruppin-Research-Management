@@ -203,8 +203,8 @@ export default function CreateProjectModal({ onClose, onCreated }) {
       <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-3xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-1">
-          <h2 className="text-lg font-bold text-gray-900">יצירת מחקר חדש</h2>
+        <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-5 pb-1">
+          <h2 className="text-base sm:text-lg font-bold text-gray-900">יצירת מחקר חדש</h2>
           <button
             onClick={onClose}
             className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
@@ -218,7 +218,7 @@ export default function CreateProjectModal({ onClose, onCreated }) {
         <Stepper currentStep={step} />
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-5">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-4 sm:py-5">
           {submitError && (
             <div className="mb-4 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-lg">
               {submitError}
@@ -275,7 +275,7 @@ export default function CreateProjectModal({ onClose, onCreated }) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100">
           <button
             type="button"
             onClick={goBack}

@@ -513,7 +513,7 @@ function RecommendationCard({ rec, onTransfer, onRequestTransfer }) {
         </div>
 
         {/* מקור + יעד */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div className="bg-green-50 border border-green-200 rounded-lg p-2.5 space-y-1.5">
             <p className="text-xs font-bold text-green-700">מקור — יתרה עודפת</p>
             <p className="text-xs font-bold text-gray-900 line-clamp-2">{giverName}</p>
@@ -997,22 +997,20 @@ export default function ComparisonPage() {
             <p className="text-sm text-gray-400 mt-0.5">{projects.length} מחקרים פעילים</p>
           </div>
           {mode !== 'recommendations' && (
-            <div className="overflow-x-auto pb-1">
-              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl min-w-max">
-                {[
-                  { key: 'overview', label: 'סקירה כללית' },
-                  { key: 'compare',  label: 'השוואה ישירה' },
-                  { key: 'center',   label: 'מחקרים לפי מרכז מחקר' },
-                  { key: 'clusters', label: 'קבוצות לפי דפוס הוצאות' },
-                ].map((m) => (
-                  <button key={m.key} onClick={() => switchMode(m.key)}
-                    className={`relative px-4 py-2 text-sm font-semibold rounded-lg transition-colors whitespace-nowrap ${
-                      mode === m.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                    }`}>
-                    {m.label}
-                  </button>
-                ))}
-              </div>
+            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-1 bg-gray-100 p-1 rounded-xl">
+              {[
+                { key: 'overview', label: 'סקירה כללית' },
+                { key: 'compare',  label: 'השוואה ישירה' },
+                { key: 'center',   label: 'מחקרים לפי מרכז מחקר' },
+                { key: 'clusters', label: 'קבוצות לפי דפוס הוצאות' },
+              ].map((m) => (
+                <button key={m.key} onClick={() => switchMode(m.key)}
+                  className={`relative px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-colors text-center ${
+                    mode === m.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  }`}>
+                  {m.label}
+                </button>
+              ))}
             </div>
           )}
         </div>

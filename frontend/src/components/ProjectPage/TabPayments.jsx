@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { getCategories } from '../../api/categoriesApi';
 import HebrewDatePicker from '../HebrewDatePicker';
 import { getProviders, createProvider } from '../../api/providersApi';
@@ -215,7 +215,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col" dir="rtl">
 
             {/* Header */}
-            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-gray-100">
               <h2 className="text-base font-bold text-gray-900">בקשת תשלום חדשה</h2>
               <button onClick={closeForm} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,7 +225,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
             </div>
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
               {error && <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -358,7 +358,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50/60 rounded-b-2xl">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50/60 rounded-b-2xl">
               <button type="button" onClick={closeForm}
                 className="px-5 py-2 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">
                 ביטול
@@ -416,9 +416,8 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredPayments.map((p) => (
-                  <>
+                  <Fragment key={p.paymentRequestId}>
                     <tr
-                      key={p.paymentRequestId}
                       className="hover:bg-gray-50 transition-colors cursor-pointer"
                       onClick={() => setExpandedRow(expandedRow === p.paymentRequestId ? null : p.paymentRequestId)}
                     >
@@ -453,7 +452,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                       <td className="px-3 sm:px-5 py-3.5"><StatusBadge status={p.status} /></td>
                     </tr>
                     {expandedRow === p.paymentRequestId && (
-                      <tr key={`${p.paymentRequestId}-expanded`} className="bg-blue-50/40">
+                      <tr className="bg-blue-50/40">
                         <td colSpan={6} className="px-8 py-4">
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                             <div>
@@ -509,7 +508,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

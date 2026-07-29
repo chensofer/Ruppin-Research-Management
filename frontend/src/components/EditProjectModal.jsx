@@ -61,7 +61,7 @@ function DetailsTab({ form, setForm, errors, allUsers, usersLoading, centers }) 
   return (
     <div className="space-y-4">
       {/* Names */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="שם מחקר" required error={errors.projectNameHe}>
           <input type="text" value={form.projectNameHe} onChange={set('projectNameHe')}
             placeholder="שם מחקר בעברית"
@@ -135,7 +135,7 @@ function DetailsTab({ form, setForm, errors, allUsers, usersLoading, centers }) 
       </Field>
 
       {/* Budget + Funding source */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="תקציב מאושר (₪)" required error={errors.totalBudget}>
           <input type="number" min={0} value={form.totalBudget} onChange={set('totalBudget')}
             placeholder="0" className={`${inputCls} ${errors.totalBudget ? errorCls : ''}`} />
@@ -147,7 +147,7 @@ function DetailsTab({ form, setForm, errors, allUsers, usersLoading, centers }) 
       </div>
 
       {/* Dates */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="תאריך התחלה" required error={errors.startDate}>
           <HebrewDatePicker
             value={form.startDate}
@@ -447,11 +447,11 @@ export default function EditProjectModal({ projectId, onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/40">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-gray-100">
           <button onClick={onClose}
             className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -467,7 +467,7 @@ export default function EditProjectModal({ projectId, onClose, onSaved }) {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-100 px-6">
+        <div className="flex border-b border-gray-100 px-4 sm:px-6">
           {TABS.map((t) => (
             <button key={t.id} type="button" onClick={() => setTab(t.id)}
               className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
@@ -484,7 +484,7 @@ export default function EditProjectModal({ projectId, onClose, onSaved }) {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5">
           {loading && (
             <div className="flex justify-center py-16">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -528,7 +528,7 @@ export default function EditProjectModal({ projectId, onClose, onSaved }) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100">
           <button type="button" onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
             ביטול
