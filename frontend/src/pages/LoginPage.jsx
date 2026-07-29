@@ -148,12 +148,17 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-400 mt-4">
-            אין לכם חשבון?{' '}
-            <Link to="/register" className="text-primary font-semibold hover:text-primary-dark transition-colors">
-              הרשמה
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-sm text-gray-400">
+              אין לכם חשבון?{' '}
+              <Link to="/register" className="text-primary font-semibold hover:text-primary-dark transition-colors">
+                הרשמה
+              </Link>
+            </p>
+            <Link to="/forgot-password" className="text-sm text-gray-400 hover:text-primary transition-colors">
+              שכחתי סיסמה
             </Link>
-          </p>
+          </div>
         </div>
       </div>
     </div>

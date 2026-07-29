@@ -32,5 +32,7 @@ namespace RupResearchAPI.Services
             string receiverProjectName,
             decimal amount,
             string requesterName);
+
+        Task SendPasswordResetEmailAsync(string toEmail, string userName, string resetLink);
     }
 }

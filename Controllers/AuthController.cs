@@ -45,5 +45,35 @@ namespace RupResearchAPI.Controllers
                 return Unauthorized(new { message = ex.Message });
             }
         }
+
+        [AllowAnonymous]
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+        {
+            try
+            {
+                await _authService.ForgotPassword(dto.UserId);
+                return Ok(new { message = "קישור לאיפוס סיסמה נשלח למייל שלך." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [AllowAnonymous]
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+        {
+            try
+            {
+                await _authService.ResetPassword(dto.Token, dto.NewPassword);
+                return Ok(new { message = "הסיסמה עודכנה בהצלחה." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }
