@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RupResearchAPI.Data;
 using RupResearchAPI.DTOs;
 using RupResearchAPI.Models;
@@ -12,12 +13,14 @@ namespace RupResearchAPI.Services
         private readonly IEmailService _email;
         private readonly IActivityLogService _log;
         private readonly IWebHostEnvironment _env;
+        private readonly IMemoryCache _cache;
 
-        public PaymentRequestService(AppDbContext db, IEmailService email, IActivityLogService log, IWebHostEnvironment env)
+        public PaymentRequestService(AppDbContext db, IEmailService email, IActivityLogService log, IWebHostEnvironment env, IMemoryCache cache)
         {
             _db = db;
             _email = email;
             _log = log;
+            _cache = cache;
             _env = env;
         }
 
@@ -124,6 +127,7 @@ namespace RupResearchAPI.Services
             request.DecisionDate = DateOnly.FromDateTime(DateTime.Today);
 
             await _db.SaveChangesAsync();
+            _cache.Remove("ml-insights");
 
             if (request.ProjectId.HasValue)
             {
