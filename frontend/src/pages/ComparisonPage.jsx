@@ -997,7 +997,6 @@ export default function ComparisonPage() {
             <p className="text-sm text-gray-400 mt-0.5">{projects.length} מחקרים פעילים</p>
           </div>
           {mode !== 'recommendations' && (
-<<<<<<< HEAD
             <div className="grid grid-cols-2 sm:flex sm:items-center gap-1 bg-gray-100 p-1 rounded-xl">
               {[
                 { key: 'overview', label: 'סקירה כללית' },
@@ -1006,18 +1005,7 @@ export default function ComparisonPage() {
                 { key: 'clusters', label: 'לפי דפוס הוצאות' },
               ].map((m) => (
                 <button key={m.key} onClick={() => switchMode(m.key)}
-                  className={`relative px-3 py-2 text-sm font-semibold rounded-lg transition-colors text-center ${
-=======
-            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-1 bg-gray-100 p-1 rounded-xl">
-              {[
-                { key: 'overview', label: 'סקירה כללית' },
-                { key: 'compare',  label: 'השוואה ישירה' },
-                { key: 'center',   label: 'מחקרים לפי מרכז מחקר' },
-                { key: 'clusters', label: 'קבוצות לפי דפוס הוצאות' },
-              ].map((m) => (
-                <button key={m.key} onClick={() => switchMode(m.key)}
                   className={`relative px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-colors text-center ${
->>>>>>> 3abad5ad35c7cf7c9fcc8dac3313ac3e299d59d6
                     mode === m.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                   }`}>
                   {m.label}
