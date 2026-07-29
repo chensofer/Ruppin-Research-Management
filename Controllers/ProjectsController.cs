@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
@@ -20,8 +19,9 @@ namespace RupResearchAPI.Controllers
         private readonly IMemoryCache _cache;
         private readonly IUserService _userService;
         private readonly AppDbContext _db;
+        private readonly IMlInsightsService _mlInsights;
 
-        public ProjectsController(IProjectService projectService, IWebHostEnvironment env, IAuditLogService audit, IMemoryCache cache, IUserService userService, AppDbContext db)
+        public ProjectsController(IProjectService projectService, IWebHostEnvironment env, IAuditLogService audit, IMemoryCache cache, IUserService userService, AppDbContext db, IMlInsightsService mlInsights)
         {
             _projectService = projectService;
             _env = env;
@@ -29,6 +29,7 @@ namespace RupResearchAPI.Controllers
             _cache = cache;
             _userService = userService;
             _db = db;
+            _mlInsights = mlInsights;
         }
 
         [HttpGet]
@@ -427,10 +428,9 @@ namespace RupResearchAPI.Controllers
             return Ok(projects);
         }
 
-        // GET /api/projects/ml-insights — תוצרי הרכיב החכם (Python):
-        // ציון סיכון תקציבי לפי פרויקט (Classification) ושיוך לקבוצת
-        // "פרופיל הוצאות" (Clustering). מורץ דרך ml_component/ml_insights.py
-        // ומוטמן ל-10 דקות כדי לא להריץ אימון מודלים בכל בקשה.
+        // GET /api/projects/ml-insights
+        // Budget-risk scoring, expense-profile clustering, and pending-request insights.
+        // Cached for 10 minutes to avoid re-training on every request.
         [HttpGet("ml-insights")]
         public async Task<IActionResult> GetMlInsights()
         {
@@ -438,34 +438,16 @@ namespace RupResearchAPI.Controllers
             if (_cache.TryGetValue(cacheKey, out string? cachedJson) && cachedJson != null)
                 return Content(cachedJson, "application/json");
 
-            var scriptDir = Path.Combine(_env.ContentRootPath, "ml_component");
-            var psi = new ProcessStartInfo
+            try
             {
-                FileName = "py",
-                Arguments = "ml_insights.py",
-                WorkingDirectory = scriptDir,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                StandardOutputEncoding = System.Text.Encoding.UTF8,
-                StandardErrorEncoding = System.Text.Encoding.UTF8,
-            };
-            psi.EnvironmentVariables["PYTHONUTF8"] = "1";
-
-            using var process = Process.Start(psi);
-            if (process == null)
-                return StatusCode(500, new { message = "לא ניתן להריץ את הרכיב החכם (Python)" });
-
-            var stdout = await process.StandardOutput.ReadToEndAsync();
-            var stderr = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(stdout))
-                return StatusCode(500, new { message = "שגיאה בהרצת הרכיב החכם", details = stderr });
-
-            var json = stdout.Trim();
-            _cache.Set(cacheKey, json, TimeSpan.FromMinutes(10));
-            return Content(json, "application/json");
+                var json = await _mlInsights.RunInsightsAsync();
+                _cache.Set(cacheKey, json, TimeSpan.FromMinutes(10));
+                return Content(json, "application/json");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "שגיאה בהרצת הרכיב החכם", details = ex.Message });
+            }
         }
 
         // POST /api/projects/{sourceId}/transfer-budget

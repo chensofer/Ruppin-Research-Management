@@ -12,14 +12,14 @@ const SESSION_BADGE_KEYS = [
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem('user');
+    const stored = sessionStorage.getItem('user');
     return stored ? JSON.parse(stored) : null;
   });
 
   const login = (authResponse) => {
     SESSION_BADGE_KEYS.forEach((k) => sessionStorage.removeItem(k));
-    localStorage.setItem('token', authResponse.token);
-    localStorage.setItem('user', JSON.stringify({
+    sessionStorage.setItem('token', authResponse.token);
+    sessionStorage.setItem('user', JSON.stringify({
       userId: authResponse.userId,
       firstName: authResponse.firstName,
       lastName: authResponse.lastName,
@@ -34,8 +34,8 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     SESSION_BADGE_KEYS.forEach((k) => sessionStorage.removeItem(k));
     setUser(null);
   };
@@ -43,7 +43,7 @@ export function AuthProvider({ children }) {
   const updateUser = (updates) => {
     setUser((prev) => {
       const next = { ...prev, ...updates };
-      localStorage.setItem('user', JSON.stringify(next));
+      sessionStorage.setItem('user', JSON.stringify(next));
       return next;
     });
   };

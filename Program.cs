@@ -42,6 +42,7 @@ namespace RupResearchAPI
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IHourReportService, HourReportService>();
             builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+            builder.Services.AddScoped<IMlInsightsService, MlInsightsService>();
 
             // JWT Authentication
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
