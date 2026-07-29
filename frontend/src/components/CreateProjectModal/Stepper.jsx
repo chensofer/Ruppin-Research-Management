@@ -33,52 +33,64 @@ export const STEP_IDS = STEPS.map((s) => s.id);
 
 export default function Stepper({ currentStep }) {
   const currentIndex = STEPS.findIndex(s => s.id === currentStep);
+  const currentLabel = STEPS[currentIndex]?.label ?? '';
 
   return (
-    <div dir="rtl" className="border-b border-gray-100 px-4 pt-4 pb-3">
-      <div className="relative flex justify-between items-start">
-
-        {/* Gray background line */}
-        <div className="absolute top-4 right-4 left-4 h-0.5 bg-gray-200 z-0" />
-
-        {/* Green completed line */}
-        {currentIndex > 0 && (
+    <div dir="rtl" className="border-b border-gray-100 px-3 sm:px-4 pt-3 pb-3">
+      {/* Mobile: progress bar + step label */}
+      <div className="sm:hidden mb-2">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-sm font-semibold text-primary">{currentLabel}</span>
+          <span className="text-xs text-gray-400">שלב {currentIndex + 1} מתוך {STEPS.length}</span>
+        </div>
+        <div className="w-full bg-gray-100 rounded-full h-1.5">
           <div
-            className="absolute top-4 right-4 h-0.5 bg-green-400 z-0 transition-all duration-300"
-            style={{ width: `calc((100% - 2rem) * ${currentIndex / (STEPS.length - 1)})` }}
+            className="bg-primary rounded-full h-1.5 transition-all duration-300"
+            style={{ width: `${((currentIndex + 1) / STEPS.length) * 100}%` }}
           />
-        )}
+        </div>
+      </div>
 
-        {STEPS.map((step, idx) => {
-          const isCompleted = idx < currentIndex;
-          const isActive    = idx === currentIndex;
-
-          return (
-            <div key={step.id} className="flex flex-col items-center gap-1 relative z-10">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                isCompleted ? 'bg-green-500' :
-                isActive    ? 'bg-primary'   : 'bg-gray-100 border border-gray-200'
-              }`}>
-                {isCompleted ? (
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <svg className={`w-4 h-4 ${isActive ? 'text-white' : 'text-gray-400'}`}
-                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {step.icon}
-                  </svg>
-                )}
+      {/* Desktop: full stepper */}
+      <div className="hidden sm:block">
+        <div className="relative flex justify-between items-start">
+          <div className="absolute top-4 right-4 left-4 h-0.5 bg-gray-200 z-0" />
+          {currentIndex > 0 && (
+            <div
+              className="absolute top-4 right-4 h-0.5 bg-green-400 z-0 transition-all duration-300"
+              style={{ width: `calc((100% - 2rem) * ${currentIndex / (STEPS.length - 1)})` }}
+            />
+          )}
+          {STEPS.map((step, idx) => {
+            const isCompleted = idx < currentIndex;
+            const isActive    = idx === currentIndex;
+            return (
+              <div key={step.id} className="flex flex-col items-center gap-1 relative z-10">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                  isCompleted ? 'bg-green-500' :
+                  isActive    ? 'bg-primary'   : 'bg-gray-100 border border-gray-200'
+                }`}>
+                  {isCompleted ? (
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className={`w-4 h-4 ${isActive ? 'text-white' : 'text-gray-400'}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {step.icon}
+                    </svg>
+                  )}
+                </div>
+                <span className={`text-center leading-tight text-xs font-medium ${
+                  isCompleted ? 'text-green-600' :
+                  isActive    ? 'text-primary'   : 'text-gray-400'
+                }`}>
+                  {step.label}
+                </span>
               </div>
-              <span className={`text-center leading-tight whitespace-nowrap text-sm font-medium ${
-                isCompleted ? 'text-green-600' :
-                isActive    ? 'text-primary'   : 'text-gray-400'
-              }`}>
-                {step.label}
-              </span>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

@@ -334,8 +334,8 @@ export default function ProjectPage() {
 
       {/* Delete confirmation modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-right">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/40">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-sm p-6 text-right">
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
               <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -380,8 +380,8 @@ export default function ProjectPage() {
         const hourCount = pendingHourApprovals.length;
         const total     = payCount + hourCount;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" dir="rtl">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-right">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/40" dir="rtl">
+            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-sm p-6 text-right">
               {/* Icon */}
               <div className="flex items-center justify-center w-14 h-14 rounded-full bg-yellow-100 mx-auto mb-4">
                 <svg className="w-7 h-7 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -493,8 +493,8 @@ export default function ProjectPage() {
       {budget > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-card px-5 py-5 mb-4 w-full overflow-hidden">
           <h3 className="text-sm font-bold text-gray-700 mb-4 text-right">התפלגות תקציב</h3>
-          <div style={{ width: '100%', height: 200 }}>
-            <ResponsiveContainer width="100%" height="100%">
+          <div>
+            <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie
                   data={[
