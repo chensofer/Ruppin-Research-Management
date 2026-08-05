@@ -6,7 +6,9 @@
       "Bash(curl -s http://localhost:5173/)",
       "PowerShell(Get-NetTCPConnection -LocalPort 5269 -ErrorAction SilentlyContinue)",
       "PowerShell(Get-Process -Id 8464 -ErrorAction SilentlyContinue)",
-      "PowerShell(Get-NetTCPConnection -OwningProcess 8464 -State Listen -ErrorAction SilentlyContinue)"
+      "PowerShell(Get-NetTCPConnection -OwningProcess 8464 -State Listen -ErrorAction SilentlyContinue)",
+      "Bash(git -C \"c:/Users/shach/Desktop/Ruppin-Research-Management\" check-ignore -v bin obj publish frontend/node_modules)",
+      "PowerShell(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\shach\\\\Desktop\\\\Ruppin-Research-Management\\\\wwwroot\" -Force)"
     ]
   }
 }
