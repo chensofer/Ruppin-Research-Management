@@ -1,110 +1,74 @@
-# RupResearch — מערכת ניהול מחקרים ותקציבים
+<div align="center">
 
-מערכת Full-Stack לניהול פרויקטי מחקר, תקציבים, בקשות תשלום ועוזרי מחקר — פותחה כפרויקט גמר על ידי מאי חכם, שחר ענפי וחן סופר, מכללת רופין, 2025–2026.
+# RupResearch · מערכת ניהול מחקרים
 
-**גרסה חיה:** [https://proj.ruppin.ac.il/bgroup11/test1](https://proj.ruppin.ac.il/bgroup11/test1)
+**מערכת ניהול מחקרים ותקציבים חכמה למרכז האקדמי רופין — ניהול פרויקטים, תקציבים, בקשות תשלום וזיהוי חריגות אוטומטי באמצעות ML.**
 
----
+מערכת Web מלאה עם עברית מלאה (RTL), ניהול הרשאות לפי תפקיד, ורכיב בינה מלאכותית לתמיכה בקבלת החלטות.
 
-## תוכן עניינים
+[![Live](https://img.shields.io/badge/Live-proj.ruppin.ac.il-blue)](https://proj.ruppin.ac.il/bgroup11/test1)
+&nbsp;·&nbsp; ASP.NET Core 8 &nbsp;·&nbsp; React &nbsp;·&nbsp; SQL Server &nbsp;·&nbsp; ML (C#) &nbsp;·&nbsp; Google Gemini
 
-1. [תיאור המערכת](#תיאור-המערכת)
-2. [טכנולוגיות](#טכנולוגיות)
-3. [ארכיטקטורה ומסד הנתונים](#ארכיטקטורה-ומסד-הנתונים)
-4. [תפקידי משתמשים](#תפקידי-משתמשים)
-5. [פיצ'רים עיקריים](#פיצ'רים-עיקריים)
-6. [הרכיב החכם — ML](#הרכיב-החכם--ml)
-7. [התקנה והרצה](#התקנה-והרצה)
-8. [קונפיגורציה](#קונפיגורציה)
+</div>
 
 ---
 
-## תיאור המערכת
+## מה המערכת עושה
 
-RupResearch היא מערכת ניהול מחקרים מלאה המיועדת לארגוני מחקר אקדמיים.  
-המערכת מאפשרת לחוקרים לנהל תקציבים, להגיש בקשות תשלום, לעקוב אחר הוצאות ולשתף עוזרי מחקר — כל זאת עם ממשק בעברית, RTL מלא, ותמיכה בייצוא דוחות ל-Excel ו-PDF.
+חוקר נכנס למערכת ורואה את כל מה שרלוונטי לניהול המחקר שלו במקום אחד:
 
----
-
-## טכנולוגיות
-
-### Frontend
-| טכנולוגיה | גרסה | שימוש |
-|-----------|------|-------|
-| React | 18 | ממשק משתמש |
-| Vite | 8 | Build tool |
-| React Router | 6 | ניתוב |
-| Axios | — | קריאות API |
-| Tailwind CSS | 3 | עיצוב |
-| ExcelJS | — | ייצוא Excel |
-| Recharts | — | גרפים ותרשימים |
-| React Hot Toast | — | הודעות Toast |
-
-### Backend
-| טכנולוגיה | גרסה | שימוש |
-|-----------|------|-------|
-| ASP.NET Core | .NET 8 | Web API |
-| Entity Framework Core | 8 | גישה למסד נתונים |
-| JWT Bearer | — | אימות משתמשים |
-| BCrypt.Net | — | הצפנת סיסמאות |
-| MailKit | — | שליחת מיילים |
-| Swagger / OpenAPI | — | תיעוד API |
-
-### רכיב חכם (ML)
-| טכנולוגיה | שימוש |
-|-----------|-------|
-| Python 3.10+ | שפת הרכיב |
-| scikit-learn | מודלים של ML |
-| pandas / numpy | עיבוד נתונים |
-| pyodbc | חיבור ל-SQL Server |
-
-### שירותים חיצוניים
-| שירות | שימוש |
-|--------|-------|
-| Google Gemini Flash | OCR — ניתוח מסמכים אוטומטי |
-| Gmail SMTP | שליחת התראות מייל |
-| SQL Server | מסד הנתונים |
+- 📁 **ניהול מחקרים** — הקמה, עריכה, ארכיון ושחזור של מחקרים עם תקציב מחולק לפי קטגוריות הוצאה
+- 💰 **תקציב ותנועות כספיות** — מעקב בזמן אמת אחר יתרות, תנועות מאושרות והתחייבויות עתידיות
+- 📄 **בקשות תשלום** — הגשה עם צירוף מסמכים, חילוץ נתונים אוטומטי מחשבוניות (Gemini AI) ותהליך אישור/דחייה מול המזכירות
+- 🧠 **רכיב ML חכם** — שלושה מודלי Random Forest וסיווג K-Means לחיזוי אישורים, זיהוי חריגות והערכת סיכון תקציבי
+- 👥 **ניהול צוות ועוזרי מחקר** — ניהול חברי צוות ועוזרי מחקר כולל שכר שעתי ומעקב תשלומים
+- ⏱️ **דיווח ואישור שעות** — דיווח שעות חודשי לעוזרי מחקר ואישור/דחייה מול החוקר האחראי
+- 📊 **השוואת מחקרים** — ניתוח השוואתי עם גרפים, קיבוץ לפי דפוס הוצאות והמלצות להעברת תקציב
+- 📬 **התראות ומיילים** — שליחת מיילים אוטומטיים על אישורים, דחיות ובקשות ממתינות
+- 📤 **דוחות וייצוא** — הפקת דוחות מפורטים ב-Excel ו-PDF ברמת מחקר בודד או כלל המערכת
 
 ---
 
-## ארכיטקטורה ומסד הנתונים
+## ארכיטקטורה
 
 ```
-frontend/          ← React + Vite (SPA)
-├── src/
-│   ├── pages/     ← דפי המערכת
-│   ├── components/← קומפוננטים
-│   ├── api/       ← קריאות ל-Backend
-│   ├── context/   ← Auth state
-│   └── utils/     ← עזר: ייצוא, קבצים, חגיגות
-
-(root)/            ← ASP.NET Core Web API
-├── Controllers/   ← HTTP בלבד, ללא לוגיקה עסקית
-├── Services/      ← כל הלוגיקה העסקית
-├── Models/        ← מודלי EF Core
-└── DTOs/          ← אובייקטי בקשה/תגובה
-
-ml_component/      ← Python ML
-├── approval_classifier.py   ← מודול 1: Classification
-├── expense_forecast.py      ← מודול 2: Regression
-├── project_clustering.py    ← מודול 3: Clustering
-├── budget_risk_classifier.py← מודול 4: Risk Classification
-└── ml_insights.py           ← ממשק לשרת C#
+┌──────────────────────────────────────────────────────────┐
+│  frontend/  —  React + Vite SPA  ·  Tailwind CSS RTL     │
+│  Context + Axios  ·  Recharts  ·  ExcelJS / PDF          │
+└──────────────────────┬───────────────────────────────────┘
+                       │  JSON over HTTPS · JWT Bearer
+┌──────────────────────▼───────────────────────────────────┐
+│  (root)/  —  ASP.NET Core 8 Web API                      │
+│  Controllers → Services → Entity Framework Core          │
+│  Auth · ML Insights · Gemini AI · MailKit                │
+└──────┬───────────────────────────┬───────────────────────┘
+       │                           │
+┌──────▼──────────┐   ┌────────────▼──────────────┐
+│  SQL Server     │   │  External Services         │
+│  17 tables      │   │  Google Gemini API (OCR)   │
+│  EF Core ORM    │   │  Gmail SMTP (MailKit)      │
+└─────────────────┘   └───────────────────────────┘
 ```
 
-### טבלאות מסד הנתונים (17 טבלאות)
+| שכבה | נתיב | אחריות |
+|------|------|--------|
+| **Frontend** | `frontend/` | React SPA — דפים, קומפוננטים, API calls, ייצוא דוחות |
+| **Backend** | `(root)/` | ASP.NET Core Web API — Controllers, Services, DTOs |
+| **ML** | `ml_component/` | Python — אב-טיפוס האלגוריתמים (גרסת הייצור ב-C# בתוך Services) |
 
-```
-research_users              research_projects
-research_roles              research_centers
-research_budget_categories  research_budget_plans
-research_categories         research_center_budgets
-research_payment_requests   research_providers
-research_future_commitments research_assistants
-research_hour_reports       research_monthly_work_approvals
-research_files              research_users_projects
-research_alerts
-```
+---
+
+## Tech Stack
+
+| תחום | טכנולוגיות |
+|------|------------|
+| **Frontend** | React · Vite · Tailwind CSS · React Router · Axios · Recharts · ExcelJS · React Hot Toast |
+| **Backend** | ASP.NET Core 8 (C#) · Entity Framework Core · Swagger / OpenAPI |
+| **Database** | SQL Server · 17 טבלאות |
+| **Auth** | JWT Bearer · BCrypt · איפוס סיסמה במייל |
+| **AI / ML** | Google Gemini (ניתוח מסמכים) · Random Forest + K-Means (מימוש C# מאפס) |
+| **Email** | MailKit · Gmail SMTP |
+| **Security** | JWT · BCrypt · Secrets מחוץ ל-git |
 
 ---
 
@@ -112,57 +76,55 @@ research_alerts
 
 | תפקיד | הרשאות |
 |-------|--------|
-| **חוקר ראשי** | ניהול מחקר, הגשת בקשות תשלום, ניהול צוות, ייצוא דוחות |
-| **עוזר מחקר** | דיווח שעות חודשי, צפייה בדוחות אישיים |
-| **מזכירות** | אישור/דחיית בקשות, צפייה בכל המחקרים, השוואות, היסטוריה, ניהול משתמשים |
-
----
-
-## פיצ'רים עיקריים
-
-- **לוח בקרה (Dashboard)** — סקירה כללית של כל המחקרים, תקציבים, ניצול ויתרות
-- **ניהול מחקר** — פרטים, צוות, עוזרים, תקציב לפי קטגוריות, מסמכים
-- **בקשות תשלום** — הגשה, צירוף מסמכים, OCR אוטומטי לזיהוי פרטים מחשבוניות
-- **אישורים ממתינים** — אישור/דחייה עם סיבה, תגיות AI לבקשות חשודות
-- **הוצאות עתידיות** — ניהול התחייבויות עתידיות עם חיזוי תקציב
-- **דיווח שעות** — עוזרי מחקר מדווחים שעות, מזכירות מאשרות
-- **העברות תקציב** — המלצות חכמות להעברת תקציב בין מחקרים
-- **השוואת מחקרים** — ניתוח השוואתי עם גרפים, קיבוץ ב-ML
-- **ייצוא דוחות** — Excel עם Freeze + AutoFilter, PDF עם כותרות חוזרות
-- **ארכיון** — מחקרים שהסתיימו
-- **התראות** — ניצול תקציב, תאריכי סיום, בקשות ממתינות
-- **ניהול משתמשים** — רק למזכירות
+| **חוקר** | ניהול המחקרים שלו, הגשת בקשות תשלום, ניהול צוות, ייצוא דוחות |
+| **מנהל מרכז מחקר** | כל הרשאות חוקר + צפייה במחקרי המרכז |
+| **מזכירות** | אישור/דחיית בקשות, ניהול משתמשים, השוואות, היסטוריה |
+| **עוזר מחקר** | דיווח שעות חודשי בלבד, צפייה בדוחות אישיים |
 
 ---
 
 ## הרכיב החכם — ML
 
-הרכיב החכם כתוב ב-Python ומתחבר ישירות למסד הנתונים החי.  
-השרת (C#) מריץ אותו כ-subprocess עם cache של 10 דקות.
+הרכיב החכם פותח ב-Python עם Scikit-learn לצורך מחקר, בדיקה והערכת ביצועים, ולאחר מכן תורגם ל-C# ומשולב ישירות בשרת ללא תלויות חיצוניות.
 
-| מודול | סוג | שאלה עסקית |
-|-------|-----|------------|
-| `approval_classifier.py` | Classification | האם בקשת תשלום תאושר? |
-| `expense_forecast.py` | Regression | מה הסכום הצפוי לבקשה? |
-| `project_clustering.py` | Clustering (K-Means) | אילו מחקרים דומים בדפוס הוצאותיהם? |
-| `budget_risk_classifier.py` | Classification | האם אישור הבקשה יגרום לחריגת תקציב? |
+| מודל | סוג | שאלה עסקית |
+|------|-----|------------|
+| Approval Classifier | Random Forest Classifier | האם בקשת תשלום תאושר? |
+| Expense Forecast | Random Forest Regressor | מה הסכום הצפוי לבקשה? |
+| Budget Risk | Random Forest Classifier | האם אישור הבקשה יגרום לחריגת תקציב? |
+| Project Clustering | K-Means | אילו מחקרים דומים בדפוס הוצאותיהם? |
 
-התוצאות מוצגות ישירות בממשק: תגיות סיכון על בקשות ממתינות, קיבוצי מחקרים בדף ההשוואות, והמלצות להעברת תקציב.
+התוצאות מוצגות בממשק: תגיות סיכון על בקשות ממתינות, קיבוצי מחקרים בדף ההשוואות, והמלצות להעברת תקציב.
+
+---
+
+## דרישות מוקדמות
+
+| כלי | גרסה |
+|-----|------|
+| Node.js | 18+ |
+| .NET SDK | 8.0 |
+| SQL Server | Express 2019+ |
 
 ---
 
 ## התקנה והרצה
 
-### דרישות מוקדמות
+```bash
+git clone https://github.com/chensofer/Ruppin-Research-Management.git
+cd Ruppin-Research-Management
+```
 
-- Node.js 18+
-- .NET SDK 8.0
-- Python 3.10+
-- גישה ל-SQL Server של הפרויקט
+**1. Backend** — צור קובץ `appsettings.Secrets.json` (ראו [קונפיגורציה](#קונפיגורציה)) ואז:
 
----
+```bash
+dotnet restore
+dotnet run
+```
 
-### 1. Frontend
+השרת עולה על `http://localhost:5269` · Swagger: `http://localhost:5269/swagger`
+
+**2. Frontend**
 
 ```bash
 cd frontend
@@ -170,65 +132,33 @@ npm install
 npm run dev
 ```
 
-הממשק יעלה על `http://localhost:5173`
+הממשק עולה על `http://localhost:5173`
 
-לבנייה לייצור:
-```bash
-npm run build
-```
+### סקריפטים שימושיים
 
----
-
-### 2. Backend
-
-```bash
-# מהתיקייה הראשית
-dotnet restore
-dotnet run
-```
-
-השרת יעלה על `http://localhost:5269`  
-Swagger זמין בכתובת: `http://localhost:5269/swagger`
-
-> **חשוב:** יש ליצור קובץ `appsettings.Secrets.json` (ראו [קונפיגורציה](#קונפיגורציה)) לפני הרצה.
-
----
-
-### 3. רכיב ML (Python)
-
-```bash
-cd ml_component
-
-# התקנת ספריות
-pip install -r requirements.txt
-
-# הרצת כל המודלים
-python main.py
-
-# הרצת מודול בודד
-python approval_classifier.py
-python project_clustering.py
-```
-
-> **הערה לWindows:** אם יש בעיית קידוד בעברית ב-PowerShell, יש להריץ תחילה:
-> ```powershell
-> $env:PYTHONUTF8=1
-> ```
-
-גרפי הפלט נשמרים בתיקיית `ml_component/output/`
+| פקודה | פעולה |
+|-------|--------|
+| `dotnet run` | הרצת השרת לוקאלית |
+| `npm run dev` | Vite dev server |
+| `npm run build` | בניית production |
 
 ---
 
 ## קונפיגורציה
 
-### Backend — `appsettings.Secrets.json`
+סודות **לעולם לא מועלים ל-git.** יש ליצור את הקובץ הבא בתיקייה הראשית:
 
-יש ליצור קובץ זה בתיקייה הראשית (הוא מוחרג מ-git):
+### `appsettings.Secrets.json` (מוחרג מ-git)
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Data Source=<SERVER>;Initial Catalog=<DATABASE>;User ID=<USER>;Password=<PASSWORD>;Encrypt=True;TrustServerCertificate=True;"
+    "DefaultConnection": "Data Source=<SERVER>;Initial Catalog=<DB>;User ID=<USER>;Password=<PASSWORD>;Encrypt=True;TrustServerCertificate=True;"
+  },
+  "Jwt": {
+    "Key": "<מינימום 32 תווים>",
+    "Issuer": "RupResearchAPI",
+    "Audience": "RupResearchClient"
   },
   "Gemini": {
     "ApiKey": "<YOUR_GEMINI_API_KEY>"
@@ -241,33 +171,40 @@ python project_clustering.py
     "FromName": "RupResearch System",
     "SecretariatEmail": "<SECRETARIAT_EMAIL>",
     "SiteUrl": "<YOUR_SITE_URL>"
-  },
-  "Jwt": {
-    "Key": "<MIN_32_CHAR_SECRET_KEY>",
-    "Issuer": "RupResearchAPI",
-    "Audience": "RupResearchClient"
   }
 }
-```
-
-### ML — `ml_component/config.py`
-
-```python
-CONNECTION_STRING = (
-    "DRIVER={ODBC Driver 17 for SQL Server};"
-    "SERVER=<SERVER>;"
-    "DATABASE=<DATABASE>;"
-    "UID=<USER>;"
-    "PWD=<PASSWORD>;"
-    "Encrypt=yes;"
-    "TrustServerCertificate=yes;"
-)
 ```
 
 > **Gemini API Key** — להשגת מפתח חינמי: [https://aistudio.google.com](https://aistudio.google.com)
 
 ---
 
+## מבנה הפרויקט
+
+```
+frontend/               React + Vite SPA
+├── src/
+│   ├── pages/          דפי המערכת
+│   ├── components/     קומפוננטים משותפים
+│   ├── api/            קריאות ל-Backend
+│   ├── context/        Auth + Theme state
+│   └── utils/          ייצוא דוחות, עזר
+
+Controllers/            HTTP endpoints בלבד
+Services/               לוגיקה עסקית + ML (C#)
+Models/                 מודלי EF Core
+DTOs/                   אובייקטי בקשה/תגובה
+Data/                   DbContext
+
+ml_component/           אב-טיפוס Python (מחקר בלבד)
+├── approval_classifier.py
+├── expense_forecast.py
+├── budget_risk_classifier.py
+└── project_clustering.py
+```
+
+---
+
 ## פותח על ידי
 
- מאי חכם, שחר ענפי וחן סופר — מכללת רופין, תוכנית מנהל עסקים ומערכות מידע, 2025–2026
+מאי חכם · חן סופר · שחר ענפי — המרכז האקדמי רופין, תוכנית מנהל עסקים ומערכות מידע, 2025–2026
