@@ -118,25 +118,48 @@ Rules:
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={apiKey}";
 
             var json = JsonSerializer.Serialize(requestBody);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await client.PostAsync(url, content);
+
+            // Retry up to 3 times on 503 (service overload)
+            HttpResponseMessage response = null!;
+            int[] retryDelaysMs = [1500, 3000];
+            for (int attempt = 0; attempt <= retryDelaysMs.Length; attempt++)
+            {
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                response = await client.PostAsync(url, content);
+                if (response.IsSuccessStatusCode) break;
+
+                var statusCode = (int)response.StatusCode;
+                if ((statusCode == 503 || statusCode == 429) && attempt < retryDelaysMs.Length)
+                {
+                    await Task.Delay(retryDelaysMs[attempt]);
+                    continue;
+                }
+                break;
+            }
 
             if (!response.IsSuccessStatusCode)
             {
-                var err = await response.Content.ReadAsStringAsync();
-                return StatusCode(502, new { message = $"שגיאה מ-Gemini: {err}" });
+                return StatusCode(502, new { message = "סריקת המסמך נכשלה" });
             }
 
             var raw = await response.Content.ReadAsStringAsync();
 
-            // Extract the text from Gemini response
+            // Extract the text from Gemini response (safely — structure may vary on safety blocks)
             using var doc = JsonDocument.Parse(raw);
-            var text = doc.RootElement
-                .GetProperty("candidates")[0]
-                .GetProperty("content")
-                .GetProperty("parts")[0]
-                .GetProperty("text")
-                .GetString() ?? "";
+            var rootEl = doc.RootElement;
+            string text = "";
+            if (rootEl.TryGetProperty("candidates", out var candidatesEl) &&
+                candidatesEl.GetArrayLength() > 0 &&
+                candidatesEl[0].TryGetProperty("content", out var contentEl) &&
+                contentEl.TryGetProperty("parts", out var partsEl) &&
+                partsEl.GetArrayLength() > 0 &&
+                partsEl[0].TryGetProperty("text", out var textEl))
+            {
+                text = textEl.GetString() ?? "";
+            }
+
+            if (string.IsNullOrWhiteSpace(text))
+                return Ok(new { requestTitle = (string?)null, requestedAmount = (decimal?)null, requestDescription = (string?)null, providerName = (string?)null, categoryName = (string?)null, invoiceNumber = (string?)null });
 
             // Strip any markdown fencing (```json ... ```) that Gemini sometimes adds
             text = System.Text.RegularExpressions.Regex.Replace(text, @"```[a-zA-Z]*", "").Trim();

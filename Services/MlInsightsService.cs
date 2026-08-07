@@ -27,6 +27,7 @@ public sealed class MlInsightsService : IMlInsightsService
     [
         "log_amount", "total_budget", "days_to_due", "has_due_date",
         "request_month", "project_progress_at_request", "requests_so_far",
+        "cum_spend_ratio",
     ];
     private static readonly string[] ApprovalNumeric =
     [
@@ -75,6 +76,7 @@ public sealed class MlInsightsService : IMlInsightsService
 
         // Risk-specific
         public double CumApprovedAmount;  // running cumulative approved
+        public double CumSpendRatio;      // CumApprovedAmount / TotalBudget at request time
         public double SpendRatioIfApproved;
         public double TimeRatio;
         public int    RequestsSoFar;
@@ -405,6 +407,7 @@ public sealed class MlInsightsService : IMlInsightsService
                 "project_progress_at_request"  => r.ProjectProgress,
                 "is_amount_outlier"            => r.IsAmountOutlier,
                 "requests_so_far"              => r.RequestsSoFar,
+                "cum_spend_ratio"              => r.CumSpendRatio,
                 _ => r.Features.TryGetValue(colNames[i], out double val) ? val : 0.0,
             };
         }
@@ -526,6 +529,7 @@ public sealed class MlInsightsService : IMlInsightsService
                 + (r.ApprovedLabel == null ? r.RequestedAmount : 0);
 
             r.CumApprovedAmount    = cumApproved[r.ProjectId];
+            r.CumSpendRatio        = r.TotalBudget > 0 ? cumApproved[r.ProjectId] / r.TotalBudget : 0;
             r.SpendRatioIfApproved = r.TotalBudget > 0 ? cumWithCurrent / r.TotalBudget : 0;
             r.TimeRatio            = Math.Max(0.01, r.ProjectProgress);
             r.BudgetRiskLabel      = r.SpendRatioIfApproved > r.TimeRatio * RiskThreshold ? 1 : 0;
@@ -571,6 +575,15 @@ public sealed class MlInsightsService : IMlInsightsService
                 double elapsed  = (today - start).TotalDays;
                 double progress = Math.Clamp(elapsed / duration, 0, 2);
 
+                double currentSpendRatio = 0;
+                if (proj.TotalBudget > 0)
+                {
+                    double totalApproved = riskRows
+                        .Where(r => r.ProjectId == proj.ProjectId && r.ApprovedLabel == 1)
+                        .Sum(r => r.RequestedAmount);
+                    currentSpendRatio = totalApproved / proj.TotalBudget;
+                }
+
                 var testRow = new PayRow
                 {
                     ProjectId     = proj.ProjectId,
@@ -581,6 +594,7 @@ public sealed class MlInsightsService : IMlInsightsService
                     RequestMonth  = today.Month,
                     ProjectProgress = progress,
                     RequestsSoFar = perProjectCount.TryGetValue(proj.ProjectId, out int cnt) ? cnt + 1 : 1,
+                    CumSpendRatio = currentSpendRatio,
                 };
                 // zero category dummies
                 foreach (var cat in categories) testRow.Features[CategoryCol(cat)] = 0.0;

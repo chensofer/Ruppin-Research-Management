@@ -50,6 +50,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
+  const [scanError, setScanError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [statusFilter, setStatusFilter] = useState('הכל');
   const [expandedRow, setExpandedRow] = useState(null);
@@ -91,7 +92,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
   const handleScanDocument = async () => {
     if (selectedFiles.length === 0) { setError('יש לבחור קובץ לסריקה תחילה'); return; }
     setScanning(true);
-    setError('');
+    setScanError('');
     try {
       const res = await analyzeDocuments(selectedFiles);
       const d = res.data;
@@ -122,8 +123,8 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
           setShowNewProvider(true);
         }
       }
-    } catch (err) {
-      setError(err.response?.data?.message || 'שגיאה בסריקת המסמך');
+    } catch {
+      setScanError('סריקת המסמך נכשלה');
     } finally {
       setScanning(false);
     }
@@ -191,7 +192,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
     ? payments.length
     : payments.filter((p) => (p.status || 'ממתין') === s).length;
 
-  const closeForm = () => { setShowForm(false); setError(''); setSelectedFiles([]); setShowNewProvider(false); setProviderError(''); };
+  const closeForm = () => { setShowForm(false); setError(''); setScanError(''); setSelectedFiles([]); setShowNewProvider(false); setProviderError(''); };
 
   return (
     <div className="space-y-4">
@@ -329,6 +330,22 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                     {scanning ? 'סורק...' : 'מלא טופס אוטומטית'}
                   </button>
                 </div>
+                {scanError && (
+                  <div className="mb-2 flex items-center gap-2.5 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+                    <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                    <p className="flex-1 text-sm font-semibold text-red-700">{scanError}</p>
+                    <button
+                      type="button"
+                      onClick={handleScanDocument}
+                      disabled={scanning}
+                      className="flex-shrink-0 text-xs font-semibold text-red-700 border border-red-300 bg-white hover:bg-red-50 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      נסה שוב
+                    </button>
+                  </div>
+                )}
                 <input
                   type="file"
                   multiple
