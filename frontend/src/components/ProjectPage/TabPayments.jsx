@@ -50,6 +50,8 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
+  const [emailFailure, setEmailFailure] = useState(null); // { id, message }
+  const [resending, setResending] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [statusFilter, setStatusFilter] = useState('הכל');
   const [expandedRow, setExpandedRow] = useState(null);
@@ -169,14 +171,38 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
       try {
         const notifyRes = await notifyPaymentRequest(newId);
         if (notifyRes?.data?.success === false) {
-          setError('הבקשה נשמרה בהצלחה, אך שליחת המייל למזכירות נכשלה. ניתן לפנות למזכירות ישירות.');
-          setShowForm(true);
+          setEmailFailure({
+            id: newId,
+            message: 'הבקשה נשמרה בהצלחה, אך שליחת המייל למזכירות נכשלה. ניתן לנסות לשלוח שוב או לפנות למזכירות ישירות.',
+          });
         }
-      } catch { /* ignore network errors */ }
+      } catch {
+        setEmailFailure({
+          id: newId,
+          message: 'הבקשה נשמרה בהצלחה, אך לא ניתן היה לאמת ששליחת המייל למזכירות הצליחה. ניתן לנסות לשלוח שוב או לפנות למזכירות ישירות.',
+        });
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'שגיאה בשמירת הבקשה');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    if (!emailFailure) return;
+    setResending(true);
+    try {
+      const notifyRes = await notifyPaymentRequest(emailFailure.id);
+      if (notifyRes?.data?.success === false) {
+        setEmailFailure({ id: emailFailure.id, message: 'שליחת המייל למזכירות נכשלה שוב. ניתן לפנות למזכירות ישירות.' });
+      } else {
+        setEmailFailure(null);
+      }
+    } catch {
+      setEmailFailure({ id: emailFailure.id, message: 'שליחת המייל למזכירות נכשלה שוב. ניתן לפנות למזכירות ישירות.' });
+    } finally {
+      setResending(false);
     }
   };
 
@@ -369,6 +395,24 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                 {saving ? 'שולח...' : 'שליחת בקשה'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email failure banner */}
+      {emailFailure && (
+        <div className="flex items-center justify-between gap-3 flex-wrap bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-lg px-4 py-3">
+          <span>{emailFailure.message}</span>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={handleResendEmail}
+              disabled={resending}
+              className="px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark disabled:opacity-60 transition-colors"
+            >
+              {resending ? 'שולח...' : 'שליחה חוזרת'}
+            </button>
+            <button type="button" onClick={() => setEmailFailure(null)} className="text-amber-500 hover:text-amber-700 px-1">✕</button>
           </div>
         </div>
       )}
