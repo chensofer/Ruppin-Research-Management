@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import ExcelJS from 'exceljs';
 import { addHistorySheet } from '../utils/exportReport';
 import Layout from '../components/Layout';
+import MobileSelect from '../components/MobileSelect';
 import { useAuth } from '../context/AuthContext';
 import { getAuditLogs, getAllAuditLogs } from '../api/auditApi';
 import { getProjects, getAllProjects } from '../api/projectsApi';
@@ -372,17 +373,17 @@ export default function HistoryPage() {
               })}
             </div>
           ) : (
-            <select
-              value={selectedProjectId}
-              onChange={e => setSelectedProjectId(e.target.value)}
-              className="input-field"
-            >
-              {visibleProjects.map(p => (
-                <option key={p.projectId} value={p.projectId}>
-                  {p.projectNameHe || p.projectNameEn || `מחקר #${p.projectId}`}
-                </option>
-              ))}
-            </select>
+            <MobileSelect
+              value={String(selectedProjectId)}
+              onChange={setSelectedProjectId}
+              placeholder=""
+              searchable
+              searchPlaceholder="חיפוש מחקר לפי שם..."
+              options={visibleProjects.map(p => ({
+                value: String(p.projectId),
+                label: p.projectNameHe || p.projectNameEn || `מחקר #${p.projectId}`,
+              }))}
+            />
           )}
         </div>
 

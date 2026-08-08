@@ -8,6 +8,7 @@ import { getCenters } from '../api/centersApi';
 import { getMyNotifications, markAllRead, deleteNotification } from '../api/notificationsApi';
 import { setCachedProjectData, getCachedProjectData } from '../utils/projectsCache';
 import Layout from '../components/Layout';
+import MobileSelect from '../components/MobileSelect';
 import ProjectCard from '../components/ProjectCard';
 import CreateProjectModal from '../components/CreateProjectModal';
 import AlertsModal from '../components/AlertsModal';
@@ -350,25 +351,15 @@ export default function DashboardPage() {
             {/* Center filter + Sort */}
             <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
               {centers.length > 0 && (
-                <div className="relative">
-                  <select
-                    value={centerFilter}
-                    onChange={(e) => setCenterFilter(e.target.value)}
-                    className={`border rounded-xl pr-3 pl-7 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all appearance-none ${
-                      centerFilter ? 'border-primary text-primary font-semibold' : 'border-gray-200 text-gray-600'
-                    }`}
-                    dir="rtl"
-                  >
-                    <option value="">כל המרכזים</option>
-                    {centers.map(c => (
-                      <option key={c.centerId} value={String(c.centerId)}>{c.centerName}</option>
-                    ))}
-                  </select>
-                  <svg className="w-3.5 h-3.5 text-gray-400 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none"
-                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
+                <MobileSelect
+                  value={centerFilter}
+                  onChange={setCenterFilter}
+                  placeholder="כל המרכזים"
+                  options={centers.map((c) => ({ value: String(c.centerId), label: c.centerName }))}
+                  searchable
+                  searchPlaceholder="חיפוש מרכז לפי שם..."
+                  className="min-w-[9rem]"
+                />
               )}
               <span className="text-sm text-gray-400 whitespace-nowrap">מיון:</span>
               <div className="relative">

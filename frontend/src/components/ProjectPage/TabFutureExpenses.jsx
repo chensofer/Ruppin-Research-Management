@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCategories } from '../../api/categoriesApi';
+import CategoryPicker from '../CreateProjectModal/CategoryPicker';
 import HebrewDatePicker from '../HebrewDatePicker';
 import { addCommitment, updateCommitment, deleteCommitment, uploadCommitmentFile } from '../../api/projectsApi';
 import { analyzeDocuments } from '../../api/paymentRequestsApi';
@@ -17,17 +17,11 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY);
-  const [categories, setCategories] = useState([]);
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [error, setError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
-
-  useEffect(() => {
-    if (!showForm) return;
-    getCategories().then((r) => setCategories(r.data)).catch(() => {});
-  }, [showForm]);
 
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
@@ -195,12 +189,11 @@ export default function TabFutureExpenses({ projectId, commitments, availableBal
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-gray-500 mb-1">קטגוריה</label>
-                  <select value={form.categoryName} onChange={set('categoryName')} className={inputCls}>
-                    <option value="">— בחר קטגוריה —</option>
-                    {categories.map((c) => (
-                      <option key={c.categoryName} value={c.categoryName}>{c.categoryName}</option>
-                    ))}
-                  </select>
+                  <CategoryPicker
+                    value={form.categoryName}
+                    onChange={(v) => setForm((f) => ({ ...f, categoryName: v }))}
+                    placeholder="— בחר קטגוריה —"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-500 mb-1">סכום (₪) <span className="text-red-500">*</span></label>

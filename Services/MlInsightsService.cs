@@ -776,17 +776,30 @@ public sealed class MlInsightsService : IMlInsightsService
             for (int j = 0; j < pendingRows.Count; j++)
             {
                 var pr      = pendingRows[j];
-                double proba = approvalProba[j];
                 double exp   = expectedAmounts[j];
                 double actual = pr.RequestedAmount;
                 double ratio  = exp > 0 ? actual / exp : 1.0;
                 bool   amtFlag = ratio >= AmountFlagThreshold;
 
+                // An amount wildly above what's expected for this kind of request is a real
+                // red flag — the raw classifier score doesn't otherwise "see" this comparison
+                // (it only sees a global IQR outlier flag, which is a different, coarser check),
+                // so without this adjustment the two badges could contradict each other
+                // (e.g. "high approval chance" next to "amount is 45x the norm"). The penalty
+                // scales with how extreme the ratio is, so a borderline 1.6x barely moves the
+                // needle while a 45x anomaly crushes the score.
+                double proba = approvalProba[j];
+                double amountPenalty = amtFlag ? Math.Min(0.85, (ratio - AmountFlagThreshold) * 0.1) : 0;
+                proba = Math.Clamp(proba * (1 - amountPenalty), 0.02, 0.98);
+
                 var reasons = new List<string>();
                 if (amtFlag)
+                {
+                    double pctOver = (ratio - 1) * 100;
                     reasons.Add(
-                        $"הסכום המבוקש (₪{actual:N0}) גבוה בכ-{ratio:F1} פעמים מהסכום הצפוי " +
-                        $"לבקשה מסוג זה (₪{exp:N0}), בהתבסס על בקשות דומות מהעבר.");
+                        $"הסכום המבוקש (₪{actual:N0}) גבוה ב-{pctOver:N0}% מהסכום הצפוי " +
+                        $"לבקשה מסוג זה (₪{exp:N0}), בהתבסס על בקשות דומות מהעבר — פער כזה מפחית משמעותית את סיכויי האישור.");
+                }
 
                 if (proba < 0.5)
                 {
@@ -800,6 +813,21 @@ public sealed class MlInsightsService : IMlInsightsService
                         reasons.Add("הבקשה מוגשת בשלב מתקדם יותר בציר הזמן של הפרויקט, בהשוואה לבקשות שאושרו בעבר.");
                     if (reasons.Count == 0)
                         reasons.Add("מאפייני הבקשה (סכום, מועד הגשה, קטגוריה) דומים לבקשות שנדחו בעבר במערכת.");
+                }
+                else
+                {
+                    if (amtFlag)
+                        reasons.Add("למרות שהסכום המבוקש חורג מהצפוי לבקשה מסוג זה, שאר מאפייני הבקשה — תקציב, מועד ושלב הפרויקט — תואמים בקשות שאושרו בעבר, ולכן סיכויי האישור עדיין נותרים גבוהים יחסית.");
+                    else if (pr.IsAmountOutlier == 0)
+                        reasons.Add("הסכום המבוקש עקבי עם בקשות אחרות שאושרו בעבר, ואינו חריג סטטיסטית.");
+                    if (pr.AmountToBudgetRatio <= meanApprovedRatio * 1.5)
+                        reasons.Add("הבקשה מהווה אחוז סביר מהתקציב הכולל של הפרויקט, בדומה לבקשות שאושרו בעבר.");
+                    if (pr.DaysToDue >= meanApprovedDays * 0.5)
+                        reasons.Add("מועד היעד לתשלום סביר ואינו קרוב באופן חריג, בדומה לבקשות שאושרו בעבר.");
+                    if (pr.ProjectProgress <= meanApprovedProgress + 0.3)
+                        reasons.Add("הבקשה מוגשת בשלב תואם בציר הזמן של הפרויקט, בדומה לבקשות שאושרו בעבר.");
+                    if (reasons.Count == 0)
+                        reasons.Add("מאפייני הבקשה (סכום, מועד הגשה, קטגוריה) דומים לבקשות שאושרו בעבר במערכת.");
                 }
 
                 pendingInsights[pr.RequestId.ToString()] = new

@@ -238,6 +238,8 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                     onChange={(v) => setForm((f) => ({ ...f, categoryName: v }))}
                     placeholder="— בחר קטגורית הוצאה —"
                     options={categories.map((c) => ({ value: c.categoryName, label: c.categoryName }))}
+                    searchable
+                    searchPlaceholder="חיפוש קטגוריה לפי שם..."
                   />
                 </div>
 
@@ -297,6 +299,8 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                         placeholder="— ללא ספק —"
                         options={providers.map((p) => ({ value: String(p.providerId), label: p.providerName }))}
                         className="flex-1"
+                        searchable
+                        searchPlaceholder="חיפוש ספק לפי שם..."
                       />
                       <button type="button" onClick={() => setShowNewProvider(true)}
                         className="text-sm text-primary hover:text-primary-dark whitespace-nowrap px-2 py-2">+ ספק חדש</button>
