@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { getCategories } from '../../api/categoriesApi';
 import HebrewDatePicker from '../HebrewDatePicker';
 import { getProviders, createProvider } from '../../api/providersApi';
@@ -50,6 +50,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
+  const [scanError, setScanError] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [statusFilter, setStatusFilter] = useState('הכל');
   const [expandedRow, setExpandedRow] = useState(null);
@@ -91,7 +92,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
   const handleScanDocument = async () => {
     if (selectedFiles.length === 0) { setError('יש לבחור קובץ לסריקה תחילה'); return; }
     setScanning(true);
-    setError('');
+    setScanError('');
     try {
       const res = await analyzeDocuments(selectedFiles);
       const d = res.data;
@@ -123,7 +124,8 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
         }
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'שגיאה בסריקת המסמך');
+      const msg = err?.response?.data?.message;
+      setScanError(msg && msg.length < 80 && !msg.startsWith('{') ? msg : 'סריקת המסמך נכשלה');
     } finally {
       setScanning(false);
     }
@@ -191,7 +193,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
     ? payments.length
     : payments.filter((p) => (p.status || 'ממתין') === s).length;
 
-  const closeForm = () => { setShowForm(false); setError(''); setSelectedFiles([]); setShowNewProvider(false); setProviderError(''); };
+  const closeForm = () => { setShowForm(false); setError(''); setScanError(''); setSelectedFiles([]); setShowNewProvider(false); setProviderError(''); };
 
   return (
     <div className="space-y-4">
@@ -215,7 +217,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col" dir="rtl">
 
             {/* Header */}
-            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-5 pb-3 sm:pb-4 border-b border-gray-100">
               <h2 className="text-base font-bold text-gray-900">בקשת תשלום חדשה</h2>
               <button onClick={closeForm} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,8 +227,8 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
             </div>
 
             {/* Body */}
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-              {error && <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
+              {error && <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error.length > 120 || error.startsWith('{') || error.startsWith('Gemini') ? 'סריקת המסמך נכשלה' : error}</p>}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -329,6 +331,22 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                     {scanning ? 'סורק...' : 'מלא טופס אוטומטית'}
                   </button>
                 </div>
+                {scanError && (
+                  <div className="mb-2 flex items-center gap-2.5 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+                    <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                    <p className="flex-1 text-sm font-semibold text-red-700">{scanError}</p>
+                    <button
+                      type="button"
+                      onClick={handleScanDocument}
+                      disabled={scanning}
+                      className="flex-shrink-0 text-xs font-semibold text-red-700 border border-red-300 bg-white hover:bg-red-50 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      נסה שוב
+                    </button>
+                  </div>
+                )}
                 <input
                   type="file"
                   multiple
@@ -358,7 +376,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50/60 rounded-b-2xl">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50/60 rounded-b-2xl">
               <button type="button" onClick={closeForm}
                 className="px-5 py-2 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">
                 ביטול
@@ -416,9 +434,8 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredPayments.map((p) => (
-                  <>
+                  <Fragment key={p.paymentRequestId}>
                     <tr
-                      key={p.paymentRequestId}
                       className="hover:bg-gray-50 transition-colors cursor-pointer"
                       onClick={() => setExpandedRow(expandedRow === p.paymentRequestId ? null : p.paymentRequestId)}
                     >
@@ -453,7 +470,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                       <td className="px-3 sm:px-5 py-3.5"><StatusBadge status={p.status} /></td>
                     </tr>
                     {expandedRow === p.paymentRequestId && (
-                      <tr key={`${p.paymentRequestId}-expanded`} className="bg-blue-50/40">
+                      <tr className="bg-blue-50/40">
                         <td colSpan={6} className="px-8 py-4">
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                             <div>
@@ -509,7 +526,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>

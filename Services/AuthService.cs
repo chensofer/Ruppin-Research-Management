@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using RupResearchAPI.Data;
 using RupResearchAPI.DTOs;
@@ -13,11 +14,15 @@ namespace RupResearchAPI.Services
     {
         private readonly AppDbContext _db;
         private readonly IConfiguration _config;
+        private readonly IMemoryCache _cache;
+        private readonly IEmailService _email;
 
-        public AuthService(AppDbContext db, IConfiguration config)
+        public AuthService(AppDbContext db, IConfiguration config, IMemoryCache cache, IEmailService email)
         {
             _db = db;
             _config = config;
+            _cache = cache;
+            _email = email;
         }
 
         public async Task<AuthResponseDto> Register(RegisterDto dto)
@@ -69,6 +74,36 @@ namespace RupResearchAPI.Services
                 LastName = user.LastName?.Trim(),
                 SystemAuthorization = user.SystemAuthorization?.Trim()
             };
+        }
+
+        public async Task ForgotPassword(string userId)
+        {
+            var user = await _db.ResearchUsers.FirstOrDefaultAsync(u => u.UserId == userId.Trim());
+            if (user == null || string.IsNullOrWhiteSpace(user.Email))
+                throw new InvalidOperationException("לא נמצא משתמש עם מזהה זה, או שאין כתובת מייל מוגדרת בחשבון.");
+
+            var token = Guid.NewGuid().ToString("N");
+            _cache.Set($"pwd_reset_{token}", user.UserId.Trim(), TimeSpan.FromHours(1));
+
+            var siteUrl = _config["Email:SiteUrl"] ?? "";
+            var resetLink = $"{siteUrl}/reset-password?token={token}";
+            var name = $"{user.FirstName?.Trim()} {user.LastName?.Trim()}".Trim();
+
+            await _email.SendPasswordResetEmailAsync(user.Email, name, resetLink);
+        }
+
+        public async Task ResetPassword(string token, string newPassword)
+        {
+            if (!_cache.TryGetValue($"pwd_reset_{token}", out string? userId) || userId == null)
+                throw new InvalidOperationException("הקישור לאיפוס סיסמה אינו תקף או שפג תוקפו.");
+
+            var user = await _db.ResearchUsers.FirstOrDefaultAsync(u => u.UserId == userId);
+            if (user == null)
+                throw new InvalidOperationException("משתמש לא נמצא.");
+
+            user.Password = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            await _db.SaveChangesAsync();
+            _cache.Remove($"pwd_reset_{token}");
         }
 
         private string GenerateJwtToken(ResearchUser user)

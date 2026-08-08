@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { fileUrl } from '../../utils/fileUrl';
 import ExcelJS from 'exceljs';
 import HebrewDatePicker from '../HebrewDatePicker';
@@ -309,9 +309,8 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
             </thead>
             <tbody className="divide-y divide-gray-100">
               {rows.map((r) => (
-                <>
+                <Fragment key={r.paymentRequestId}>
                   <tr
-                    key={r.paymentRequestId}
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
                     onClick={() =>
                       setExpandedRow(expandedRow === r.paymentRequestId ? null : r.paymentRequestId)
@@ -345,10 +344,8 @@ export default function TabTransactions({ payments, totalBudget, projectName }) 
                       {r.balance == null ? '—' : fmt(r.balance)}
                     </td>
                   </tr>
-                  {expandedRow === r.paymentRequestId && (
-                    <ExpandedDetails key={`${r.paymentRequestId}-exp`} row={r} />
-                  )}
-                </>
+                  {expandedRow === r.paymentRequestId && <ExpandedDetails row={r} />}
+                </Fragment>
               ))}
             </tbody>
           </table>

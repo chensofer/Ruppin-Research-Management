@@ -326,5 +326,48 @@ namespace RupResearchAPI.Services
                 $"💸 בקשת העברת תקציב — {requesterName} מבקש/ת ₪{amount:N0} ממחקר \"{giverProjectName}\"",
                 html);
         }
+
+        public async Task SendPasswordResetEmailAsync(string toEmail, string userName, string resetLink)
+        {
+            var html = $@"<!DOCTYPE html>
+<html dir='rtl' lang='he'>
+<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'></head>
+<body style='margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;'>
+<table width='100%' cellpadding='0' cellspacing='0' style='background:#f1f5f9;padding:32px 16px;'>
+<tr><td align='center'>
+<table width='520' cellpadding='0' cellspacing='0' style='max-width:520px;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);'>
+
+  <tr><td style='background:linear-gradient(135deg,#003478 0%,#1B4080 100%);padding:32px 28px;text-align:center;'>
+    <p style='color:#93c5fd;font-size:12px;margin:0 0 8px;letter-spacing:2px;font-weight:bold;'>RUPRESEARCH · מערכת ניהול מחקרים</p>
+    <h1 style='color:white;margin:0;font-size:22px;font-weight:bold;'>🔐 איפוס סיסמה</h1>
+  </td></tr>
+
+  <tr><td style='background:white;padding:32px 28px;text-align:right;' dir='rtl'>
+    <p style='color:#1e293b;font-size:15px;margin:0 0 12px;'>שלום {userName},</p>
+    <p style='color:#475569;font-size:14px;line-height:1.7;margin:0 0 24px;'>
+      קיבלנו בקשה לאיפוס הסיסמה שלך במערכת ניהול המחקרים.<br/>
+      לחץ/י על הכפתור למטה להגדרת סיסמה חדשה.
+    </p>
+    <div style='text-align:center;margin:28px 0;'>
+      <a href='{resetLink}' style='display:inline-block;background:#003478;color:white;padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:bold;font-size:15px;'>איפוס סיסמה</a>
+    </div>
+    <p style='color:#94a3b8;font-size:12px;margin:0;line-height:1.6;'>
+      הקישור בתוקף למשך שעה אחת.<br/>
+      אם לא ביקשת איפוס סיסמה — ניתן להתעלם ממייל זה.
+    </p>
+  </td></tr>
+
+  <tr><td style='background:#1e293b;padding:14px 28px;text-align:center;'>
+    <p style='color:#64748b;font-size:11px;margin:0;'>מערכת ניהול מחקרים · המכללה האקדמית רופין</p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>";
+
+            await SendAsync(toEmail, "🔐 איפוס סיסמה — מערכת RupResearch", html);
+        }
     }
 }

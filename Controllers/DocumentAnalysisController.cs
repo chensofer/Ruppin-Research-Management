@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using PDFtoImage;
+using SkiaSharp;
 
 namespace RupResearchAPI.Controllers
 {
@@ -52,32 +54,40 @@ namespace RupResearchAPI.Controllers
                 if (file.Length == 0) continue;
 
                 var mime = file.ContentType?.ToLower() ?? "";
-                // Fall back to extension when MIME is missing or generic
                 if (string.IsNullOrEmpty(mime) || mime is "application/octet-stream" or "application/unknown")
                 {
                     var ext = Path.GetExtension(file.FileName);
                     mime = extMimeMap.GetValueOrDefault(ext, mime);
                 }
 
-                // Resolve Gemini-compatible MIME (supports PDF and common image types)
-                string? geminiMime = null;
-                if (mime.Contains("pdf"))         geminiMime = "application/pdf";
-                else if (mime.Contains("png"))    geminiMime = "image/png";
-                else if (mime.Contains("webp"))   geminiMime = "image/webp";
-                else if (mime.Contains("gif"))    geminiMime = "image/gif";
-                else if (mime.Contains("bmp") || mime.Contains("tiff"))
-                    geminiMime = "image/jpeg"; // convert BMP/TIFF via re-encode not needed — Gemini treats as JPEG
-                else if (mime.Contains("jpeg") || mime.Contains("jpg"))
-                    geminiMime = "image/jpeg";
-
-                if (geminiMime == null) continue; // unsupported type — skip
-
                 using var ms = new MemoryStream();
                 await file.CopyToAsync(ms);
-                var b64 = Convert.ToBase64String(ms.ToArray());
-                var mimeType = geminiMime;
 
-                parts.Add(new { inlineData = new { mimeType, data = b64 } });
+                if (mime.Contains("pdf"))
+                {
+                    // Convert each PDF page to a JPEG image so Gemini can do visual OCR
+                    ms.Position = 0;
+                    var pageImages = Conversion.ToImages(ms, options: new RenderOptions(Dpi: 150));
+                    foreach (var bitmap in pageImages)
+                    {
+                        using var imgMs = new MemoryStream();
+                        bitmap.Encode(imgMs, SKEncodedImageFormat.Jpeg, 90);
+                        parts.Add(new { inlineData = new { mimeType = "image/jpeg", data = Convert.ToBase64String(imgMs.ToArray()) } });
+                        bitmap.Dispose();
+                    }
+                }
+                else
+                {
+                    string? geminiMime = null;
+                    if (mime.Contains("png"))                          geminiMime = "image/png";
+                    else if (mime.Contains("webp"))                    geminiMime = "image/webp";
+                    else if (mime.Contains("gif"))                     geminiMime = "image/gif";
+                    else if (mime.Contains("jpeg") || mime.Contains("jpg") ||
+                             mime.Contains("bmp")  || mime.Contains("tiff")) geminiMime = "image/jpeg";
+
+                    if (geminiMime == null) continue;
+                    parts.Add(new { inlineData = new { mimeType = geminiMime, data = Convert.ToBase64String(ms.ToArray()) } });
+                }
             }
 
             if (parts.Count == 0)
@@ -89,6 +99,7 @@ namespace RupResearchAPI.Controllers
                 text = @"IMPORTANT: Output ONLY a valid JSON object. No markdown, no explanation, no code fences.
 
 Read the attached document(s) or image(s) (invoices, receipts, quotes, photos of receipts, etc.) and extract the following fields.
+IMPORTANT: If the document text appears garbled, encoded, or unreadable — ignore the text layer entirely and use visual OCR to read what is displayed on the page. Many Israeli PDFs use custom font encoding that appears as gibberish; always prefer the visual content.
 Return EXACTLY this JSON structure and nothing else:
 {
   ""requestTitle"": ""short title describing what was purchased or the service"",
@@ -118,25 +129,48 @@ Rules:
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={apiKey}";
 
             var json = JsonSerializer.Serialize(requestBody);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await client.PostAsync(url, content);
+
+            // Retry up to 3 times on 503 (service overload)
+            HttpResponseMessage response = null!;
+            int[] retryDelaysMs = [1500, 3000];
+            for (int attempt = 0; attempt <= retryDelaysMs.Length; attempt++)
+            {
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                response = await client.PostAsync(url, content);
+                if (response.IsSuccessStatusCode) break;
+
+                var statusCode = (int)response.StatusCode;
+                if ((statusCode == 503 || statusCode == 429) && attempt < retryDelaysMs.Length)
+                {
+                    await Task.Delay(retryDelaysMs[attempt]);
+                    continue;
+                }
+                break;
+            }
 
             if (!response.IsSuccessStatusCode)
             {
-                var err = await response.Content.ReadAsStringAsync();
-                return StatusCode(502, new { message = $"שגיאה מ-Gemini: {err}" });
+                return StatusCode(502, new { message = "סריקת המסמך נכשלה" });
             }
 
             var raw = await response.Content.ReadAsStringAsync();
 
-            // Extract the text from Gemini response
+            // Extract the text from Gemini response (safely — structure may vary on safety blocks)
             using var doc = JsonDocument.Parse(raw);
-            var text = doc.RootElement
-                .GetProperty("candidates")[0]
-                .GetProperty("content")
-                .GetProperty("parts")[0]
-                .GetProperty("text")
-                .GetString() ?? "";
+            var rootEl = doc.RootElement;
+            string text = "";
+            if (rootEl.TryGetProperty("candidates", out var candidatesEl) &&
+                candidatesEl.GetArrayLength() > 0 &&
+                candidatesEl[0].TryGetProperty("content", out var contentEl) &&
+                contentEl.TryGetProperty("parts", out var partsEl) &&
+                partsEl.GetArrayLength() > 0 &&
+                partsEl[0].TryGetProperty("text", out var textEl))
+            {
+                text = textEl.GetString() ?? "";
+            }
+
+            if (string.IsNullOrWhiteSpace(text))
+                return Ok(new { requestTitle = (string?)null, requestedAmount = (decimal?)null, requestDescription = (string?)null, providerName = (string?)null, categoryName = (string?)null, invoiceNumber = (string?)null });
 
             // Strip any markdown fencing (```json ... ```) that Gemini sometimes adds
             text = System.Text.RegularExpressions.Regex.Replace(text, @"```[a-zA-Z]*", "").Trim();

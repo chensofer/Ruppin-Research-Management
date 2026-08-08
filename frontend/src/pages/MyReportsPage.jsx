@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getMySubmissions, getHourReports } from '../api/hourReportsApi';
+import { getMySubmissions, getHourReports, getAssistantProjects } from '../api/hourReportsApi';
 import Layout from '../components/Layout';
 import ExcelJS from 'exceljs';
 
@@ -239,6 +239,7 @@ export default function MyReportsPage() {
   const navigate = useNavigate();
 
   const [submissions, setSubmissions] = useState([]);
+  const [assignedProjects, setAssignedProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [projectFilter, setProjectFilter] = useState('all');
@@ -248,20 +249,23 @@ export default function MyReportsPage() {
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    getMySubmissions(user.userId)
-      .then((r) => setSubmissions(r.data ?? []))
-      .catch(() => setSubmissions([]))
+    Promise.all([
+      getMySubmissions(user.userId),
+      getAssistantProjects(user.userId),
+    ])
+      .then(([subRes, projRes]) => {
+        setSubmissions(subRes.data ?? []);
+        setAssignedProjects(projRes.data ?? []);
+      })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, [user]);
 
-  // Unique projects from submissions
-  const projects = Object.values(
-    submissions.reduce((acc, s) => {
-      const key = s.projectId ?? 0;
-      if (!acc[key]) acc[key] = { projectId: key, name: s.projectNameHe || `מחקר ${key}` };
-      return acc;
-    }, {})
-  );
+  // Project dropdown shows only the assistant's assigned projects
+  const projects = assignedProjects.map((p) => ({
+    projectId: p.projectId,
+    name: p.projectNameHe || p.projectNameEn || `מחקר ${p.projectId}`,
+  }));
 
   const filtered = submissions.filter((s) => {
     const matchStatus  = statusFilter === 'all' || s.approvalStatus === statusFilter;
