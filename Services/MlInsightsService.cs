@@ -15,7 +15,7 @@ public sealed class MlInsightsService : IMlInsightsService
     public MlInsightsService(AppDbContext db) => _db = db;
 
     // ── Constants (matching Python) ──────────────────────────────────────
-    private const double RiskThreshold = 1.2;
+    private const double RiskThreshold = 1.05;
     private const double AmountFlagThreshold = 1.5;
     private const string UnknownCategory = "לא ידוע";
 
@@ -27,7 +27,7 @@ public sealed class MlInsightsService : IMlInsightsService
     [
         "log_amount", "total_budget", "days_to_due", "has_due_date",
         "request_month", "project_progress_at_request", "requests_so_far",
-        "cum_spend_ratio",
+        "cum_spend_ratio", "spend_pace",
     ];
     private static readonly string[] ApprovalNumeric =
     [
@@ -77,6 +77,7 @@ public sealed class MlInsightsService : IMlInsightsService
         // Risk-specific
         public double CumApprovedAmount;  // running cumulative approved
         public double CumSpendRatio;      // CumApprovedAmount / TotalBudget at request time
+        public double SpendPace;          // CumSpendRatio / max(ProjectProgress, 0.01)
         public double SpendRatioIfApproved;
         public double TimeRatio;
         public int    RequestsSoFar;
@@ -408,6 +409,7 @@ public sealed class MlInsightsService : IMlInsightsService
                 "is_amount_outlier"            => r.IsAmountOutlier,
                 "requests_so_far"              => r.RequestsSoFar,
                 "cum_spend_ratio"              => r.CumSpendRatio,
+                "spend_pace"                   => r.SpendPace,
                 _ => r.Features.TryGetValue(colNames[i], out double val) ? val : 0.0,
             };
         }
@@ -532,6 +534,7 @@ public sealed class MlInsightsService : IMlInsightsService
             r.CumSpendRatio        = r.TotalBudget > 0 ? cumApproved[r.ProjectId] / r.TotalBudget : 0;
             r.SpendRatioIfApproved = r.TotalBudget > 0 ? cumWithCurrent / r.TotalBudget : 0;
             r.TimeRatio            = Math.Max(0.01, r.ProjectProgress);
+            r.SpendPace            = r.CumSpendRatio / r.TimeRatio;
             r.BudgetRiskLabel      = r.SpendRatioIfApproved > r.TimeRatio * RiskThreshold ? 1 : 0;
 
             if (r.ApprovedLabel == 1) cumApproved[r.ProjectId] += r.RequestedAmount;
@@ -556,6 +559,9 @@ public sealed class MlInsightsService : IMlInsightsService
         int[] riskNumIdx = RiskNumeric.Select(n => Array.IndexOf(riskCols, n)).ToArray();
         var riskScaler = new Scaler(riskX, riskNumIdx);
         var riskXScaled = riskScaler.ApplyAll(riskX, riskNumIdx);
+
+        // Per-project spend state for floor computation
+        var projSpendState = new Dictionary<int, (double spendRatio, double progress)>();
 
         Dictionary<int, double> riskScores = new();
         if (riskXScaled.Length >= 2 && riskY.Contains(0) && riskY.Contains(1))
@@ -584,6 +590,8 @@ public sealed class MlInsightsService : IMlInsightsService
                     currentSpendRatio = totalApproved / proj.TotalBudget;
                 }
 
+                projSpendState[proj.ProjectId] = (currentSpendRatio, progress);
+
                 var testRow = new PayRow
                 {
                     ProjectId     = proj.ProjectId,
@@ -595,6 +603,7 @@ public sealed class MlInsightsService : IMlInsightsService
                     ProjectProgress = progress,
                     RequestsSoFar = perProjectCount.TryGetValue(proj.ProjectId, out int cnt) ? cnt + 1 : 1,
                     CumSpendRatio = currentSpendRatio,
+                    SpendPace     = currentSpendRatio / Math.Max(progress, 0.01),
                 };
                 // zero category dummies
                 foreach (var cat in categories) testRow.Features[CategoryCol(cat)] = 0.0;
@@ -611,6 +620,22 @@ public sealed class MlInsightsService : IMlInsightsService
                 for (int i = 0; i < projectTestVectors.Count; i++)
                     riskScores[projectTestVectors[i].projId] = proba[i];
             }
+        }
+
+        // Apply spend-pace floor: if a project is spending faster than time allows,
+        // ensure the risk score reflects it (ML may underestimate with limited training data)
+        foreach (var proj in rawProj)
+        {
+            if (!projSpendState.TryGetValue(proj.ProjectId, out var state)) continue;
+            double spendRatio = state.spendRatio;
+            double prog       = Math.Max(state.progress, 0.01);
+            double spendPace  = spendRatio / prog;
+            if (spendPace <= RiskThreshold) continue; // within acceptable pace
+
+            // pace-based risk: 0.5 at threshold, approaches 0.95 as pace → 3x
+            double paceRisk = Math.Min(0.95, (spendPace - RiskThreshold) * 0.35 + 0.50);
+            double current  = riskScores.TryGetValue(proj.ProjectId, out double s) ? s : 0.0;
+            riskScores[proj.ProjectId] = Math.Max(current, paceRisk);
         }
 
         // 8. Clustering on project features (project_clustering) ──────

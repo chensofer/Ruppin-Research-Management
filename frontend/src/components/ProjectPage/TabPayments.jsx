@@ -123,8 +123,9 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
           setShowNewProvider(true);
         }
       }
-    } catch {
-      setScanError('סריקת המסמך נכשלה');
+    } catch (err) {
+      const msg = err?.response?.data?.message;
+      setScanError(msg && msg.length < 80 && !msg.startsWith('{') ? msg : 'סריקת המסמך נכשלה');
     } finally {
       setScanning(false);
     }
@@ -227,7 +228,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
-              {error && <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
+              {error && <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error.length > 120 || error.startsWith('{') || error.startsWith('Gemini') ? 'סריקת המסמך נכשלה' : error}</p>}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
