@@ -7,10 +7,12 @@ namespace RupResearchAPI.Services
     public class EmailService : IEmailService
     {
         private readonly IConfiguration _config;
+        private readonly ILogger<EmailService> _logger;
 
-        public EmailService(IConfiguration config)
+        public EmailService(IConfiguration config, ILogger<EmailService> logger)
         {
             _config = config;
+            _logger = logger;
         }
 
         private (string host, int port, string user, string pass, string fromName, string toEmail, string siteUrl) ReadConfig()
@@ -29,38 +31,55 @@ namespace RupResearchAPI.Services
         {
             var (host, port, user, pass, fromName, _, _) = ReadConfig();
 
-            Console.WriteLine($"[EMAIL] Connecting to {host}:{port} as {user} → {toEmail}");
-
-            var message = new MimeMessage();
-            message.From.Add(new MailboxAddress(fromName, user));
-            message.To.Add(new MailboxAddress("", toEmail));
-            message.Subject = subject;
-
-            var builder = new BodyBuilder { HtmlBody = htmlBody };
-            if (attachmentPaths != null)
+            if (string.IsNullOrWhiteSpace(toEmail))
             {
-                foreach (var path in attachmentPaths.Where(File.Exists))
+                _logger.LogError("שליחת מייל בוטלה: לא הוגדרה כתובת יעד (בדקו את המפתח Email:SecretariatEmail בהגדרות).");
+                throw new InvalidOperationException("כתובת המייל של המזכירות אינה מוגדרת במערכת.");
+            }
+
+            const int maxAttempts = 2;
+            Exception? lastError = null;
+
+            for (var attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                try
                 {
-                    builder.Attachments.Add(path);
-                    Console.WriteLine($"[EMAIL] Attaching: {Path.GetFileName(path)}");
+                    var message = new MimeMessage();
+                    message.From.Add(new MailboxAddress(fromName, user));
+                    message.To.Add(new MailboxAddress("", toEmail));
+                    message.Subject = subject;
+
+                    var builder = new BodyBuilder { HtmlBody = htmlBody };
+                    if (attachmentPaths != null)
+                    {
+                        foreach (var path in attachmentPaths.Where(File.Exists))
+                            builder.Attachments.Add(path);
+                    }
+                    message.Body = builder.ToMessageBody();
+
+                    using var client = new SmtpClient();
+                    await client.ConnectAsync(host, port, SecureSocketOptions.StartTls);
+                    await client.AuthenticateAsync(user, pass);
+                    await client.SendAsync(message);
+                    await client.DisconnectAsync(true);
+
+                    _logger.LogInformation(
+                        "מייל נשלח בהצלחה אל {ToEmail} (ניסיון {Attempt}/{MaxAttempts}) — נושא: {Subject}",
+                        toEmail, attempt, maxAttempts, subject);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex;
+                    _logger.LogError(ex,
+                        "שליחת מייל אל {ToEmail} נכשלה בניסיון {Attempt}/{MaxAttempts} דרך {Host}:{Port}. סוג שגיאה: {ExceptionType}",
+                        toEmail, attempt, maxAttempts, host, port, ex.GetType().Name);
+                    if (attempt < maxAttempts)
+                        await Task.Delay(1500);
                 }
             }
-            message.Body = builder.ToMessageBody();
 
-            using var client = new SmtpClient();
-            try
-            {
-                await client.ConnectAsync(host, port, SecureSocketOptions.StartTls);
-                await client.AuthenticateAsync(user, pass);
-                await client.SendAsync(message);
-                await client.DisconnectAsync(true);
-                Console.WriteLine($"[EMAIL] Sent successfully to {toEmail}");
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[EMAIL ERROR] {ex.GetType().Name}: {ex.Message}");
-                throw new Exception($"שגיאה בשליחת מייל: {ex.Message}", ex);
-            }
+            throw new Exception($"שגיאה בשליחת מייל: {lastError?.Message}", lastError);
         }
 
         public async Task SendPaymentRequestEmailAsync(
