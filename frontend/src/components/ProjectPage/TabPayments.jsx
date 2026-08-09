@@ -50,6 +50,9 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
+  const [scanError, setScanError] = useState('');
+  const [emailFailure, setEmailFailure] = useState(null);
+  const [resending, setResending] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [statusFilter, setStatusFilter] = useState('הכל');
   const [expandedRow, setExpandedRow] = useState(null);
@@ -91,7 +94,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
   const handleScanDocument = async () => {
     if (selectedFiles.length === 0) { setError('יש לבחור קובץ לסריקה תחילה'); return; }
     setScanning(true);
-    setError('');
+    setScanError('');
     try {
       const res = await analyzeDocuments(selectedFiles);
       const d = res.data;
@@ -123,7 +126,8 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
         }
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'שגיאה בסריקת המסמך');
+      const msg = err?.response?.data?.message;
+      setScanError(msg && msg.length < 80 && !msg.startsWith('{') ? msg : 'סריקת המסמך נכשלה');
     } finally {
       setScanning(false);
     }
@@ -169,14 +173,38 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
       try {
         const notifyRes = await notifyPaymentRequest(newId);
         if (notifyRes?.data?.success === false) {
-          setError('הבקשה נשמרה בהצלחה, אך שליחת המייל למזכירות נכשלה. ניתן לפנות למזכירות ישירות.');
-          setShowForm(true);
+          setEmailFailure({
+            id: newId,
+            message: 'הבקשה נשמרה בהצלחה, אך שליחת המייל למזכירות נכשלה. ניתן לנסות לשלוח שוב או לפנות למזכירות ישירות.',
+          });
         }
-      } catch { /* ignore network errors */ }
+      } catch {
+        setEmailFailure({
+          id: newId,
+          message: 'הבקשה נשמרה בהצלחה, אך לא ניתן היה לאמת ששליחת המייל למזכירות הצליחה. ניתן לנסות לשלוח שוב או לפנות למזכירות ישירות.',
+        });
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'שגיאה בשמירת הבקשה');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    if (!emailFailure) return;
+    setResending(true);
+    try {
+      const notifyRes = await notifyPaymentRequest(emailFailure.id);
+      if (notifyRes?.data?.success === false) {
+        setEmailFailure({ id: emailFailure.id, message: 'שליחת המייל למזכירות נכשלה שוב. ניתן לפנות למזכירות ישירות.' });
+      } else {
+        setEmailFailure(null);
+      }
+    } catch {
+      setEmailFailure({ id: emailFailure.id, message: 'שליחת המייל למזכירות נכשלה שוב. ניתן לפנות למזכירות ישירות.' });
+    } finally {
+      setResending(false);
     }
   };
 
@@ -191,7 +219,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
     ? payments.length
     : payments.filter((p) => (p.status || 'ממתין') === s).length;
 
-  const closeForm = () => { setShowForm(false); setError(''); setSelectedFiles([]); setShowNewProvider(false); setProviderError(''); };
+  const closeForm = () => { setShowForm(false); setError(''); setScanError(''); setSelectedFiles([]); setShowNewProvider(false); setProviderError(''); };
 
   return (
     <div className="space-y-4">
@@ -226,7 +254,7 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
-              {error && <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
+              {error && <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error.length > 120 || error.startsWith('{') || error.startsWith('Gemini') ? 'סריקת המסמך נכשלה' : error}</p>}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -236,6 +264,8 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                     onChange={(v) => setForm((f) => ({ ...f, categoryName: v }))}
                     placeholder="— בחר קטגורית הוצאה —"
                     options={categories.map((c) => ({ value: c.categoryName, label: c.categoryName }))}
+                    searchable
+                    searchPlaceholder="חיפוש קטגוריה לפי שם..."
                   />
                 </div>
 
@@ -295,6 +325,8 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                         placeholder="— ללא ספק —"
                         options={providers.map((p) => ({ value: String(p.providerId), label: p.providerName }))}
                         className="flex-1"
+                        searchable
+                        searchPlaceholder="חיפוש ספק לפי שם..."
                       />
                       <button type="button" onClick={() => setShowNewProvider(true)}
                         className="text-sm text-primary hover:text-primary-dark whitespace-nowrap px-2 py-2">+ ספק חדש</button>
@@ -329,6 +361,22 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                     {scanning ? 'סורק...' : 'מלא טופס אוטומטית'}
                   </button>
                 </div>
+                {scanError && (
+                  <div className="mb-2 flex items-center gap-2.5 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+                    <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                    <p className="flex-1 text-sm font-semibold text-red-700">{scanError}</p>
+                    <button
+                      type="button"
+                      onClick={handleScanDocument}
+                      disabled={scanning}
+                      className="flex-shrink-0 text-xs font-semibold text-red-700 border border-red-300 bg-white hover:bg-red-50 px-2.5 py-1 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      נסה שוב
+                    </button>
+                  </div>
+                )}
                 <input
                   type="file"
                   multiple
@@ -369,6 +417,24 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                 {saving ? 'שולח...' : 'שליחת בקשה'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email failure banner */}
+      {emailFailure && (
+        <div className="flex items-center justify-between gap-3 flex-wrap bg-amber-50 border border-amber-200 text-amber-700 text-sm rounded-lg px-4 py-3">
+          <span>{emailFailure.message}</span>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={handleResendEmail}
+              disabled={resending}
+              className="px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark disabled:opacity-60 transition-colors"
+            >
+              {resending ? 'שולח...' : 'שליחה חוזרת'}
+            </button>
+            <button type="button" onClick={() => setEmailFailure(null)} className="text-amber-500 hover:text-amber-700 px-1">✕</button>
           </div>
         </div>
       )}

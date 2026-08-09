@@ -287,22 +287,31 @@ function PerformanceBadge({ score, project }) {
 
 function RiskBadge({ riskInsight }) {
   if (!riskInsight || riskInsight.risk_score == null) return null;
-  const pct = Math.round(riskInsight.risk_score * 100);
-  const atRisk = riskInsight.risk_label === 'בסיכון';
+  const score = riskInsight.risk_score;
+  const pct = Math.round(score * 100);
+
+  // Backend only flags binary "בסיכון" at score >= 0.5 (kept as-is elsewhere, e.g.
+  // cluster danger counts) — this splits the "not officially at risk" range into
+  // low/medium for a more informative badge, without changing that cutoff.
+  const tier =
+    score >= 0.5 ? 'high' : score >= 0.25 ? 'medium' : 'low';
+
+  const styles = {
+    low:    'bg-gray-50 text-gray-500 border-gray-100',
+    medium: 'bg-amber-50 text-amber-700 border-amber-200',
+    high:   'bg-orange-50 text-orange-700 border-orange-200',
+  };
+  const labels = { low: 'נמוכה', medium: 'בינונית', high: 'גבוהה' };
 
   return (
     <div
       title="הערכה המבוססת על קצב ניצול התקציב, הזמן שנותר, התחייבויות ובקשות תשלום פתוחות."
-      className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold cursor-default ${
-        atRisk
-          ? 'bg-orange-50 text-orange-700 border-orange-200'
-          : 'bg-gray-50 text-gray-500 border-gray-100'
-      }`}
+      className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold cursor-default ${styles[tier]}`}
     >
       <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
       </svg>
-      <span>רמת סיכון תקציבי חזויה: {atRisk ? 'גבוהה' : 'נמוכה'} — {pct}%</span>
+      <span>רמת סיכון תקציבי חזויה: {labels[tier]} — {pct}%</span>
     </div>
   );
 }

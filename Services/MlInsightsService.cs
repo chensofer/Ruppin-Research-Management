@@ -15,7 +15,7 @@ public sealed class MlInsightsService : IMlInsightsService
     public MlInsightsService(AppDbContext db) => _db = db;
 
     // ── Constants (matching Python) ──────────────────────────────────────
-    private const double RiskThreshold = 1.2;
+    private const double RiskThreshold = 1.05;
     private const double AmountFlagThreshold = 1.5;
     private const string UnknownCategory = "לא ידוע";
 
@@ -27,6 +27,7 @@ public sealed class MlInsightsService : IMlInsightsService
     [
         "log_amount", "total_budget", "days_to_due", "has_due_date",
         "request_month", "project_progress_at_request", "requests_so_far",
+        "cum_spend_ratio", "spend_pace",
     ];
     private static readonly string[] ApprovalNumeric =
     [
@@ -75,6 +76,8 @@ public sealed class MlInsightsService : IMlInsightsService
 
         // Risk-specific
         public double CumApprovedAmount;  // running cumulative approved
+        public double CumSpendRatio;      // CumApprovedAmount / TotalBudget at request time
+        public double SpendPace;          // CumSpendRatio / max(ProjectProgress, 0.01)
         public double SpendRatioIfApproved;
         public double TimeRatio;
         public int    RequestsSoFar;
@@ -405,6 +408,8 @@ public sealed class MlInsightsService : IMlInsightsService
                 "project_progress_at_request"  => r.ProjectProgress,
                 "is_amount_outlier"            => r.IsAmountOutlier,
                 "requests_so_far"              => r.RequestsSoFar,
+                "cum_spend_ratio"              => r.CumSpendRatio,
+                "spend_pace"                   => r.SpendPace,
                 _ => r.Features.TryGetValue(colNames[i], out double val) ? val : 0.0,
             };
         }
@@ -526,8 +531,10 @@ public sealed class MlInsightsService : IMlInsightsService
                 + (r.ApprovedLabel == null ? r.RequestedAmount : 0);
 
             r.CumApprovedAmount    = cumApproved[r.ProjectId];
+            r.CumSpendRatio        = r.TotalBudget > 0 ? cumApproved[r.ProjectId] / r.TotalBudget : 0;
             r.SpendRatioIfApproved = r.TotalBudget > 0 ? cumWithCurrent / r.TotalBudget : 0;
             r.TimeRatio            = Math.Max(0.01, r.ProjectProgress);
+            r.SpendPace            = r.CumSpendRatio / r.TimeRatio;
             r.BudgetRiskLabel      = r.SpendRatioIfApproved > r.TimeRatio * RiskThreshold ? 1 : 0;
 
             if (r.ApprovedLabel == 1) cumApproved[r.ProjectId] += r.RequestedAmount;
@@ -553,6 +560,9 @@ public sealed class MlInsightsService : IMlInsightsService
         var riskScaler = new Scaler(riskX, riskNumIdx);
         var riskXScaled = riskScaler.ApplyAll(riskX, riskNumIdx);
 
+        // Per-project spend state for floor computation
+        var projSpendState = new Dictionary<int, (double spendRatio, double progress)>();
+
         Dictionary<int, double> riskScores = new();
         if (riskXScaled.Length >= 2 && riskY.Contains(0) && riskY.Contains(1))
         {
@@ -571,6 +581,17 @@ public sealed class MlInsightsService : IMlInsightsService
                 double elapsed  = (today - start).TotalDays;
                 double progress = Math.Clamp(elapsed / duration, 0, 2);
 
+                double currentSpendRatio = 0;
+                if (proj.TotalBudget > 0)
+                {
+                    double totalApproved = riskRows
+                        .Where(r => r.ProjectId == proj.ProjectId && r.ApprovedLabel == 1)
+                        .Sum(r => r.RequestedAmount);
+                    currentSpendRatio = totalApproved / proj.TotalBudget;
+                }
+
+                projSpendState[proj.ProjectId] = (currentSpendRatio, progress);
+
                 var testRow = new PayRow
                 {
                     ProjectId     = proj.ProjectId,
@@ -581,6 +602,8 @@ public sealed class MlInsightsService : IMlInsightsService
                     RequestMonth  = today.Month,
                     ProjectProgress = progress,
                     RequestsSoFar = perProjectCount.TryGetValue(proj.ProjectId, out int cnt) ? cnt + 1 : 1,
+                    CumSpendRatio = currentSpendRatio,
+                    SpendPace     = currentSpendRatio / Math.Max(progress, 0.01),
                 };
                 // zero category dummies
                 foreach (var cat in categories) testRow.Features[CategoryCol(cat)] = 0.0;
@@ -597,6 +620,22 @@ public sealed class MlInsightsService : IMlInsightsService
                 for (int i = 0; i < projectTestVectors.Count; i++)
                     riskScores[projectTestVectors[i].projId] = proba[i];
             }
+        }
+
+        // Apply spend-pace floor: if a project is spending faster than time allows,
+        // ensure the risk score reflects it (ML may underestimate with limited training data)
+        foreach (var proj in rawProj)
+        {
+            if (!projSpendState.TryGetValue(proj.ProjectId, out var state)) continue;
+            double spendRatio = state.spendRatio;
+            double prog       = Math.Max(state.progress, 0.01);
+            double spendPace  = spendRatio / prog;
+            if (spendPace <= RiskThreshold) continue; // within acceptable pace
+
+            // pace-based risk: 0.5 at threshold, approaches 0.95 as pace → 3x
+            double paceRisk = Math.Min(0.95, (spendPace - RiskThreshold) * 0.35 + 0.50);
+            double current  = riskScores.TryGetValue(proj.ProjectId, out double s) ? s : 0.0;
+            riskScores[proj.ProjectId] = Math.Max(current, paceRisk);
         }
 
         // 8. Clustering on project features (project_clustering) ──────
@@ -737,17 +776,30 @@ public sealed class MlInsightsService : IMlInsightsService
             for (int j = 0; j < pendingRows.Count; j++)
             {
                 var pr      = pendingRows[j];
-                double proba = approvalProba[j];
                 double exp   = expectedAmounts[j];
                 double actual = pr.RequestedAmount;
                 double ratio  = exp > 0 ? actual / exp : 1.0;
                 bool   amtFlag = ratio >= AmountFlagThreshold;
 
+                // An amount wildly above what's expected for this kind of request is a real
+                // red flag — the raw classifier score doesn't otherwise "see" this comparison
+                // (it only sees a global IQR outlier flag, which is a different, coarser check),
+                // so without this adjustment the two badges could contradict each other
+                // (e.g. "high approval chance" next to "amount is 45x the norm"). The penalty
+                // scales with how extreme the ratio is, so a borderline 1.6x barely moves the
+                // needle while a 45x anomaly crushes the score.
+                double proba = approvalProba[j];
+                double amountPenalty = amtFlag ? Math.Min(0.85, (ratio - AmountFlagThreshold) * 0.1) : 0;
+                proba = Math.Clamp(proba * (1 - amountPenalty), 0.02, 0.98);
+
                 var reasons = new List<string>();
                 if (amtFlag)
+                {
+                    double pctOver = (ratio - 1) * 100;
                     reasons.Add(
-                        $"הסכום המבוקש (₪{actual:N0}) גבוה בכ-{ratio:F1} פעמים מהסכום הצפוי " +
-                        $"לבקשה מסוג זה (₪{exp:N0}), בהתבסס על בקשות דומות מהעבר.");
+                        $"הסכום המבוקש (₪{actual:N0}) גבוה ב-{pctOver:N0}% מהסכום הצפוי " +
+                        $"לבקשה מסוג זה (₪{exp:N0}), בהתבסס על בקשות דומות מהעבר — פער כזה מפחית משמעותית את סיכויי האישור.");
+                }
 
                 if (proba < 0.5)
                 {
@@ -761,6 +813,21 @@ public sealed class MlInsightsService : IMlInsightsService
                         reasons.Add("הבקשה מוגשת בשלב מתקדם יותר בציר הזמן של הפרויקט, בהשוואה לבקשות שאושרו בעבר.");
                     if (reasons.Count == 0)
                         reasons.Add("מאפייני הבקשה (סכום, מועד הגשה, קטגוריה) דומים לבקשות שנדחו בעבר במערכת.");
+                }
+                else
+                {
+                    if (amtFlag)
+                        reasons.Add("למרות שהסכום המבוקש חורג מהצפוי לבקשה מסוג זה, שאר מאפייני הבקשה — תקציב, מועד ושלב הפרויקט — תואמים בקשות שאושרו בעבר, ולכן סיכויי האישור עדיין נותרים גבוהים יחסית.");
+                    else if (pr.IsAmountOutlier == 0)
+                        reasons.Add("הסכום המבוקש עקבי עם בקשות אחרות שאושרו בעבר, ואינו חריג סטטיסטית.");
+                    if (pr.AmountToBudgetRatio <= meanApprovedRatio * 1.5)
+                        reasons.Add("הבקשה מהווה אחוז סביר מהתקציב הכולל של הפרויקט, בדומה לבקשות שאושרו בעבר.");
+                    if (pr.DaysToDue >= meanApprovedDays * 0.5)
+                        reasons.Add("מועד היעד לתשלום סביר ואינו קרוב באופן חריג, בדומה לבקשות שאושרו בעבר.");
+                    if (pr.ProjectProgress <= meanApprovedProgress + 0.3)
+                        reasons.Add("הבקשה מוגשת בשלב תואם בציר הזמן של הפרויקט, בדומה לבקשות שאושרו בעבר.");
+                    if (reasons.Count == 0)
+                        reasons.Add("מאפייני הבקשה (סכום, מועד הגשה, קטגוריה) דומים לבקשות שאושרו בעבר במערכת.");
                 }
 
                 pendingInsights[pr.RequestId.ToString()] = new

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { getAllProjects, transferBudget } from '../../api/projectsApi';
+import MobileSelect from '../MobileSelect';
 
 const fmt = (n) =>
   n != null ? `₪${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)}` : '—';
@@ -143,32 +144,32 @@ export default function TabBudgetTransfer({ projectId, projectName, availableBal
               ) : preFilledNotFound ? (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-800">
                   מחקר היעד אינו זמין להעברה (ייתכן שהוא בארכיון או הסתיים). בחר מחקר אחר.
-                  <select
-                    value=""
-                    onChange={(e) => { setForm((f) => ({ ...f, targetProjectId: e.target.value })); setError(''); }}
-                    className="mt-2 w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-                  >
-                    <option value="">-- בחר מחקר --</option>
-                    {allProjects.map((p) => (
-                      <option key={p.projectId} value={String(p.projectId)}>
-                        {p.projectNameHe || p.projectNameEn || `מחקר #${p.projectId}`}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="mt-2">
+                    <MobileSelect
+                      value=""
+                      onChange={(v) => { setForm((f) => ({ ...f, targetProjectId: v })); setError(''); }}
+                      placeholder="-- בחר מחקר --"
+                      searchable
+                      searchPlaceholder="חיפוש מחקר לפי שם..."
+                      options={allProjects.map((p) => ({
+                        value: String(p.projectId),
+                        label: p.projectNameHe || p.projectNameEn || `מחקר #${p.projectId}`,
+                      }))}
+                    />
+                  </div>
                 </div>
               ) : (
-                <select
+                <MobileSelect
                   value={form.targetProjectId}
-                  onChange={(e) => { setForm((f) => ({ ...f, targetProjectId: e.target.value })); setError(''); }}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-                >
-                  <option value="">-- בחר מחקר --</option>
-                  {allProjects.map((p) => (
-                    <option key={p.projectId} value={String(p.projectId)}>
-                      {p.projectNameHe || p.projectNameEn || `מחקר #${p.projectId}`}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => { setForm((f) => ({ ...f, targetProjectId: v })); setError(''); }}
+                  placeholder="-- בחר מחקר --"
+                  searchable
+                  searchPlaceholder="חיפוש מחקר לפי שם..."
+                  options={allProjects.map((p) => ({
+                    value: String(p.projectId),
+                    label: p.projectNameHe || p.projectNameEn || `מחקר #${p.projectId}`,
+                  }))}
+                />
               )}
             </div>
 

@@ -15,13 +15,15 @@ namespace RupResearchAPI.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly IAuditLogService _audit;
         private readonly IMemoryCache _cache;
+        private readonly ILogger<PaymentRequestsController> _logger;
 
-        public PaymentRequestsController(IPaymentRequestService service, IWebHostEnvironment env, IAuditLogService audit, IMemoryCache cache)
+        public PaymentRequestsController(IPaymentRequestService service, IWebHostEnvironment env, IAuditLogService audit, IMemoryCache cache, ILogger<PaymentRequestsController> logger)
         {
             _service = service;
             _env = env;
             _audit = audit;
             _cache = cache;
+            _logger = logger;
         }
 
         [HttpGet("api/projects/{projectId}/payment-requests")]
@@ -86,7 +88,10 @@ namespace RupResearchAPI.Controllers
             }
             catch (Exception ex)
             {
-                return Ok(new { success = false, error = ex.Message });
+                _logger.LogError(ex,
+                    "שליחת מייל למזכירות נכשלה עבור בקשת תשלום #{RequestId}. סוג שגיאה: {ExceptionType}",
+                    id, ex.GetType().Name);
+                return Ok(new { success = false, error = "שליחת המייל למזכירות נכשלה. ניתן לנסות שוב או לפנות למזכירות ישירות." });
             }
         }
 
@@ -115,11 +120,11 @@ namespace RupResearchAPI.Controllers
 
         [HttpGet("api/test-email")]
         [AllowAnonymous]
-        public async Task<IActionResult> TestEmail()
+        public async Task<IActionResult> TestEmail(int id = 1)
         {
             try
             {
-                await _service.NotifySecretariat(1, "test");
+                await _service.NotifySecretariat(id, "test");
                 return Ok(new { result = "✅ המייל נשלח בהצלחה!" });
             }
             catch (Exception ex)

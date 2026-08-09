@@ -5,6 +5,7 @@ import { getUsers } from '../../api/usersApi';
 import { getCenters } from '../../api/centersApi';
 import { updateProject } from '../../api/projectsApi';
 import UserAvatar from '../UserAvatar';
+import MobileSelect from '../MobileSelect';
 
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
@@ -310,17 +311,16 @@ export default function TabOverview({ detail, onChanged, readOnly = false, hasEn
 
             {/* Row 5: Center + Funding */}
             <EditField label="מרכז מחקר" error={errors.centerId}>
-              <select
+              <MobileSelect
                 value={form.centerId}
-                onChange={setField('centerId')}
-                className={`${inputCls} ${errors.centerId ? errCls : ''} ${hasEnded ? 'bg-gray-50 text-gray-400' : ''}`}
+                onChange={(v) => setForm((f) => ({ ...f, centerId: v }))}
+                placeholder="— בחר מרכז מחקר —"
+                searchable
+                searchPlaceholder="חיפוש מרכז לפי שם..."
                 disabled={loadingMeta || hasEnded}
-              >
-                <option value="">— בחר מרכז מחקר —</option>
-                {centers.map((c) => (
-                  <option key={c.centerId} value={c.centerId}>{c.centerName}</option>
-                ))}
-              </select>
+                options={centers.map((c) => ({ value: String(c.centerId), label: c.centerName }))}
+                className={errors.centerId ? 'ring-1 ring-red-400 rounded-lg' : ''}
+              />
             </EditField>
 
             <EditField label="מקור מימון" error={errors.fundingSource}>

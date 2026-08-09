@@ -14,14 +14,16 @@ namespace RupResearchAPI.Services
         private readonly IActivityLogService _log;
         private readonly IWebHostEnvironment _env;
         private readonly IMemoryCache _cache;
+        private readonly ILogger<PaymentRequestService> _logger;
 
-        public PaymentRequestService(AppDbContext db, IEmailService email, IActivityLogService log, IWebHostEnvironment env, IMemoryCache cache)
+        public PaymentRequestService(AppDbContext db, IEmailService email, IActivityLogService log, IWebHostEnvironment env, IMemoryCache cache, ILogger<PaymentRequestService> logger)
         {
             _db = db;
             _email = email;
             _log = log;
             _cache = cache;
             _env = env;
+            _logger = logger;
         }
 
         public async Task<List<PaymentRequestResponseDto>> GetByProject(int projectId)
@@ -348,7 +350,11 @@ namespace RupResearchAPI.Services
         public async Task NotifySecretariat(int requestId, string submittedByUserId)
         {
             var req      = await _db.ResearchPaymentRequests.FindAsync(requestId);
-            if (req == null) return;
+            if (req == null)
+            {
+                _logger.LogWarning("ניסיון לשלוח מייל למזכירות עבור בקשת תשלום #{RequestId} שאינה קיימת במסד הנתונים.", requestId);
+                throw new InvalidOperationException($"בקשת תשלום #{requestId} לא נמצאה.");
+            }
 
             var project  = await _db.ResearchProjects.FindAsync(req.ProjectId);
             var allUsers = await _db.ResearchUsers.ToListAsync();

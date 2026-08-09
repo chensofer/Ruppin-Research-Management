@@ -155,6 +155,17 @@ def compute_pending_request_insights(df: pd.DataFrame) -> dict:
                 reasons.append("הבקשה מוגשת בשלב מתקדם יותר בציר הזמן של הפרויקט, בהשוואה לבקשות שאושרו בעבר.")
             if not reasons:
                 reasons.append("מאפייני הבקשה (סכום, מועד הגשה, קטגוריה) דומים לבקשות שנדחו בעבר במערכת.")
+        else:
+            if not bool(row["is_amount_outlier"]):
+                reasons.append("הסכום המבוקש עקבי עם בקשות אחרות שאושרו בעבר, ואינו חריג סטטיסטית.")
+            if row["amount_to_budget_ratio"] <= approved_means["amount_to_budget_ratio"] * 1.5:
+                reasons.append("הבקשה מהווה אחוז סביר מהתקציב הכולל של הפרויקט, בדומה לבקשות שאושרו בעבר.")
+            if row["days_to_due"] >= approved_means["days_to_due"] * 0.5:
+                reasons.append("מועד היעד לתשלום סביר ואינו קרוב באופן חריג, בדומה לבקשות שאושרו בעבר.")
+            if row["project_progress_at_request"] <= approved_means["project_progress_at_request"] + 0.3:
+                reasons.append("הבקשה מוגשת בשלב תואם בציר הזמן של הפרויקט, בדומה לבקשות שאושרו בעבר.")
+            if not reasons:
+                reasons.append("מאפייני הבקשה (סכום, מועד הגשה, קטגוריה) דומים לבקשות שאושרו בעבר במערכת.")
 
         out[str(pid)] = {
             "approval_probability": round(float(proba), 4),

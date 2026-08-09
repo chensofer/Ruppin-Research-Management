@@ -18,6 +18,8 @@ namespace RupResearchAPI.Services
 
         public async Task<List<ProjectResponseDto>> GetAll(string userId)
         {
+            await PurgeExpiredCommitmentsAsync();
+
             // Get all projects then filter in memory (avoids OPENJSON issue on older SQL Server)
             var allProjects = await _db.ResearchProjects.ToListAsync();
 
@@ -117,6 +119,8 @@ namespace RupResearchAPI.Services
 
         public async Task<ProjectDetailDto?> GetDetail(int id)
         {
+            await PurgeExpiredCommitmentsAsync();
+
             var project = await _db.ResearchProjects.FindAsync(id);
             if (project == null) return null;
 
@@ -896,8 +900,24 @@ namespace RupResearchAPI.Services
 
         // ── Future Commitments ────────────────────────────────────────────────
 
+        // Once a future expense's expected date has passed without it being turned
+        // into an actual payment request, it's stale — remove it automatically.
+        private async Task PurgeExpiredCommitmentsAsync()
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var expired = await _db.ResearchFutureCommitments
+                .Where(c => c.ExpectedDate != null && c.ExpectedDate < today)
+                .ToListAsync();
+            if (expired.Count > 0)
+            {
+                _db.ResearchFutureCommitments.RemoveRange(expired);
+                await _db.SaveChangesAsync();
+            }
+        }
+
         public async Task<List<FutureCommitmentDto>> GetCommitments(int projectId)
         {
+            await PurgeExpiredCommitmentsAsync();
             return await _db.ResearchFutureCommitments
                 .Where(c => c.ProjectId == projectId)
                 .Select(c => ToCommitmentDto(c))

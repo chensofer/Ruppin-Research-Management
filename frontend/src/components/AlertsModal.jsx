@@ -265,7 +265,12 @@ export default function AlertsModal({ budgetAlerts, timeAlerts, transferRequests
               {/* Footer */}
               <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/60 flex items-center justify-start">
                 <button
-                  onClick={onClose}
+                  onClick={() => {
+                    if (onDeleteNotif) {
+                      [...approvedNotifs, ...rejectedNotifs].forEach(n => onDeleteNotif(n.notificationId));
+                    }
+                    onClose();
+                  }}
                   className="px-5 py-2 bg-gray-800 hover:bg-gray-900 text-white text-sm font-semibold rounded-xl transition-colors"
                 >
                   הבנתי

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getMySubmissions, getHourReports } from '../api/hourReportsApi';
+import { getMySubmissions, getHourReports, getAssistantProjects } from '../api/hourReportsApi';
 import Layout from '../components/Layout';
+import MobileSelect from '../components/MobileSelect';
 import ExcelJS from 'exceljs';
 
 const MONTH_NAMES = [
@@ -239,6 +240,7 @@ export default function MyReportsPage() {
   const navigate = useNavigate();
 
   const [submissions, setSubmissions] = useState([]);
+  const [assignedProjects, setAssignedProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [projectFilter, setProjectFilter] = useState('all');
@@ -248,20 +250,23 @@ export default function MyReportsPage() {
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    getMySubmissions(user.userId)
-      .then((r) => setSubmissions(r.data ?? []))
-      .catch(() => setSubmissions([]))
+    Promise.all([
+      getMySubmissions(user.userId),
+      getAssistantProjects(user.userId),
+    ])
+      .then(([subRes, projRes]) => {
+        setSubmissions(subRes.data ?? []);
+        setAssignedProjects(projRes.data ?? []);
+      })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, [user]);
 
-  // Unique projects from submissions
-  const projects = Object.values(
-    submissions.reduce((acc, s) => {
-      const key = s.projectId ?? 0;
-      if (!acc[key]) acc[key] = { projectId: key, name: s.projectNameHe || `מחקר ${key}` };
-      return acc;
-    }, {})
-  );
+  // Project dropdown shows only the assistant's assigned projects
+  const projects = assignedProjects.map((p) => ({
+    projectId: p.projectId,
+    name: p.projectNameHe || p.projectNameEn || `מחקר ${p.projectId}`,
+  }));
 
   const filtered = submissions.filter((s) => {
     const matchStatus  = statusFilter === 'all' || s.approvalStatus === statusFilter;
@@ -361,16 +366,14 @@ export default function MyReportsPage() {
 
           {/* Project filter */}
           {projects.length > 0 && (
-            <select
-              value={projectFilter}
-              onChange={(e) => setProjectFilter(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary text-gray-700"
-            >
-              <option value="all">כל המחקרים</option>
-              {projects.map((p) => (
-                <option key={p.projectId} value={String(p.projectId)}>{p.name}</option>
-              ))}
-            </select>
+            <MobileSelect
+              value={projectFilter === 'all' ? '' : projectFilter}
+              onChange={(v) => setProjectFilter(v || 'all')}
+              placeholder="כל המחקרים"
+              options={projects.map((p) => ({ value: String(p.projectId), label: p.name }))}
+              searchable
+              searchPlaceholder="חיפוש מחקר לפי שם..."
+            />
           )}
         </div>
 

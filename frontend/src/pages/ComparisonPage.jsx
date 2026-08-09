@@ -215,9 +215,12 @@ function buildTransferRecommendations(projects, myProjectIds, mlInsights, allPro
       : avail > Math.max(budget * 0.15, 5000) &&
         (endingSoon || riskScore === null || riskScore < 0.3);
 
+    const projectedShortfall = burnRate !== null && burnRate > 1.3 && daysLeft !== null && daysLeft > 30;
+
     const isReceiver = allowReceiver && (
       avail < 0 ||
-      (riskScore !== null && riskScore >= 0.5)
+      (riskScore !== null && riskScore >= 0.7 && usagePct >= 50) ||
+      projectedShortfall
     );
 
     return { ...p, timePct, budget, paid, avail, usagePct, burnRate, daysLeft, hasEnded, riskScore, isGiver, isReceiver };
@@ -297,7 +300,7 @@ function buildTransferRecommendations(projects, myProjectIds, mlInsights, allPro
       giverRemaining[giver.projectId] -= amount;
       receiverStillNeeded[recv.projectId] -= amount;
 
-      recs.push({ giver, receiver: recv, amount, tags: buildTags(giver, recv), isGiverMine: myProjectIds.has(giver.projectId) });
+      recs.push({ giver, receiver: recv, amount, tags: buildTags(giver, recv), isGiverMine: myProjectIds.has(giver.projectId), isReceiverMine: myProjectIds.has(recv.projectId) });
     }
   }
 
@@ -316,11 +319,18 @@ function buildTransferRecommendations(projects, myProjectIds, mlInsights, allPro
     if (target) {
       need = receiverStillNeeded[target.projectId];
     } else {
-      // אין יעד רשמי שנשאר לו צורך — פונים למחקר הפעיל עם הניצול הגבוה ביותר,
-      // שהוא עצמו לא מחקר עם עודף (אין טעם להעביר כסף למי שכבר "מקור")
+      // אין יעד רשמי — מחפשים מחקר שקצב הוצאותיו מהיר מהצפוי (burnRate > 1.2):
+      // ניצול תקציב גבוה ביחס לאחוז הזמן שעבר, כלומר הכסף אוזל מהר מהתכנון.
+      // מחקר עם 45% ניצול ו-312 ימים שנשארו לא ייכנס לכאן — רק מי שבאמת שורף מהר.
       target = enriched
-        .filter(p => p.projectId !== giver.projectId && !p.hasEnded && !p.isGiver && p.usagePct >= 40)
-        .sort((a, b) => b.usagePct - a.usagePct)[0];
+        .filter(p =>
+          p.projectId !== giver.projectId &&
+          !p.hasEnded &&
+          !p.isGiver &&
+          p.burnRate !== null &&
+          p.burnRate > 1.2
+        )
+        .sort((a, b) => b.burnRate - a.burnRate)[0];
       if (!target) continue;
       need = Math.max(target.budget * (target.usagePct / 100) - target.budget * 0.5, target.budget * 0.1);
     }
@@ -333,12 +343,28 @@ function buildTransferRecommendations(projects, myProjectIds, mlInsights, allPro
 
     const tags = buildTags(giver, target);
     if (!(target.avail < 0) && !(target.riskScore !== null && target.riskScore >= 0.5))
-      tags.push('לא נמצא יעד בסיכון פורמלי — מומלץ לפזר את העודף למחקר הפעיל עם הניצול הגבוה ביותר');
+      tags.push(`קצב הוצאות מהיר מהצפוי (×${target.burnRate?.toFixed(2)}) — הכסף אוזל מהר מהתכנון`);
 
-    recs.push({ giver, receiver: target, amount, tags, isGiverMine: myProjectIds.has(giver.projectId) });
+    recs.push({ giver, receiver: target, amount, tags, isGiverMine: myProjectIds.has(giver.projectId), isReceiverMine: myProjectIds.has(target.projectId) });
   }
 
-  return recs;
+  // מניעת כפילות: לכל יעד — המלצה אחת בלבד.
+  // המיון מקדים את ה"מקור שלי" (isGiverMine) כדי שהכפתור הישיר יעדיף על פני "שלח בקשה".
+  const sorted = recs.sort((a, b) => {
+    if (a.receiver.projectId !== b.receiver.projectId) return 0;
+    if (a.isGiverMine && !b.isGiverMine) return -1;
+    if (!a.isGiverMine && b.isGiverMine) return 1;
+    return b.amount - a.amount;
+  });
+  const seenReceivers = new Set();
+  const deduped = sorted.filter(r => {
+    if (seenReceivers.has(r.receiver.projectId)) return false;
+    seenReceivers.add(r.receiver.projectId);
+    return true;
+  });
+
+  // מציגים רק המלצות שבהן המשתמש מעורב — כמקור או כיעד
+  return deduped.filter(r => r.isGiverMine || r.isReceiverMine);
 }
 
 
@@ -475,13 +501,18 @@ function RecommendationsSummary({ recommendations }) {
   );
 }
 
+function calcDaysUntilBudgetOut(receiver) {
+  const { burnRate, usagePct, timePct, daysLeft } = receiver;
+  if (!burnRate || burnRate <= 1 || !timePct || timePct >= 100 || !daysLeft) return null;
+  return Math.max(0, Math.round((100 - usagePct) * daysLeft / (burnRate * (100 - timePct))));
+}
+
 function RecommendationCard({ rec, onTransfer, onRequestTransfer }) {
-  const { giver, receiver, amount, isGiverMine } = rec;
+  const { giver, receiver, amount, isGiverMine, isReceiverMine } = rec;
   const giverName  = giver.projectNameHe    || giver.projectNameEn    || `מחקר #${giver.projectId}`;
   const recvName   = receiver.projectNameHe || receiver.projectNameEn || `מחקר #${receiver.projectId}`;
   const giverUsage = Math.round(giver.usagePct ?? 0);
   const recvUsage  = Math.round(receiver.usagePct ?? 0);
-  const confidence = calcConfidence(giver, receiver);
   const giverAfter = giver.avail - amount;
   const recvAfter  = receiver.avail + amount;
 
@@ -491,25 +522,16 @@ function RecommendationCard({ rec, onTransfer, onRequestTransfer }) {
 
       <div className="p-3 space-y-2">
 
-        {/* כותרת + ציון */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-1.5 flex-1 min-w-0">
-            <svg className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-            </svg>
-            <p className="text-sm font-bold text-gray-900 leading-snug">
-              להעביר <span className="text-primary font-extrabold">{fmt(amount)}</span>{' '}
-              מ<span className="text-green-700">"{giverName}"</span>{' '}
-              אל <span className="text-red-600">"{recvName}"</span>
-            </p>
-          </div>
-          <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded-full border ${
-            confidence >= 80 ? 'bg-green-100 text-green-700 border-green-200'
-            : confidence >= 60 ? 'bg-amber-100 text-amber-700 border-amber-200'
-            : 'bg-gray-100 text-gray-600 border-gray-200'
-          }`}>
-            {confidence}% התאמה
-          </span>
+        {/* כותרת */}
+        <div className="flex items-start gap-1.5">
+          <svg className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+          <p className="text-sm font-bold text-gray-900 leading-snug">
+            להעביר <span className="text-primary font-extrabold">{fmt(amount)}</span>{' '}
+            מ<span className="text-green-700">"{giverName}"</span>{' '}
+            אל <span className="text-red-600">"{recvName}"</span>
+          </p>
         </div>
 
         {/* מקור + יעד */}
@@ -553,6 +575,34 @@ function RecommendationCard({ rec, onTransfer, onRequestTransfer }) {
                 {receiver.principalResearcherName}
               </p>
             )}
+            {/* סיבה מדוע המחקר זקוק לתקציב */}
+            {receiver.avail < 0 ? (
+              <div className="bg-red-50 border border-red-300 rounded-lg px-3 py-2.5 space-y-1" dir="rtl">
+                <p className="text-xs font-bold text-red-800 flex items-center gap-1.5">
+                  <span>🔴</span> חריגה מהתקציב המאושר
+                </p>
+                <p className="text-xs text-red-700">גירעון של {fmt(Math.abs(receiver.avail))}</p>
+              </div>
+            ) : receiver.burnRate !== null && receiver.burnRate > 1.3 ? (
+              <div className="bg-amber-50 border border-amber-300 rounded-lg px-3 py-2.5 space-y-1" dir="rtl">
+                <p className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
+                  <span>⚠️</span> ניצול תקציב מהיר מהצפוי
+                </p>
+                {receiver.daysLeft !== null && (
+                  <p className="text-xs text-amber-700">המחקר מסתיים בעוד {receiver.daysLeft} ימים</p>
+                )}
+              </div>
+
+            ) : receiver.riskScore !== null && receiver.riskScore >= 0.7 ? (
+              <div className="bg-amber-50 border border-amber-300 rounded-lg px-3 py-2.5 space-y-1" dir="rtl">
+                <p className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
+                  <span>⚠️</span> סיכון תקציבי גבוה
+                </p>
+                {receiver.daysLeft !== null && (
+                  <p className="text-xs text-amber-700">המחקר מסתיים בעוד {receiver.daysLeft} ימים</p>
+                )}
+              </div>
+            ) : null}
             <div className="text-xs space-y-0.5 pt-1 border-t border-red-200">
               {receiver.avail < 0
                 ? <p>גירעון: <span className="font-bold text-red-700">−{fmt(Math.abs(receiver.avail))}</span></p>
@@ -600,34 +650,35 @@ function RecommendationCard({ rec, onTransfer, onRequestTransfer }) {
             </svg>
             לטיפול בבקשת ההעברה
           </button>
-        ) : (
+        ) : isReceiverMine ? (
           <div className="space-y-2">
-            <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-4 flex flex-col items-center text-center gap-3">
-              <span className="text-xs font-bold text-purple-400 uppercase tracking-widest">מחקר שאינו שלך</span>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-4 flex flex-col items-center text-center gap-3">
+              <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">מחקר שלי זקוק לתקציב</span>
               <div className="flex flex-col items-center gap-1">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">חוקר ראשי</p>
-                <p className="text-base font-bold text-purple-800">{giver.principalResearcherName || 'לא ידוע'}</p>
+                <p className="text-xs text-gray-400 mt-1">חוקר ראשי של מחקר המקור</p>
+                <p className="text-base font-bold text-blue-800">{giver.principalResearcherName || 'לא ידוע'}</p>
               </div>
-              <p className="text-xs text-gray-500 leading-relaxed border-t border-purple-100 pt-2 w-full">
-                ניתן לשלוח ל<span className="font-semibold text-purple-700">{giver.principalResearcherName || 'החוקר הראשי'}</span> התראה עם פרטי הבקשה — החוקר הראשי יפנה למזכירות לביצוע ההעברה.
+              <p className="text-xs text-gray-500 leading-relaxed border-t border-blue-100 pt-2 w-full">
+                שליחת בקשה ל<span className="font-semibold text-blue-700">{giver.principalResearcherName || 'החוקר הראשי'}</span> להעביר{' '}
+                <span className="font-bold">{fmt(amount)}</span> ממחקרם למחקר שלך — הם יפנו למזכירות לביצוע.
               </p>
             </div>
             <button
               onClick={() => onRequestTransfer(giver.projectId, receiver.projectId, amount)}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm shadow-purple-200"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm shadow-blue-200"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
-              שלח התראה ל{giver.principalResearcherName || 'החוקר הראשי'}
+              בקש העברת תקציב למחקר שלי
             </button>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

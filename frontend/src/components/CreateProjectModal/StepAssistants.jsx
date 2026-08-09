@@ -51,11 +51,14 @@ export default function StepAssistants({ data, onChange }) {
   const filtered = allUsers.filter((u) => {
     if (u.systemAuthorization !== 'עוזר מחקר') return false;
     if (selectedExistingIds.has(u.userId)) return false;
-    if (!query) return true;
-    const q = query.toLowerCase();
+    if (!query.trim()) return true;
+    const q = query.trim().toLowerCase();
+    const fullName = `${u.firstName ?? ''} ${u.lastName ?? ''}`.replace(/\s+/g, ' ').trim().toLowerCase();
     return (
-      u.userId.toLowerCase().includes(q) ||
-      `${u.firstName} ${u.lastName}`.toLowerCase().includes(q)
+      (u.userId ?? '').toLowerCase().includes(q) ||
+      (u.firstName ?? '').toLowerCase().includes(q) ||
+      (u.lastName ?? '').toLowerCase().includes(q) ||
+      fullName.includes(q)
     );
   });
 

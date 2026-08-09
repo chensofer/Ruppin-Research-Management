@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getCategories, createCategory } from '../../api/categoriesApi';
+import MobileSelect from '../MobileSelect';
 
 const NEW_KEY = '__new__';
 
@@ -20,12 +21,12 @@ export default function CategoryPicker({ value, onChange, placeholder = 'בחר 
       .catch(() => {});
   }, []);
 
-  const handleSelect = (e) => {
-    if (e.target.value === NEW_KEY) {
+  const handleSelect = (val) => {
+    if (val === NEW_KEY) {
       setShowNew(true);
     } else {
       setShowNew(false);
-      onChange(e.target.value);
+      onChange(val);
     }
   };
 
@@ -53,17 +54,17 @@ export default function CategoryPicker({ value, onChange, placeholder = 'בחר 
 
   return (
     <div className="space-y-2">
-      <select
+      <MobileSelect
         value={showNew ? NEW_KEY : (value || '')}
         onChange={handleSelect}
-        className={inputCls}
-      >
-        <option value="">{placeholder}</option>
-        {categories.map((c) => (
-          <option key={c.categoryName} value={c.categoryName}>{c.categoryName}</option>
-        ))}
-        <option value={NEW_KEY}>＋ הוסף קטגוריה חדשה...</option>
-      </select>
+        placeholder={placeholder}
+        searchable
+        searchPlaceholder="חיפוש קטגוריה לפי שם..."
+        options={[
+          ...categories.map((c) => ({ value: c.categoryName, label: c.categoryName })),
+          { value: NEW_KEY, label: '＋ הוסף קטגוריה חדשה...' },
+        ]}
+      />
 
       {showNew && (
         <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 space-y-2">
