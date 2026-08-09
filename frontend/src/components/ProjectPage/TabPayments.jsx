@@ -50,17 +50,9 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
-<<<<<<< HEAD
   const [scanError, setScanError] = useState('');
-<<<<<<< HEAD
-=======
-  const [emailFailure, setEmailFailure] = useState(null); // { id, message }
+  const [emailFailure, setEmailFailure] = useState(null);
   const [resending, setResending] = useState(false);
->>>>>>> 5454408695bebffe4db27afd46815955014c17fa
-=======
-  const [emailFailure, setEmailFailure] = useState(null); // { id, message }
-  const [resending, setResending] = useState(false);
->>>>>>> d84cd32d32da1a1cbe9da001aa26e6abfe39939a
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [statusFilter, setStatusFilter] = useState('הכל');
   const [expandedRow, setExpandedRow] = useState(null);
