@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getMySubmissions, getHourReports, getAssistantProjects } from '../api/hourReportsApi';
 import Layout from '../components/Layout';
+import MobileSelect from '../components/MobileSelect';
 import ExcelJS from 'exceljs';
 
 const MONTH_NAMES = [
@@ -365,16 +366,14 @@ export default function MyReportsPage() {
 
           {/* Project filter */}
           {projects.length > 0 && (
-            <select
-              value={projectFilter}
-              onChange={(e) => setProjectFilter(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary text-gray-700"
-            >
-              <option value="all">כל המחקרים</option>
-              {projects.map((p) => (
-                <option key={p.projectId} value={String(p.projectId)}>{p.name}</option>
-              ))}
-            </select>
+            <MobileSelect
+              value={projectFilter === 'all' ? '' : projectFilter}
+              onChange={(v) => setProjectFilter(v || 'all')}
+              placeholder="כל המחקרים"
+              options={projects.map((p) => ({ value: String(p.projectId), label: p.name }))}
+              searchable
+              searchPlaceholder="חיפוש מחקר לפי שם..."
+            />
           )}
         </div>
 

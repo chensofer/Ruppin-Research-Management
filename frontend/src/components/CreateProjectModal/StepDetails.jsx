@@ -3,6 +3,7 @@ import HebrewDatePicker from '../HebrewDatePicker';
 import { getUsers } from '../../api/usersApi';
 import { getCenters } from '../../api/centersApi';
 import UserAvatar from '../UserAvatar';
+import MobileSelect from '../MobileSelect';
 
 
 function Field({ label, required, children, error }) {
@@ -159,16 +160,15 @@ export default function StepDetails({ data, onChange, errors }) {
 
       {/* Research center */}
       <Field label="מרכז מחקר" error={errors.centerId}>
-        <select
+        <MobileSelect
           value={data.centerId}
-          onChange={set('centerId')}
-          className={`${inputCls} ${errors.centerId ? errorCls : ''}`}
-        >
-          <option value="">— ללא שיוך למרכז מחקר —</option>
-          {centers.map((c) => (
-            <option key={c.centerId} value={c.centerId}>{c.centerName}</option>
-          ))}
-        </select>
+          onChange={(v) => onChange({ ...data, centerId: v })}
+          placeholder="— ללא שיוך למרכז מחקר —"
+          searchable
+          searchPlaceholder="חיפוש מרכז לפי שם..."
+          options={centers.map((c) => ({ value: String(c.centerId), label: c.centerName }))}
+          className={errors.centerId ? 'ring-1 ring-red-400 rounded-lg' : ''}
+        />
       </Field>
 
       {/* Budget + Funding Source */}

@@ -490,9 +490,15 @@ export default function TabAssistants({ projectId, assistants, onChanged, readOn
     if (selectedIds.has(u.userId)) return false;
     if (stagedUser && u.userId === stagedUser.userId) return false;
     if (u.systemAuthorization !== 'עוזר מחקר') return false;
-    if (!query) return true;
-    const q = query.toLowerCase();
-    return u.userId.toLowerCase().includes(q) || `${u.firstName} ${u.lastName}`.toLowerCase().includes(q);
+    if (!query.trim()) return true;
+    const q = query.trim().toLowerCase();
+    const fullName = `${u.firstName ?? ''} ${u.lastName ?? ''}`.replace(/\s+/g, ' ').trim().toLowerCase();
+    return (
+      (u.userId ?? '').toLowerCase().includes(q) ||
+      (u.firstName ?? '').toLowerCase().includes(q) ||
+      (u.lastName ?? '').toLowerCase().includes(q) ||
+      fullName.includes(q)
+    );
   });
 
   const displayed = filtered;

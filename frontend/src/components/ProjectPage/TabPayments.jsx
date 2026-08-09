@@ -52,10 +52,15 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
   const [error, setError] = useState('');
 <<<<<<< HEAD
   const [scanError, setScanError] = useState('');
+<<<<<<< HEAD
 =======
   const [emailFailure, setEmailFailure] = useState(null); // { id, message }
   const [resending, setResending] = useState(false);
 >>>>>>> 5454408695bebffe4db27afd46815955014c17fa
+=======
+  const [emailFailure, setEmailFailure] = useState(null); // { id, message }
+  const [resending, setResending] = useState(false);
+>>>>>>> d84cd32d32da1a1cbe9da001aa26e6abfe39939a
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [statusFilter, setStatusFilter] = useState('הכל');
   const [expandedRow, setExpandedRow] = useState(null);
@@ -267,6 +272,8 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                     onChange={(v) => setForm((f) => ({ ...f, categoryName: v }))}
                     placeholder="— בחר קטגורית הוצאה —"
                     options={categories.map((c) => ({ value: c.categoryName, label: c.categoryName }))}
+                    searchable
+                    searchPlaceholder="חיפוש קטגוריה לפי שם..."
                   />
                 </div>
 
@@ -326,6 +333,8 @@ export default function TabPayments({ projectId, payments, onCreated, readOnly =
                         placeholder="— ללא ספק —"
                         options={providers.map((p) => ({ value: String(p.providerId), label: p.providerName }))}
                         className="flex-1"
+                        searchable
+                        searchPlaceholder="חיפוש ספק לפי שם..."
                       />
                       <button type="button" onClick={() => setShowNewProvider(true)}
                         className="text-sm text-primary hover:text-primary-dark whitespace-nowrap px-2 py-2">+ ספק חדש</button>

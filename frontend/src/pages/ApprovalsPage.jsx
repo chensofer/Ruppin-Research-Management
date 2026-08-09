@@ -5,6 +5,7 @@ import { getPendingPaymentRequests, updatePaymentRequestStatus } from '../api/pa
 import { getPendingHourApprovals, decideMonthlyApproval } from '../api/hourReportsApi';
 import { getMlInsights } from '../api/projectsApi';
 import Layout from '../components/Layout';
+import MobileSelect from '../components/MobileSelect';
 import { requestNotificationPermission, sendNotification } from '../utils/notifications';
 import { celebrate } from '../utils/celebrate';
 import { fileUrl } from '../utils/fileUrl';
@@ -98,9 +99,11 @@ function MlInsightBadge({ mlInfo }) {
   if (!mlInfo) return null;
 
   const { approval_probability, amount_flag, expected_amount, reasons } = mlInfo;
-  const lowApproval = approval_probability < 0.5;
+  const hasApproval = approval_probability != null;
+  const lowApproval = hasApproval && approval_probability < 0.5;
+  const hasReasons = reasons?.length > 0;
 
-  if (!lowApproval && !amount_flag) return null;
+  if (!hasApproval && !amount_flag) return null;
 
   return (
     <div dir="rtl">
@@ -115,7 +118,16 @@ function MlInsightBadge({ mlInfo }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             נדרשת בדיקה נוספת
-            <span className="font-normal text-orange-500 text-xs">— רמת חריגות: {Math.round(approval_probability * 100)}%</span>
+            <span className="font-normal text-orange-500 text-xs">— סיכוי לאישור: {Math.round(approval_probability * 100)}%</span>
+          </span>
+        )}
+        {hasApproval && !lowApproval && (
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold bg-green-50 text-green-700 border border-green-200 px-2.5 py-1 rounded-full">
+            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75l6 6 9-13.5" />
+            </svg>
+            צפי גבוה לאישור
+            <span className="font-normal text-green-600 text-xs">— {Math.round(approval_probability * 100)}%</span>
           </span>
         )}
         {amount_flag && (
@@ -124,14 +136,18 @@ function MlInsightBadge({ mlInfo }) {
             <span className="text-xs font-normal text-purple-500">סכום מקובל משוער: {formatAmount(expected_amount)}</span>
           </span>
         )}
-        <span className="inline-flex items-center text-sm text-gray-400 underline self-center">
-          {open ? 'הסתר' : 'הסבר'}
-        </span>
+        {hasReasons && (
+          <span className="inline-flex items-center text-sm text-gray-400 underline self-center">
+            {open ? 'הסתר' : 'הסבר'}
+          </span>
+        )}
       </button>
 
-      {open && reasons?.length > 0 && (
+      {open && hasReasons && (
         <div className="mt-2 bg-amber-50/70 border border-amber-200 rounded-xl p-3 space-y-1.5">
-          <p className="text-sm font-bold text-amber-800">מדוע הבקשה דורשת בדיקה?</p>
+          <p className="text-sm font-bold text-amber-800">
+            {lowApproval ? 'מדוע הבקשה דורשת בדיקה?' : 'מדוע יש צפי גבוה לאישור?'}
+          </p>
           <ul className="space-y-1">
             {reasons.map((r, i) => (
               <li key={i} className="text-sm text-amber-800 flex items-start gap-1.5">
@@ -711,16 +727,14 @@ export default function ApprovalsPage() {
             {availableProjects.length > 1 && (
               <div>
                 <p className="text-xs font-semibold text-gray-500 mb-2">מחקר</p>
-                <select
+                <MobileSelect
                   value={filterProjectLocal}
-                  onChange={(e) => setFilterProjectLocal(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                >
-                  <option value="">כל המחקרים</option>
-                  {availableProjects.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+                  onChange={setFilterProjectLocal}
+                  placeholder="כל המחקרים"
+                  options={availableProjects.map((p) => ({ value: String(p.id), label: p.name }))}
+                  searchable
+                  searchPlaceholder="חיפוש מחקר לפי שם..."
+                />
               </div>
             )}
 

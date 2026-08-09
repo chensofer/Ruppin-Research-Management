@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RupResearchAPI.Data;
 using RupResearchAPI.DTOs;
@@ -462,6 +463,25 @@ namespace RupResearchAPI.Controllers
                 var userId = User.FindFirst("user_id")?.Value ?? string.Empty;
                 await _projectService.TransferBudget(sourceId, req.TargetProjectId, req.Amount, userId);
 
+                // Clear any pending "transfer request" notification this now-completed transfer fulfills
+                var pendingTransferNotifs = await _db.ResearchNotifications
+                    .Where(n => n.RecipientUserId == userId && n.NotificationType == "budget_transfer_request")
+                    .ToListAsync();
+                foreach (var notif in pendingTransferNotifs)
+                {
+                    try
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(notif.Data ?? "{}");
+                        var root = doc.RootElement;
+                        var giverId    = root.TryGetProperty("giverProjectId", out var g)    ? g.GetInt32()    : -1;
+                        var receiverId = root.TryGetProperty("receiverProjectId", out var r) ? r.GetInt32()   : -1;
+                        if (giverId == sourceId && receiverId == req.TargetProjectId)
+                            _db.ResearchNotifications.Remove(notif);
+                    }
+                    catch { /* malformed data payload — ignore */ }
+                }
+                await _db.SaveChangesAsync();
+
                 var amountStr = req.Amount.ToString("N0");
                 await _audit.LogAsync(sourceId, userId, "budget_transferred",
                     $"העברת תקציב של ₪{amountStr} למחקר #{req.TargetProjectId}", "budget", req.TargetProjectId.ToString());
@@ -588,7 +608,7 @@ namespace RupResearchAPI.Controllers
             {
                 RecipientUserId  = giverPI.UserId,
                 SenderName       = requesterName,
-                Message          = $"{requesterName} מבקש/ת להעביר ₪{dto.Amount:N0} ממחקרך \"{giverProjectName}\" למחקר \"{receiverProjectName}\". יש לפנות למזכירות לביצוע ההעברה.",
+                Message          = $"{requesterName} מבקש/ת להעביר ₪{dto.Amount:N0} ממחקרך \"{giverProjectName}\" למחקר \"{receiverProjectName}\".",
                 NotificationType = "budget_transfer_request",
                 Data             = System.Text.Json.JsonSerializer.Serialize(new {
                     giverProjectId    = dto.GiverProjectId,
