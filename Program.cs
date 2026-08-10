@@ -170,12 +170,16 @@ namespace RupResearchAPI
                 app.UseDeveloperExceptionPage();
             }
 
-            // Ensure uploads directory exists
-            var uploadsPath = Path.Combine(app.Environment.WebRootPath
-                ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads");
-            Directory.CreateDirectory(uploadsPath);
+            // Ensure uploads directory exists — use a fixed path so it works even when WebRootPath is null
+            var wwwrootPath = app.Environment.WebRootPath
+                ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            Directory.CreateDirectory(Path.Combine(wwwrootPath, "uploads"));
 
-            app.UseStaticFiles();
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(wwwrootPath),
+                RequestPath = ""
+            });
             app.UseCors("FrontendDev");
             app.UseAuthentication();
             app.UseAuthorization();

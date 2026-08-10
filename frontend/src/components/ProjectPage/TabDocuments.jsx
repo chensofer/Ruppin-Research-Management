@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { uploadProjectFile, deleteProjectFile, getProjectFolders, createProjectFolder } from '../../api/projectsApi';
+import { fileUrl } from '../../utils/fileUrl';
 
 const inputCls = 'w-full bg-white text-gray-800 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent';
 
@@ -280,7 +281,7 @@ export default function TabDocuments({ projectId, files, onChanged, readOnly = f
 
                       {/* Open file in new tab */}
                       <a
-                        href={f.path}
+                        href={fileUrl(f.path)}
                         target="_blank"
                         rel="noreferrer"
                         className="flex items-center gap-1 text-sm text-primary hover:text-primary-dark font-medium whitespace-nowrap px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
@@ -294,7 +295,7 @@ export default function TabDocuments({ projectId, files, onChanged, readOnly = f
 
                       {/* Download file */}
                       <a
-                        href={f.path}
+                        href={fileUrl(f.path)}
                         download={f.fileName}
                         className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors"
                       >
