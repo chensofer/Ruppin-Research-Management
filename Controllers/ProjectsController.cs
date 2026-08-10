@@ -231,7 +231,7 @@ namespace RupResearchAPI.Controllers
             var project = await _projectService.GetById(id);
             if (project == null) return NotFound();
 
-            var uploadsRoot = Path.Combine(_env.WebRootPath ?? Directory.GetCurrentDirectory(), "uploads", id.ToString());
+            var uploadsRoot = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", id.ToString());
             Directory.CreateDirectory(uploadsRoot);
 
             var safeFileName = Path.GetFileName(file.FileName);
